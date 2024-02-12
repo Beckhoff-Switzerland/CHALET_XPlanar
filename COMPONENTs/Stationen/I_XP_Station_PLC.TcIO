@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Station_PLC" Id="{3b987664-67f6-4cb7-a8f7-0d8b2fa4f315}">
+    <Declaration><![CDATA[INTERFACE I_XP_Station_PLC EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Folder Name="Interaction with process" Id="{3fe7964a-64b4-44ff-b62e-f45c0b7bdb90}" />
+    <Folder Name="Simulation" Id="{01c439b8-7664-4918-9dab-6a825793f5ac}" />
+    <Property Name="AccocietedTrack" Id="{ecd4795b-11eb-43bb-a6eb-3daf45b9d80f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AccocietedTrack : I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{fb619953-4ad9-443d-8a2f-cff658b61ebe}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AreMoversInPlace" Id="{7a6f6934-2de8-455e-a17f-0d7483cfddd9}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AreMoversInPlace : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{ad4e2403-8735-4696-ab47-b34f3d965a4f}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="CtsEmptySpaceInQueue" Id="{6941acd4-136c-4ef2-ab15-898b1d35ffc0}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsEmptySpaceInQueue : UDINT]]></Declaration>
+      <Get Name="Get" Id="{c1a2dd87-2728-4228-abb0-b020ec3e07ee}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="CtsMoversInQueue" Id="{8671767d-2e3a-4dcf-8749-1324a4840a3b}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsMoversInQueue : UDINT]]></Declaration>
+      <Get Name="Get" Id="{005f92e2-a7c7-47bd-b35f-f23a0d16341e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Feedback" Id="{8f47576e-547d-412b-ac71-24aad7948980}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_CH_Feedback]]></Declaration>
+      <Get Name="Get" Id="{2665adc2-18c6-447a-a3d2-5a8641202412}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="InterfaceToMover" Id="{2680e90e-4101-45db-ac85-5a0747917732}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Return interface to mover in station. Return 0 if no mover is in station *)
+PROPERTY InterfaceToMover : I_XP_Mover]]></Declaration>
+      <Get Name="Get" Id="{4794413a-64a8-4205-b3ce-cf4c689b2744}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverGapAtExit" Id="{01f2af1f-47e7-48a3-aa21-f7dd138600f0}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverGapAtExit : LREAL //[mm] Every mover that leaves or passes the station gets this new gap as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{3cfc3786-9262-47cd-82e4-72d65d86a675}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{9cd75c7d-c751-437e-b239-25c6322787a0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoverQueueSize" Id="{49e3aea5-4fb7-4379-82f1-68c07256c6f5}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverQueueSize : UINT]]></Declaration>
+      <Get Name="Get" Id="{7e5a6378-6e33-42c9-8c95-463aeef7b1de}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{6722a720-b9df-4036-ac46-ffcc6b548495}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoversInQueue" Id="{4c938db1-dc07-4fcd-87c8-d201711e6dbb}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversInQueue : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF I_XP_Mover_PLC // Return a sorted list of movers in this zone. Index 0 is the mover in Front]]></Declaration>
+      <Get Name="Get" Id="{360167f2-c8ca-40a0-9ef1-70a7e1d4b346}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{43fdffe2-b360-4cd4-a4b1-fd5a234944a6}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{13b8ef0b-99e2-4694-9388-a3f76d783946}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrackXY" Id="{f8d42ec9-db00-437b-bcf3-cb30e5c8e65b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrackXY : REFERENCE TO PositionXY]]></Declaration>
+      <Get Name="Get" Id="{4a461d48-3add-4c57-a772-a972e7cc1046}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionXY" Id="{1401c6d0-f9d2-4965-bb14-cbae22665e8b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionXY : REFERENCE TO  PositionXY]]></Declaration>
+      <Get Name="Get" Id="{d9f5686e-21da-48e7-add8-90d9dfe45f12}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ProcessSimulationActive" Id="{93661f8b-9e74-4318-a626-8a1549d25de1}" FolderPath="Simulation\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ProcessSimulationActive : BOOL]]></Declaration>
+      <Get Name="Get" Id="{fe3c2865-525b-4d64-bef2-2a0f62fefd94}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ReadyToRecvMovers" Id="{cf91281f-c2a6-4445-a2e3-27207a7069dc}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//prevent further movers from entering the station, 
+//e.g. to prevent a collision. All movers that are already moving to reach this station will be stopped with a stop 
+//and restarted with Ready True.
+PROPERTY ReadyToRecvMovers : BOOL ]]></Declaration>
+      <Get Name="Get" Id="{a656ac96-0f6f-4bb8-89aa-a2a867c08e1c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{d1ee0481-3cff-4a40-9a95-f50e58069ae2}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Method Name="SendMoversToGroup" Id="{e4962851-2911-4718-9137-a79853d76b03}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[METHOD SendMoversToGroup : I_CH_Feedback
+VAR_INPUT 
+	sTargetStationGroupID : STRING;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SimulationMode" Id="{e1ab33af-73d3-48a1-a683-cb1f02beb4b7}" FolderPath="Simulation\">
+      <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
+METHOD SimulationMode : HRESULT
+VAR_INPUT
+	fProcessDuration 			: LREAL; //[s]
+	sTargedStationGroupID		: STRING; //group of the targed station to automatic send after the duration
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="StationGroupID" Id="{5d46c9f8-7f8a-4530-828f-a29e7de7afde}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationGroupID : STRING]]></Declaration>
+      <Get Name="Get" Id="{d078026a-6151-46b6-aa55-764743cd51a9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationsAhead" Id="{a15a8190-632c-447b-bb8d-df59fa6aeeb2}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationsAhead : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{7db66501-c0e7-41de-8144-cecc1479a705}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationsBehinde" Id="{3c4906d7-428a-4fa9-9a93-76bf40a245cc}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationsBehinde : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{773577f4-83bf-4e7b-a3bf-ba926ea33d06}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TargetPosMonitoringTime" Id="{248ac04f-c2c7-421c-b0b7-e716c9300d00}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargetPosMonitoringTime : TIME]]></Declaration>
+      <Get Name="Get" Id="{713f3cb7-1b59-427d-b1fc-069999c1dbdf}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{ec7a6fce-e9bb-4ed3-b675-958e7c45a585}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="TargetPosWindow" Id="{2373307b-8be4-416c-a09a-bdfc17a17500}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargetPosWindow : LREAL]]></Declaration>
+      <Get Name="Get" Id="{f259b64a-063e-496a-8729-13237556cb41}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{65f5f787-a9cc-454b-bcf4-a5edb0834125}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+  </Itf>
+</TcPlcObject>

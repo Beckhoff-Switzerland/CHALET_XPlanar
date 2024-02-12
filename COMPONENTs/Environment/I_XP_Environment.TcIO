@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Environment" Id="{82d4e6a8-d939-49b0-818e-86b258207442}">
+    <Declaration><![CDATA[INTERFACE I_XP_Environment]]></Declaration>
+    <Method Name="AddToGroup" Id="{f4493e59-ad90-4dac-89cb-3c35b7abff5c}">
+      <Declaration><![CDATA[METHOD AddToGroup : HRESULT
+VAR_INPUT
+	iGroup : I_XP_Group;
+END_VAR
+
+]]></Declaration>
+    </Method>
+    <Method Name="Clear" Id="{2eaf657c-b06a-4ac5-8bfd-2f4b4ad6572c}">
+      <Declaration><![CDATA[METHOD Clear : HRESULT
+]]></Declaration>
+    </Method>
+    <Method Name="Configure" Id="{9bbca1e7-a2f1-485d-8de7-8f90a1dc3677}">
+      <Declaration><![CDATA[METHOD Configure : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Feedback" Id="{e6ee7906-45bb-443c-afb3-2b2a9b508770}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{cc18bd10-41f4-4051-8a16-631b92b39a61}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{0d86c81e-3fa8-49c7-87ef-1a4588a06d1e}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+]]></Declaration>
+    </Method>
+    <Property Name="Mapped" Id="{14b61345-b383-42ca-9c63-97777c6507b6}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{def7e364-4983-49a2-8c16-a97e170bf491}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="OID" Id="{d57780a8-d816-4f3a-87e8-b26abdce176d}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY OID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{392b3d6c-8a64-48ae-8401-41ec1794064d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PlanarEnvironment" Id="{d65c920f-3d4e-48f7-ae43-79864570d93f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarEnvironment : REFERENCE TO MC_PlanarEnvironment]]></Declaration>
+      <Get Name="Get" Id="{23f8d9b1-51ed-469b-8515-26a29f4d1b5e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="RemoveFromGroup" Id="{0c2f8f63-9e17-4cfb-8064-d9613a987c2a}">
+      <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
+]]></Declaration>
+    </Method>
+    <Method Name="Update" Id="{59e802b9-e7ee-42b2-909a-2e831ace6dc5}">
+      <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="UtilityEnvirement" Id="{fd24b682-4ff6-4ca5-a2e9-fb815df216ce}">
+      <Declaration><![CDATA[PROPERTY UtilityEnvirement : Tc3_XPlanarUtility.I_Environment]]></Declaration>
+      <Get Name="Get" Id="{3f66a6a5-9ba4-4ba0-923f-e7c56dd321a6}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

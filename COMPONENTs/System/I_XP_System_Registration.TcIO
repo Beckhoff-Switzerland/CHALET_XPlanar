@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_System_Registration" Id="{e8de1029-edf1-48ac-8767-37955aeef3bf}">
+    <Declaration><![CDATA[INTERFACE I_XP_System_Registration EXTENDS __SYSTEM.IQueryInterface
+
+]]></Declaration>
+    <Folder Name="Relations" Id="{c9680898-1122-492d-b533-5a4044af26ba}" />
+    <Property Name="Disabled" Id="{bc1a19f2-f3cc-4dc5-a3a0-576ac4d27fc7}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Disabled : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{0060a681-5d59-4961-94f4-94c375301068}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Enabled" Id="{15c9469c-1c88-4a24-9f26-440347c64512}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Enabled : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{3052e13d-8df3-49ea-a378-5150d7a96e00}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Enviroment" Id="{aaa1987e-b70f-4ee2-b379-7a1398848679}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Enviroment : I_XP_Environment]]></Declaration>
+      <Get Name="Get" Id="{b1774fc1-bd1a-4483-b56e-fb61d41a02fd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="LinkEnvironment" Id="{669c5c7b-9174-402b-83f5-02b9b68b1002}" FolderPath="Relations\">
+      <Declaration><![CDATA[METHOD LinkEnvironment : HRESULT
+VAR_INPUT
+	ipEnvironment : I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="LinkGroup" Id="{a092af0a-4b40-46a7-b31e-c10f27dab63b}" FolderPath="Relations\">
+      <Declaration><![CDATA[METHOD LinkGroup : HRESULT
+VAR_INPUT
+	ipGroup : I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Movers" Id="{aa051c7e-753f-4cb5-af11-a844d1bb7650}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Movers : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{4ff00d70-0801-4749-9f80-ee76d2d47538}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="RegisterMover" Id="{7ca63539-fe2d-4c1b-890c-2cd113934467}" FolderPath="Relations\">
+      <Declaration><![CDATA[METHOD RegisterMover : HRESULT
+VAR_INPUT
+	ipMover : I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="RegisterStation" Id="{f18828eb-fe6f-4698-a548-67049b605140}" FolderPath="Relations\">
+      <Declaration><![CDATA[METHOD RegisterStation : HRESULT
+VAR_INPUT
+	ipStation : I_CH_Object;
+END_VAR
+
+]]></Declaration>
+    </Method>
+    <Method Name="RegisterTrack" Id="{948c86d2-3ef1-451e-acf5-1389de5b2f89}" FolderPath="Relations\">
+      <Declaration><![CDATA[METHOD RegisterTrack : HRESULT
+VAR_INPUT
+	ipTrack : I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="RegisterTrigger" Id="{7b1b848d-ac99-423d-8e0d-80327be24ffe}" FolderPath="Relations\">
+      <Declaration><![CDATA[METHOD RegisterTrigger : HRESULT
+VAR_INPUT
+	ipTrigger	: CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="RegisterZone" Id="{be8d8cd1-d36f-4126-8fde-db2d923078d9}" FolderPath="Relations\">
+      <Declaration><![CDATA[METHOD RegisterZone : HRESULT
+VAR_INPUT
+	ipZone	: CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Stations" Id="{9e267d53-e260-4129-93cb-10ac6925b467}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Stations : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{90067f51-2017-4171-ab12-0b28128fd963}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Tracks" Id="{ea970b38-0478-4ca5-8e3d-a82e22dd610e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Tracks : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{9ad237f1-4100-43c9-9c8a-8789a5895ca8}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Triggers" Id="{7dabb22e-9637-4f90-beec-a21994eacf41}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Triggers : CHALET_BaseComponents.I_CH_LIST
+]]></Declaration>
+      <Get Name="Get" Id="{cbba9580-d37d-4c68-9536-31ff53d3c118}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Zones" Id="{8f062f35-7d30-4e7e-859f-73d2a6604f93}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Zones : CHALET_BaseComponents.I_CH_LIST
+]]></Declaration>
+      <Get Name="Get" Id="{4c606985-3fb6-4eae-aefb-61cbf0487056}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

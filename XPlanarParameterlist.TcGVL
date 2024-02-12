@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <GVL Name="XPlanarParameterlist" Id="{8edd5463-cd5b-4961-b538-f0641ed78251}" ParameterList="True">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT 
+	(*Minimum gap center to center on track [mm] *)
+	F_MOVER_MINIMUM_GAP_ON_TRACK : LREAL := 100.0;
+	
+	(*During enabling the Movers use this gap [mm] *)
+	F_GAP_STARTUP : LREAL := 150.0;
+	
+	(*Add envirement to groupe during enabling *)
+	B_ADD_ENVIROMENT_TO_GROUP: BOOL := TRUE;	
+		
+	(*Pathfinder max recursion search depth in stations*)
+	N_MAX_SEARCH_DEPTH: UINT := 5;
+	
+	(*get an array of points of track in this size *)
+	N_TRACE_POINTS : UINT := 100;
+	
+	(*NOT SUPPORTET ATM FIX 3- max tracks after a track switch *)
+	N_MAX_STATIONS_AHEAD_OR_BEHIND : UINT := 3;	
+	
+	//Velocity during enabling move on track. 0=Default
+	F_ENABLING_ON_TRACK_VELOCITY	: LREAL := 0;
+	
+	//Acc-/Deceleration during enabling move on track. 0=Default
+	F_ENABLING_ON_TRACK_ACC_DEC		: LREAL := 0;
+		
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

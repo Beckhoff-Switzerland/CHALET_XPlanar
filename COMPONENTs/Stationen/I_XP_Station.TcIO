@@ -1,0 +1,127 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Station" Id="{3d974a17-7bf1-45ea-a1bb-e6a1207524fe}">
+    <Declaration><![CDATA[INTERFACE I_XP_Station EXTENDS __SYSTEM.IQueryInterface
+
+]]></Declaration>
+    <Property Name="AccocietedTrack" Id="{f1f8fb4d-f5e8-4293-ab6b-e19a472e59da}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AccocietedTrack : I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{9a483f3b-2b37-4504-9722-e1528e1cf396}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="AddMoverToQueue" Id="{c4da7942-2d63-4214-a839-5ac13c1f072a}">
+      <Declaration><![CDATA[METHOD AddMoverToQueue : HRESULT
+VAR_INPUT
+	ipMover : I_XP_Mover;
+END_VAR]]></Declaration>
+    </Method>
+    <Property Name="AssignedMovers" Id="{8cd89700-2be3-47cc-925c-cee79fa842fd}">
+      <Declaration><![CDATA[PROPERTY AssignedMovers : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{5cb2b908-d7cd-4ce9-b194-f1a72e296d0e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Configure" Id="{bc350bf6-8abf-47b4-bb67-c376b4ee15bf}">
+      <Declaration><![CDATA[METHOD Configure : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="DeleteMoversQueue" Id="{4df869e3-43c4-41fb-9494-0537850d74ad}">
+      <Declaration><![CDATA[METHOD DeleteMoversQueue : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="PositionOnTrack" Id="{1995ed67-50eb-4b29-8b06-4f9329ae5e7c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{3a9d7479-0ed2-4bfb-9888-de466a1001f9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrackXY" Id="{08286a01-cfce-45ac-a931-ea486a69b4f2}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrackXY : REFERENCE TO PositionXY]]></Declaration>
+      <Get Name="Get" Id="{a9dbad2f-8ea7-4f41-a263-b3e5c35b4ffd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionXY" Id="{18df1069-0957-468b-96bf-9f0ba52731b7}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionXY : REFERENCE TO  PositionXY]]></Declaration>
+      <Get Name="Get" Id="{09416665-bf5e-4716-be3f-5e44e14b1445}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="RegistrateStationBehinde" Id="{c059d578-6d47-41ad-866d-07b3106aa919}">
+      <Declaration><![CDATA[METHOD RegistrateStationBehinde : HRESULT
+VAR_INPUT
+	ipStation : I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SearchNextBestStationByName" Id="{fcb1507d-3e4c-4581-87d2-84dd7ec17f5f}">
+      <Declaration><![CDATA[METHOD SearchNextBestStationByName : ST_PathFinder_1
+VAR_INPUT
+	sTargedStationGroupeID : STRING;
+	nPermittedSearchDepth : UINT;
+	ipWhoIsAsking	: I_XP_Station;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SendMoversToGroup" Id="{ea1d0745-bc3a-4dc6-9685-a98523a491dd}">
+      <Declaration><![CDATA[METHOD SendMoversToGroup : I_CH_Feedback
+VAR_INPUT 
+	sTargetStationGroupID : STRING;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="StationGroupID" Id="{7f0da163-013b-42b5-9a58-a5d05bf925bc}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationGroupID : STRING]]></Declaration>
+      <Get Name="Get" Id="{9d892f15-0aaf-412a-a3d2-c381f6cd5d76}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationsAhead" Id="{7a9bb62c-e314-49ec-bae2-5edb8a19790b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationsAhead : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{64a1eb89-5f81-45dc-a19d-a6cd0bd0ccae}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationsBehinde" Id="{bad569b2-399c-48ff-8fc7-9c3af9c67938}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationsBehinde : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{82d39e6d-dfe2-40d9-b338-aebf2b2841a9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Update" Id="{88efa7a1-495a-495d-b209-6ee84bfa33b0}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>

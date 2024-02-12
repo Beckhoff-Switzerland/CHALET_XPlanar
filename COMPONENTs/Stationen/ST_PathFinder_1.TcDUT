@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_PathFinder_1" Id="{6d4b32d6-9960-44ac-a910-0896ab556432}">
+    <Declaration><![CDATA[TYPE ST_PathFinder_1 :
+STRUCT
+	bTargetFound : BOOL; // Targed Station found on this path. No information about ready or not	
+	ipBestStation : I_XP_Station;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

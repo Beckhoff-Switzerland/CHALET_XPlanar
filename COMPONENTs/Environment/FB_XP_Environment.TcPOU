@@ -1,0 +1,325 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XP_Environment" Id="{6c9df844-5691-4d75-a14e-01fa98bb26e3}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+(* XPlanar Environment - 1 per associated XPlanar 
+	The Planar environment is a software object that represents the two-dimensional XPlanar stator surface. Together with Planar movers in a group, 
+	it prevents collisions of the movers with the edge of the surface. *)
+FUNCTION_BLOCK FB_XP_Environment EXTENDS FB_CH_Object IMPLEMENTS I_XP_Environment
+VAR
+	//Link to Planar-Environment object
+	fbEnvironment : MC_PlanarEnvironment;
+	fbUtilityEnvirement : FB_TcIoXPlanarEnvironment;
+	
+	{attribute 'hide'}  
+	bInitDone :BOOL := FALSE;
+	{attribute 'hide'}
+	iXpSystem : I_XP_System_Registration;
+	{attribute 'hide'}               	
+	fbFeedback 			: FB_XP_Feedback;
+	{attribute 'hide'}                   	
+	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
+END_VAR
+
+
+// Planar-Feedback objects
+VAR
+	{attribute 'hide'} 
+	fbFeedbackAddToGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackRmvFromGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackConfigure : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackClear : MC_PlanarFeedback;
+END_VAR
+	
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="Group" Id="{1ec64b27-6c0b-4188-9c58-0a330b77e507}" />
+    <Method Name="AddToGroup" Id="{287f1c1d-9530-419a-a6a6-4458e419ac5b}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD AddToGroup : HRESULT
+VAR_INPUT
+	iGroup : I_XP_Group;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	iGroup.AddEnvironment(THIS^.fbEnvironment, THIS^.fbFeedbackAddToGrp);
+	AddToGroup := S_OK;
+ELSE
+	AddToGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Clear" Id="{e2df5771-2b46-447a-a790-27cc8fd54fd0}">
+      <Declaration><![CDATA[METHOD Clear : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Clear;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbEnvironment.Clear(commandFeedback:=THIS^.fbFeedbackClear);
+Clear := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Configure" Id="{94a277cb-a6e6-4475-a159-23a2d173207d}">
+      <Declaration><![CDATA[METHOD Configure : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Configure;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbEnvironment.CreateBoundary(commandFeedback:=THIS^.fbFeedbackConfigure);
+Configure := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{3332ee11-a20c-443f-8062-eeaf7c0acaa7}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipSystem : I_CH_Object;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
+	
+	(* Register to the Xplanar System
+	   1. Test if the interface exists
+	   2. Test if the object implements a "System for Mover" interface 
+	*)
+	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.iXpSystem) THEN
+		THIS^.iXpSystem.LinkEnvironment(THIS^);
+	END_IF
+	
+	
+END_IF
+
+bFBInitCalledOnce := TRUE;
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Feedback" Id="{4d454920-2471-4339-ada8-e58505a82219}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{92adf6cc-8743-45e1-869d-653b09b7978d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Feedback := THIS^.fbFeedback;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{40324653-7238-423b-a8fd-05ed7a18c09e}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.Mapped THEN
+	//Error
+	Initialize := E_FAIL;
+
+	
+ELSIF NOT bInitDone THEN
+	//Busy
+	Initialize := S_PENDING;
+	
+	IF fbUtilityEnvirement.Init(bExecute := TRUE) THEN
+		fbUtilityEnvirement.Init(bExecute := FALSE);
+		bInitDone := TRUE;
+	END_IF
+	
+	
+ELSE	
+	//Done
+	Initialize := S_OK;
+END_IF
+
+
+
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
+THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
+//Set done or keep in busy state	
+THIS^.fbFeedback.HR := Initialize;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Mapped" Id="{b8d25027-a67e-470b-9581-b959c6328df3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{bb7d8e37-da00-480b-964e-962762127f9f}">
+        <Declaration><![CDATA[VAR
+	bMcToPlcNotMapped 	: BOOL;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[bMcToPlcNotMapped := F_GetMappingStatus(ADR(THIS^.fbEnvironment.MCTOPLC_STD), SIZEOF(THIS^.fbEnvironment.MCTOPLC_STD)) <> EPlcMappingStatus.MS_Mapped;
+
+Mapped := NOT bMcToPlcNotMapped;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="OID" Id="{7ae2b0fe-be79-4b9e-9fc2-a7d176f204c5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY OID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{88f94db8-1661-4f49-b868-d54d29985f73}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[OID := THIS^.fbEnvironment.MCTOPLC_STD.EnvironmentOID;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PlanarEnvironment" Id="{a6c655b1-a79b-420b-8a88-eca38ef9d746}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarEnvironment : REFERENCE TO MC_PlanarEnvironment]]></Declaration>
+      <Get Name="Get" Id="{26cfa0c3-4ea1-4baa-9ed5-8f88fba409a0}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PlanarEnvironment ref= THIS^.fbEnvironment;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="RemoveFromGroup" Id="{b08ba9a4-1133-4063-9835-12556583929a}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.RemoveFromGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	THIS^.fbEnvironment.RemoveFromGroup(THIS^.fbFeedbackRmvFromGrp);
+	RemoveFromGroup := S_OK;
+ELSE
+	RemoveFromGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{476a95ad-3269-45e6-a01b-247748d45f7c}">
+      <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+
+
+// ********************** Set feedback depending on active command *******************************
+IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
+	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+END_IF
+
+CASE THIS^.eActiveCommand OF
+	E_NcAxisCommands.None: 
+		//Display if a Mover Error is active during no command is active
+		IF THIS^.fbEnvironment.Error AND NOT fbFeedback.Error THEN 
+			fbFeedback.ErrorId 			:= THIS^.fbEnvironment.ErrorID;
+			fbFeedback.ActiveCommand 	:= TO_STRING(E_NcAxisCommands.None);	
+			fbFeedback.ClearObjectInfo();
+		END_IF
+
+	E_NcAxisCommands.Initialize:
+		fbFeedback.Busy 			:= NOT THIS^.bInitDone;
+		fbFeedback.Done 			:= THIS^.bInitDone;
+		fbFeedback.ErrorId 			:= 0;
+		fbFeedback.ClearObjectInfo();
+		                                                       			                        	
+	E_NcAxisCommands.Clear:     	
+		fbFeedback.Busy 			:= fbFeedbackClear.Busy;
+		fbFeedback.Done 			:= fbFeedbackClear.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackClear.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackClear.objectInfo;
+           			                        	
+	E_NcAxisCommands.Configure:     	
+		fbFeedback.Busy 			:= fbFeedbackConfigure.Busy;
+		fbFeedback.Done 			:= fbFeedbackConfigure.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackConfigure.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackConfigure.objectInfo;
+                                      			                        	
+	E_NcAxisCommands.AddToGroupe:     	
+		fbFeedback.Busy 			:= fbFeedbackAddToGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackAddToGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackAddToGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackAddToGrp.objectInfo;
+                                      			                        	
+	E_NcAxisCommands.RemoveFromGroupe:     	
+		fbFeedback.Busy 			:= fbFeedbackRmvFromGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackRmvFromGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackRmvFromGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackRmvFromGrp.objectInfo;
+                                		
+	ELSE//External command in subclass
+		;
+END_CASE
+
+
+// **********************  Stop to execute commands on .done or .error ***************************
+IF fbFeedback.Done OR THIS^.fbFeedback.Error THEN
+	eActiveCommand 				:= E_NcAxisCommands.None;
+END_IF
+
+//Update xplanar object
+THIS^.fbEnvironment.Update();
+
+//Update feedback object
+fbFeedbackConfigure.Update(); 
+fbFeedbackClear.Update(); 
+fbFeedbackAddToGrp.Update(); 
+fbFeedbackRmvFromGrp.Update(); 
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="UtilityEnvirement" Id="{2e740e9d-ce68-40bf-aad7-1f44d441a8bc}">
+      <Declaration><![CDATA[PROPERTY UtilityEnvirement : Tc3_XPlanarUtility.I_Environment]]></Declaration>
+      <Get Name="Get" Id="{722af0ec-c8ab-4b67-b67b-63ac0647ba49}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[UtilityEnvirement := fbUtilityEnvirement;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

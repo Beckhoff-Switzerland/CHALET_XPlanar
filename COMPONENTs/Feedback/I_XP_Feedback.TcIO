@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Feedback" Id="{a00e3718-b8e2-4aa6-a7a1-39908a645e7c}">
+    <Declaration><![CDATA[INTERFACE I_XP_Feedback EXTENDS CHALET_BaseComponents.I_CH_Feedback
+]]></Declaration>
+    <Property Name="ObjectInfo" Id="{d73d86fb-fc47-4864-a982-52c233d0af1f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Indicates which object one would collide with. *)
+PROPERTY ObjectInfo : REFERENCE TO PlanarObjectInfo]]></Declaration>
+      <Get Name="Get" Id="{347b8903-1db1-4e0c-aee8-08385285e022}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

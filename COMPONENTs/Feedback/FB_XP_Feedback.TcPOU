@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XP_Feedback" Id="{67e3d560-09f1-41ce-b857-21295b33fa36}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+FUNCTION_BLOCK FB_XP_Feedback EXTENDS CHALET_BaseComponents.FB_CH_Feedback IMPLEMENTS I_XP_Feedback
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	(* Indicates which object one would collide with. *)
+	{attribute 'hide'}
+	_objectInfo : PlanarObjectInfo;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="ClearObjectInfo" Id="{30a346c8-6648-4763-b232-013ac322f0e2}">
+      <Declaration><![CDATA[METHOD ClearObjectInfo : BOOL
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^._ObjectInfo.Id := 0;
+THIS^._ObjectInfo.ObjectType := EPlanarObjectType.None;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ObjectInfo" Id="{e8eeaec2-0fbd-4a1b-b245-08ec968594b6}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Indicates which object one would collide with. *)
+PROPERTY ObjectInfo : REFERENCE TO PlanarObjectInfo]]></Declaration>
+      <Get Name="Get" Id="{a2d652c3-c1aa-4235-a52e-b220bd96ba5b}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[objectInfo REF= THIS^._objectInfo;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

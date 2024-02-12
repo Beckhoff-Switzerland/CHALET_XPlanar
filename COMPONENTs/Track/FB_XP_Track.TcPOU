@@ -1,0 +1,637 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XP_Track" Id="{3b47d2f9-b25f-432c-a6e7-cfeea4a711ff}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+(* XPlanar track - n per associated XPlanar. Can be instantiated as an array and/or individually
+	The Planar track is a software object that represents a (virtual) one-dimensional path on the two-dimensional XPlanar stator surface. 
+	Several Planar movers can be lined up and moved on this path. Collisions are prevented by keeping a preset distance between the movers. *)	
+FUNCTION_BLOCK FB_XP_Track EXTENDS FB_CH_Object IMPLEMENTS I_XP_Track
+VAR
+	//Link to Planar-Track object
+	fbTrack : MC_PlanarTrack;
+	
+	{attribute 'hide'}  
+	bInitDone :BOOL := FALSE;
+	{attribute 'hide'}               	
+	fbFeedback 			: FB_XP_Feedback;
+	{attribute 'hide'}                   	
+	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
+	{attribute 'hide'}
+	ipXpSystem : I_XP_System_Registration;
+	{attribute 'hide'}	
+	nSeqConfiguring : UINT;
+	{attribute 'hide'} 
+	ipTracksEndAtThis : ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track;
+	{attribute 'hide'} 
+	ipTracksStartFromThis : ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track;
+	//HMI - The track is divided into an array of coordinates to display the track course on a visualization
+	afTrackPoints		: ARRAY[0..XplanarParameterlist.N_TRACE_POINTS] OF PositionXY;
+	
+
+	{attribute 'hide'}
+	// ipXpSystem Is Not Valid at this point, call the konstruktor again in the FB_Init
+	fbSortedListMoversOnTrack	: FB_XP_Zone(ipXpSystem);
+END_VAR
+
+// Planar-Feedback objects
+VAR
+	{attribute 'hide'} 
+	fbFeedbackDisable: MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackEnable : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackAddToGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackRmvFromGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackReset : MC_PlanarFeedback;
+END_VAR
+	
+
+	]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="Enable/Disable" Id="{2b869c2e-39f8-4722-a978-478fda933277}" />
+    <Folder Name="Group" Id="{e6e14778-ea58-4882-a699-86e8e6047192}" />
+    <Method Name="AddMover" Id="{4e587a4b-a2fd-42e8-8022-3b33c6b80065}">
+      <Declaration><![CDATA[METHOD AddMover : HRESULT
+VAR_INPUT
+	ipMover : I_XP_Mover;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ipMover <> 0 THEN
+	AddMover := ipMover.JoinTrack(THIS^);
+ELSE
+	AddMover := E_FAIL;
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AddToGroup" Id="{7e7a881a-5460-47b6-87d1-69a5f54b2a36}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD AddToGroup : HRESULT
+VAR_INPUT
+	iGroup : I_XP_Group;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	iGroup.AddTrack(THIS^.fbTrack, THIS^.fbFeedbackAddToGrp);
+	AddToGroup := S_OK;
+ELSE
+	AddToGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CalcTrackPoints" Id="{9dce1fbd-e0e4-4664-bace-b74870c30cc8}">
+      <Declaration><![CDATA[METHOD PROTECTED CalcTrackPoints : HRESULT
+VAR_INPUT
+END_VAR
+VAR
+    nIdx      : UINT;
+    fbPosition : PositionXYC;
+	fLength   : LREAL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[fLength := THIS^.fbTrack.GetLength();
+
+FOR nIdx := 0 TO XplanarParameterlist.N_TRACE_POINTS DO
+	THIS^.fbTrack.GetPositionAt(fLength/(XplanarParameterlist.N_TRACE_POINTS)*nIdx, fbPosition);
+	
+	THIS^.afTrackPoints[nIdx].x := fbPosition.x;
+	THIS^.afTrackPoints[nIdx].y := fbPosition.y;
+	//THIS^.afTrackPoints[nIdx].c := fbPosition.c;
+END_FOR
+
+CalcTrackPoints := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Configure" Id="{9fcb3d34-7c7a-4018-bb61-a13ff9565f1b}" FolderPath="Enable/Disable\">
+      <Declaration><![CDATA[METHOD Configure : HRESULT // This is called once during system enabling
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Validate settings
+IF THIS^.Length = 0 THEN
+	Configure := E_FAIL;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+	RETURN;
+END_IF
+
+THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Configure;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.nSeqConfiguring := 10;
+Configure := S_OK;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Configuring" Id="{e4ce3390-76b3-4d94-9c90-9caf4d048359}" FolderPath="Enable/Disable\">
+      <Declaration><![CDATA[METHOD Configuring : HRESULT // This is called until S_OK during system enabling
+VAR
+	ipEachTrackObj : I_CH_Object;
+	nIdx : UDINT;
+END_VAR
+VAR_INST
+	fbAdsRead 	: ADSREAD;
+	TrackOTCID 	: ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF OTCID;
+END_VAR
+VAR CONSTANT
+	N_IDX_OFFSET_PREVIOUS_TRACK 	: UDINT := 16#050300D5; // Parameter(online) in Planar Track object
+	N_IDX_OFFSET_SUBSEQUENT_TRACK 	: UDINT := 16#050300D6; // Parameter(online) in Planar Track object	
+	
+	N_PORT_MET_TASK 				: UINT := 521; //ZZZ TODO this port is not fix. REad from the TcCom object
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Configuring := S_PENDING;
+CASE nSeqConfiguring OF
+	0: // Idle
+		Configuring := S_OK;
+		
+	10: //Start
+		//No config is done here. Set Track elements direkt in the Track TcCom Object
+		nSeqConfiguring := 700;
+		
+	700: //Calculate an array of track points. These can then be visualized on an HMI, for example
+		THIS^.CalcTrackPoints();
+		nSeqConfiguring := 800;
+	
+	
+	
+	//PREVIOUS_TRACK
+	800: // Prepare - Read from Track object
+		fbAdsRead.READ := FALSE;
+		MEMSET(destAddr := ADR(TrackOTCID), n := SIZEOF(TrackOTCID), fillByte:= 0);
+		nSeqConfiguring := 801;
+	
+	801: // Start read - Read from Track object
+		fbAdsRead.PORT		:= N_PORT_MET_TASK; 
+		fbAdsRead.IDXGRP	:= THIS^.OID;
+		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_PREVIOUS_TRACK; 
+		fbAdsRead.LEN		:= SIZEOF(TrackOTCID);
+		fbAdsRead.DESTADDR	:= ADR(TrackOTCID);
+			
+		fbAdsRead.READ := TRUE;
+		nSeqConfiguring := 802;
+	
+	802: // Wait for reading - Read from Track object
+		IF fbAdsRead.ERR AND fbAdsRead.ERRID = 6 THEN
+			//Error, the reason for this could be that this track has no connected tracks
+			//Continous with SUBSEQUENT_TRACK
+			nSeqConfiguring := 850;
+		ELSIF fbAdsRead.ERR THEN
+			//Error
+			nSeqConfiguring := nSeqConfiguring + 1000;
+		ELSIF NOT fbAdsRead.BUSY THEN
+			//Done
+			nSeqConfiguring := 803;
+		END_IF
+	
+	803: // Convert to I_XP_Track - Read from Track object
+		FOR nIdx := 0 TO (XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1) DO
+			//Get Obj
+			ipEachTrackObj := THIS^.ipXpSystem.Tracks.FindOID(TrackOTCID[nIdx]);
+			//convert obj -> I_XP_Track
+			ToXpTrack(ipEachTrackObj, ipTracksEndAtThis[nIdx]);	
+		END_FOR
+		nSeqConfiguring := 850;		
+	
+		
+		
+		
+	//SUBSEQUENT_TRACK	
+	850: // Prepare - Read from Track object
+		fbAdsRead.READ := FALSE;
+		MEMSET(destAddr := ADR(TrackOTCID), n := SIZEOF(TrackOTCID), fillByte:= 0);
+		nSeqConfiguring := 851;
+	
+	851: // Start read - Read from Track object
+		fbAdsRead.PORT		:= N_PORT_MET_TASK;
+		fbAdsRead.IDXGRP	:= THIS^.OID;
+		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_SUBSEQUENT_TRACK;
+		fbAdsRead.LEN		:= SIZEOF(TrackOTCID);
+		fbAdsRead.DESTADDR	:= ADR(TrackOTCID);
+			
+		fbAdsRead.READ := TRUE;
+		nSeqConfiguring := 852;
+	
+	852: // Wait for reading - Read from Track object
+		IF fbAdsRead.ERR AND fbAdsRead.ERRID = 6 THEN
+			//Error, the reason for this could be that this track has no connected tracks
+			nSeqConfiguring := 900;
+		ELSIF fbAdsRead.ERR THEN
+			//Error
+			nSeqConfiguring := nSeqConfiguring + 1000;
+		ELSIF NOT fbAdsRead.BUSY THEN
+			//Done
+			nSeqConfiguring := 853;
+		END_IF
+	
+	853: // Convert to I_XP_Track - Read from Track object
+		FOR nIdx := 0 TO (XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1) DO
+			//Get Obj
+			ipEachTrackObj := THIS^.ipXpSystem.Tracks.FindOID(TrackOTCID[nIdx]);
+			//convert obj -> I_XP_Track
+			ToXpTrack(ipEachTrackObj, ipTracksStartFromThis[nIdx]);	
+		END_FOR
+		nSeqConfiguring := 900;
+	
+	
+		
+	
+	
+	900: // Config the internal FB_Zone
+		THIS^.fbSortedListMoversOnTrack.AccocietedTrack 		:= (THIS^);
+		THIS^.fbSortedListMoversOnTrack.StartPositionOnTrack	:= 0;
+		THIS^.fbSortedListMoversOnTrack.EndPositionOnTrack 		:= THIS^.Length;
+		nSeqConfiguring := 999;
+		
+	999: // Done
+		Configuring := S_OK;
+		
+	1000..1999://Error
+		Configuring := E_FAIL;
+END_CASE
+
+
+fbAdsRead();]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="CtsMoversOnTrack" Id="{f5c92b82-fa04-4344-9678-cfae0b690dad}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsMoversOnTrack : UINT]]></Declaration>
+      <Get Name="Get" Id="{580fb42a-a37b-44a8-b24d-f5b908dd5d6a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CtsMoversOnTrack := THIS^.fbSortedListMoversOnTrack.CtsMoversInZone;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Disable" Id="{4875b69f-6e4a-44a1-86a5-68c37016194c}" FolderPath="Enable/Disable\">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Disable;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+
+	THIS^.fbTrack.Enable(fbFeedbackDisable);
+	Disable := S_OK;
+ELSE
+	Disable := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Enable" Id="{292d4b33-ab4e-46c1-8ee3-9dd6992332cb}" FolderPath="Enable/Disable\">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Enable;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+
+	THIS^.fbTrack.Enable(fbFeedbackEnable);
+	Enable := S_OK;
+ELSE
+	Enable := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{bd7962a8-7fbc-4b97-8a9e-756a233bc51d}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipSystem : I_CH_Object;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
+	
+	(* Register to the Xplanar System
+	   1. Test if the interface exists
+	   2. Test if the object implements a "System for Mover" interface 
+	*)
+	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.ipXpSystem) THEN
+		THIS^.ipXpSystem.RegisterTrack(THIS^);
+	END_IF
+	
+	THIS^.fbSortedListMoversOnTrack.FB_init(FALSE,FALSE, THIS^.ipXpSystem);
+END_IF
+
+bFBInitCalledOnce := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Feedback" Id="{1564402b-ab3a-4608-8e90-81f38c847303}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{f0acb3f0-6342-46be-9655-47b46b5941f5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Feedback := THIS^.fbFeedback;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{b896fc44-0b73-4eff-afae-ecb801b264e1}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR
+	hr : HRESULT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.Mapped THEN
+	//Error
+	Initialize := E_FAIL;
+
+ELSIF NOT bInitDone THEN
+	//Busy
+	Initialize := S_PENDING;
+	
+	//Config the internal FB_Zone
+	THIS^.fbSortedListMoversOnTrack.AccocietedTrack 		:= (THIS^);
+	THIS^.fbSortedListMoversOnTrack.StartPositionOnTrack	:= 0;
+	THIS^.fbSortedListMoversOnTrack.EndPositionOnTrack 		:= 0; //End should be the length of track. But is not sure defind at this point
+	THIS^.fbSortedListMoversOnTrack.ListOfMoversToCheck 	:= THIS^.ipXpSystem.Movers; // All Movers in system
+	
+	//Done as sone list is initilized
+	bInitDone := (S_OK = THIS^.fbSortedListMoversOnTrack.Initialize());
+	
+ELSE	
+	//Done
+	Initialize := S_OK;	
+END_IF
+
+
+
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
+THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
+//Set done or keep in busy state	
+THIS^.fbFeedback.HR := Initialize;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Length" Id="{71eaadbd-1c54-42e9-8d1d-8f27bd48dc86}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Length : LREAL]]></Declaration>
+      <Get Name="Get" Id="{a130a9f2-5c04-404e-92e9-c79382f2a810}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Length := THIS^.fbTrack.GetLength();]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Mapped" Id="{1a400ed0-2c58-4d55-9002-0c3878fabdc3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{20c2a12e-68d3-4272-b1a0-39444f2afedd}">
+        <Declaration><![CDATA[VAR
+	bMcToPlcNotMapped 	: BOOL;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[bMcToPlcNotMapped := F_GetMappingStatus(ADR(THIS^.fbTrack.MCTOPLC_STD), SIZEOF(THIS^.fbTrack.MCTOPLC_STD)) <> EPlcMappingStatus.MS_Mapped;
+
+Mapped := NOT bMcToPlcNotMapped;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="MoversOnTrack" Id="{49b68c60-de23-4b53-aaa9-2a7753359f37}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversOnTrack : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF I_XP_Mover_PLC // Return a sorted list of movers on track. Index 0 is the mover in Front]]></Declaration>
+      <Get Name="Get" Id="{64ad0539-d4a2-4d87-83e2-35972250cdb1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[MoversOnTrack REF= THIS^.fbSortedListMoversOnTrack.MoversInZone;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="OID" Id="{90983f23-ab27-4c9b-83fe-ad4ce837aabc}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY OID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{2f957262-8fdd-45d3-9100-ac31a63822a2}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[OID := THIS^.fbTrack.MCTOPLC_STD.TrackOID;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PlanarTrack" Id="{2fb9669f-5350-4c6c-81e0-7e96f15e447b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarTrack : REFERENCE TO MC_PlanarTrack]]></Declaration>
+      <Get Name="Get" Id="{fa842340-3326-4a7d-8913-7ca984b2ea37}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PlanarTrack ref= THIS^.fbTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="RemoveFromGroup" Id="{9de749e7-be9a-4037-a8c7-8d2d3b16d041}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.RemoveFromGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	THIS^.fbTrack.RemoveFromGroup(THIS^.fbFeedbackRmvFromGrp);
+	
+	RemoveFromGroup := S_OK;
+ELSE
+	RemoveFromGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Reset" Id="{d67cf55e-473b-48f9-af14-d88c18e7c136}">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Reset;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbTrack.Reset(THIS^.fbFeedbackReset);
+Reset := S_OK;
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TracksEndAtThis" Id="{74b0ded5-e929-46ca-b828-5466efe653e0}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TracksEndAtThis : REFERENCE TO  ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{e11bad87-2af8-410b-a2af-e0cb16dd4cb1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TracksEndAtThis REF= ipTracksEndAtThis;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TracksStartFromThis" Id="{f5262a37-248e-4ded-aad1-91bd1fc5719b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TracksStartFromThis : REFERENCE TO ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{e40e870d-64f3-414e-9693-9373335e2f88}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TracksStartFromThis REF= ipTracksStartFromThis;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Update" Id="{8a9f448d-8111-47f3-8acb-64af533cf07b}">
+      <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+
+
+// ********************** Set feedback depending on active command *******************************
+IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
+	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+END_IF
+
+CASE THIS^.eActiveCommand OF
+	E_NcAxisCommands.None: 
+		//Display if a Mover Error is active during no command is active
+		IF THIS^.fbTrack.Error AND NOT fbFeedback.Error THEN 
+			fbFeedback.ErrorId 			:= THIS^.fbTrack.ErrorID;
+			fbFeedback.ActiveCommand 	:= TO_STRING(E_NcAxisCommands.None);	
+			fbFeedback.ClearObjectInfo();
+		END_IF
+
+	E_NcAxisCommands.Initialize:
+		fbFeedback.Busy 			:= NOT THIS^.bInitDone;
+		fbFeedback.Done 			:= THIS^.bInitDone;
+		fbFeedback.ErrorId 			:= 0;
+		fbFeedback.ClearObjectInfo();
+		                        	
+	E_NcAxisCommands.Enable:     	
+		fbFeedback.Busy 			:= fbFeedbackEnable.Busy;
+		fbFeedback.Done 			:= fbFeedbackEnable.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackEnable.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackEnable.objectInfo;
+                                			                        	
+	E_NcAxisCommands.Disable:     	
+		fbFeedback.Busy 			:= fbFeedbackDisable.Busy;
+		fbFeedback.Done 			:= fbFeedbackDisable.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackDisable.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackDisable.objectInfo;
+		
+	E_NcAxisCommands.Configure:
+		fbFeedback.Busy 		:= nSeqConfiguring > 0;
+		fbFeedback.Done 		:= nSeqConfiguring = 999;
+		IF nSeqConfiguring > 1000 THEN
+			fbFeedback.ErrorId 		:= nSeqConfiguring;
+		END_IF
+                                			                        	
+	E_NcAxisCommands.Reset:     	
+		fbFeedback.Busy 			:= fbFeedbackReset.Busy;
+		fbFeedback.Done 			:= fbFeedbackReset.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackReset.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackReset.objectInfo;
+                                      			                        	
+	E_NcAxisCommands.AddToGroupe:     	
+		fbFeedback.Busy 			:= fbFeedbackAddToGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackAddToGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackAddToGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackAddToGrp.objectInfo;
+                                      			                        	
+	E_NcAxisCommands.RemoveFromGroupe:     	
+		fbFeedback.Busy 			:= fbFeedbackRmvFromGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackRmvFromGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackRmvFromGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackRmvFromGrp.objectInfo;
+                                		
+	ELSE//External command in subclass
+		;
+END_CASE
+
+
+// **********************  Stop to execute commands on .done or .error ***************************
+IF fbFeedback.Done OR THIS^.fbFeedback.Error THEN
+	eActiveCommand 				:= E_NcAxisCommands.None;
+END_IF
+
+//Update xplanar object
+THIS^.fbTrack.Update();
+
+//Update feedback object
+fbFeedbackEnable.Update(); 
+fbFeedbackDisable.Update(); 
+fbFeedbackReset.Update(); 
+fbFeedbackAddToGrp.Update(); 
+fbFeedbackRmvFromGrp.Update(); 
+
+]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

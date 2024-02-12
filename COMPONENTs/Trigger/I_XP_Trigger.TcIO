@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Trigger" Id="{e889dd59-5dee-4e00-b90b-22cc52226e89}">
+    <Declaration><![CDATA[INTERFACE I_XP_Trigger  EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Property Name="AccocietedTrack" Id="{ef546e42-ba12-4853-b3cc-e3135efdb3a0}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AccocietedTrack : I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{b434b88a-019b-4891-8eb4-ce9ebdf862e3}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{f7b7a5fe-b6e6-4b19-9e92-2b4b10d34513}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="HR" Id="{06d44635-3899-4ea3-949a-de9d327c067f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT]]></Declaration>
+      <Get Name="Get" Id="{39fe9785-6fbf-4da0-a19c-335771fa6e58}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ListOfMoversToCheck" Id="{42534cb0-9df8-4806-972f-2059bafdf42f}">
+      <Declaration><![CDATA[PROPERTY ListOfMoversToCheck : I_CH_List]]></Declaration>
+      <Set Name="Set" Id="{f2d3cab5-804f-448e-96b1-3f5fdc6303b0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoverAtTrigger" Id="{fd27ac87-7291-46e9-88bc-eeae84dfef00}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverAtTrigger : I_XP_Mover
+]]></Declaration>
+      <Get Name="Get" Id="{84e37e84-fd84-4616-b3d6-21ff5c4d115a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverDetected" Id="{f3e18a86-2212-4fc8-8459-68b23c5ff674}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverDetected : BOOL]]></Declaration>
+      <Get Name="Get" Id="{2fbc8824-c313-4d36-b789-b3fb118d82cc}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{362a2ebc-f473-4db3-8f3e-aea905d1b2e1}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{eb74a73a-f59b-432c-becf-664cb07b2b77}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{83cdd31a-0ea3-4417-b1a4-e389b539f4f6}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="TimeStamp" Id="{f5da10b0-5c07-47b8-b4d1-c81ce3f3f9d1}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TimeStamp : T_DCTIME64;]]></Declaration>
+      <Get Name="Get" Id="{d4bad2b0-8d75-46b2-8133-7526ba2775de}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TriggerDirection" Id="{2e609c80-0dec-4a1b-9830-c24df066d715}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TriggerDirection : Tc3_Mc3Definitions.MC_Direction
+]]></Declaration>
+      <Get Name="Get" Id="{2199bc2e-b8a3-4b8b-8bca-a38ea00b093e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{935f9921-c87a-45b6-a856-7277def4e98e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>

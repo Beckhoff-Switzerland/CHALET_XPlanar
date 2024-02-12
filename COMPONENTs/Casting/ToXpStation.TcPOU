@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="ToXpStation" Id="{861c1052-1a02-46a2-852e-8d7d0be58aec}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION ToXpStation : BOOL
+VAR_INPUT
+	iChObject : I_CH_OBJECT;
+	iXpStation : REFERENCE TO I_XP_Station;
+END_VAR
+
+VAR
+	iTmp : I_XP_Station;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* Register the Station
+   1. Test if the interface exists
+   2. Test if the object implements a "Object" interface 
+*)
+IF iChObject <> 0 AND_THEN __QUERYINTERFACE(iChObject,iTmp) THEN
+	iXpStation := iTmp;
+	ToXpStation := TRUE;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,238 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Mover" Id="{567b42ec-b45f-4b7f-a752-c8a31c59e383}">
+    <Declaration><![CDATA[INTERFACE I_XP_Mover EXTENDS __SYSTEM.IQueryInterface
+
+]]></Declaration>
+    <Folder Name="Group" Id="{98522917-210e-4a16-96b2-caa3ecaab952}" />
+    <Folder Name="Movement" Id="{45a88e98-b38f-4e20-a2fc-c8f2eacf66e9}" />
+    <Folder Name="Power" Id="{6ad90f0c-2e61-418b-aeeb-5501ac650e15}" />
+    <Folder Name="Track" Id="{72a1ce14-cdbe-4ed5-b425-caf348424991}" />
+    <Folder Name="XPlanarUtility" Id="{2df32512-d70c-4321-8df1-ac6cf839314b}" />
+    <Method Name="AddToGroup" Id="{73ea1ac0-7bcc-4b60-8e2d-1355b58a060f}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD AddToGroup : HRESULT
+VAR_INPUT
+	iGroup : I_XP_Group;
+END_VAR
+
+]]></Declaration>
+    </Method>
+    <Property Name="CurrentTrack" Id="{69c62c7e-fb39-45b5-890b-317f4f8b20cb}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CurrentTrack : I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{72537a94-dd35-48db-bd13-306cc94464af}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Disable" Id="{2706c01e-8eb0-4c7c-b9b9-bc6026ccda5a}" FolderPath="Power\">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="DistToTrack" Id="{5cf89fed-3711-4b0d-8593-11510bed9c97}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD DistToTrack : LREAL
+VAR_INPUT
+	iTrack : I_XP_Track;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Enable" Id="{654d96e4-cc81-417e-8487-9607e549968c}" FolderPath="Power\">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Feedback" Id="{4b1f9a45-e49b-4af1-8aa6-8ecc374a291d}">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{e2f4d9e9-82f0-4cee-b9a0-9923ba2b4974}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Halt" Id="{046b42e8-6abb-4fe8-9265-1f8f3f2517a1}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD Halt : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="JoinTrack" Id="{31147787-1411-44ed-b2b6-87cbd46573b0}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD JoinTrack : HRESULT
+VAR_INPUT
+	iTrack : I_XP_Track;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="LastCmdTargedGap" Id="{a496c8f2-826a-4cba-93fc-b9675765056e}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
+      <Get Name="Get" Id="{c8f57789-8af3-4ab1-aa8e-508a9ec2bccc}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedPosition" Id="{dee0ea17-c5b1-4e7e-a97c-14c2f5d3d740}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedPosition : LREAL]]></Declaration>
+      <Get Name="Get" Id="{be0d85eb-e04f-4493-ac36-6ef9ba5c8a87}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedTrack" Id="{3feb4643-3533-4273-b62d-32158d27543a}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedTrack: I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{86b72d7f-e015-4ccb-8a1d-8cbad564148e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Mapped" Id="{29fba0cd-0241-4594-844a-64cae7f19898}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{e9c319e5-216e-440c-9fe6-3c8c426c4edc}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Mode" Id="{155121c8-381b-4cdd-941f-af7116491591}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mode : MC_PLANAR_MOVER_COMMAND_MODE]]></Declaration>
+      <Get Name="Get" Id="{6de44ca8-561f-4669-bf03-9d7ea70002e0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="MoveA" Id="{b042fe17-0ef5-4fe5-b650-42edf05ed986}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveA : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveB" Id="{9231b9e0-0775-4a13-aa5e-9179ea891e32}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveB : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveC" Id="{2f4f8a50-5619-46a2-8f8d-5e794fe60f10}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveC : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+	
+	(* Addition turns to move in modulo movement (positive or negative). *)
+	additionalTurns : UDINT := 0;
+	
+	(* Direction in which the target is approached. *)
+	direction : Tc3_Mc3Definitions.MC_DIRECTION := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionNonModulo;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveOnTrack" Id="{b8ed01ff-29a6-4dea-9a0a-82dda551f489}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD MoveOnTrack : HRESULT
+VAR_INPUT
+	ipTrack : I_XP_Track;
+	fPosition : LREAL;
+	fGap : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveOnTrack_ShortestWay" Id="{9ef653d3-fa0c-469f-9110-14a92b28a19e}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD MoveOnTrack_ShortestWay : HRESULT
+VAR_INPUT
+	ipTrack : I_XP_Track;
+	fPosition : LREAL;
+	fGap : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveOnTrackToStation" Id="{e699b82c-ab17-485f-b20a-ce8928efd71e}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD MoveOnTrackToStation : HRESULT
+VAR_INPUT
+	ipStation : I_XP_Station;
+	fGap : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveXY" Id="{20f1e13d-5751-45ab-9270-b581d1f529c5}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveXY : HRESULT
+VAR_INPUT
+	fPosition_X : LREAL;
+	fPosition_Y : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveZ" Id="{06fa6a41-a0d9-4513-85f2-620cccb1c48f}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveZ : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+
+]]></Declaration>
+    </Method>
+    <Property Name="OID" Id="{35394ce9-108d-478b-a7be-1635eb9da0ae}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY OID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{002f69cf-fb5b-41bc-aab5-c98b0b8b64b5}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ParentStation" Id="{a0cc072f-0eb1-4b5e-912c-3e2bc5d0354b}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ParentStation : I_XP_Station
+]]></Declaration>
+      <Get Name="Get" Id="{9d350ef0-d0d0-4de4-b849-2ebb50e862c9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{78b10601-2cc8-4447-941c-9745c3971f81}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="PlanarMover" Id="{88fe9e0a-0e89-478c-b5f7-e56e3553bd03}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarMover : REFERENCE TO MC_PlanarMover]]></Declaration>
+      <Get Name="Get" Id="{525df7f7-9f93-49d6-a3f7-0c2b71648e31}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{518cae7c-639f-4ece-a5ee-c588dfd0a161}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : Lreal]]></Declaration>
+      <Get Name="Get" Id="{c83c88c8-455b-4b56-a2c8-b018d056ed98}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="RemoveFromGroup" Id="{cee4b8eb-11b5-4f44-b08a-00c260e6ab44}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
+]]></Declaration>
+    </Method>
+    <Method Name="Reset" Id="{52916818-fd48-4af4-99c7-22ba17a3ed7c}" FolderPath="Power\">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="TargetStationGroupID" Id="{97d05437-e2dc-4493-893c-aaa23f5d0855}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargetStationGroupID : String]]></Declaration>
+      <Get Name="Get" Id="{26e06e6e-e8c2-43da-8d32-f6cc1563b105}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{e033f054-fad9-43c1-aff3-0a08f57a2cc8}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="TcIoXPlanarMover" Id="{1c57778a-8bd4-481d-8c71-cc34d720286e}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[PROPERTY TcIoXPlanarMover : Tc3_XPlanarUtility.I_TcIoXPlanarMover]]></Declaration>
+      <Get Name="Get" Id="{f5617ed4-9613-4bc1-a526-cb00742a4511}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="UtilityMover" Id="{3ecc98c5-7410-414c-991b-689c7c0933df}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityMover : Tc3_XPlanarUtility.I_McPlanarMover]]></Declaration>
+      <Get Name="Get" Id="{5c891266-a2d4-4f64-9af6-dd01fffb81e0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

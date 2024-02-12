@@ -1,0 +1,1452 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XP_Mover" Id="{ab327e23-c80a-4275-af5f-c83c5ee6f670}" SpecialFunc="None">
+    <Declaration><![CDATA[// The warning " Interface of overridden methode xxx of base I_xxx doesn't match declaration" can be disabled here. 
+{warning disable C0094 }
+{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+(* XPlanar mover - n per associated XPlanar. Can be instantiated as an array and/or individually
+	The Planar mover is a software object that represents an XPlanar mover. It summarizes the state of the real mover (position, velocity, etc.) 
+	for the user. In addition, the user has the possibility to influence or control the state of the real mover via the Planar mover. *)	
+FUNCTION_BLOCK FB_XP_Mover EXTENDS FB_CH_Object IMPLEMENTS I_XP_Mover, I_XP_Mover_PLC
+VAR
+	//Link to MC-Mover
+	fbMover : MC_PlanarMover;
+	
+	{attribute 'hide'}  
+	bInitDone :BOOL := FALSE;
+	{attribute 'hide'}               	
+	fbFeedback 			: FB_XP_Feedback;
+	{attribute 'hide'}                   	
+	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
+	{attribute 'hide'} 
+	fbUtilityMover : FB_McPlanarMover;
+	{attribute 'hide'}
+	iXpSystem : I_XP_System_Registration;
+	{attribute 'hide'} 
+	sTargedStation : STRING;
+	{attribute 'hide'} 
+	sCurrentStation : STRING;
+	{attribute 'hide'}
+	ipParentStation : I_XP_Station; //This is the station in which the Mover is currently standing or moving.	
+	{attribute 'hide'}
+	fLastCmdTargedPosition : LREAL; //the last commanded target position [mm]
+	{attribute 'hide'}	
+	fLastCmdTargedGap 	: LREAL; //the last commanded target gap
+	{attribute 'hide'}		
+	ipLastCmdTrack : I_XP_Track;
+	{attribute 'hide'}
+	ipProductData : I_XP_ProductData; //later the required interface of the tool or product can be queried via query interface
+END_VAR
+
+//External Setpoint Generator
+VAR
+	AxisSetpointX : FB_NcAxis;
+	AxisSetpointY : FB_NcAxis;
+	AxisSetpointZ : FB_NcAxis;
+	AxisSetpointA : FB_NcAxis;
+	AxisSetpointB : FB_NcAxis;
+	AxisSetpointC : FB_NcAxis;
+END_VAR
+
+
+//DynamicConstraint
+VAR
+	{attribute 'hide'} 
+	fbDynConstraintContainer 	: DynamicConstraint_Container;		//A container for dynamic constraints.
+	{attribute 'hide'} 
+	fbDynConstraintPath 		: DynamicConstraint_PathXY; 		//One dimensional dynamic constraint along the XY-components of a path, ignoring non-tangential effects.
+	{attribute 'hide'} 	
+	fbDynConstraintCoordinates	: DynamicConstraint_Coordinates;	//Dynamic constraints for individual coordinates.
+END_VAR
+
+
+// Planar-Feedback objects
+VAR
+	{attribute 'hide'} 
+	fbFeedbackMoveA : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackMoveB : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackMoveC : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackMoveXY : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackMoveZ : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackEnable : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackDisable : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackHalt : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackReset : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackAddToGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackRmvFromGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackJoinTrack : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackMoveOnTrack: MC_PlanarFeedback;	
+	{attribute 'hide'} 
+	fbFeedbackExtStart : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackExtStop : MC_PlanarFeedback;
+END_VAR
+{warning restore C0094}]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="DynamicConstraint" Id="{d445897a-09cb-4fda-a46e-ec867f4d3abd}" />
+    <Folder Name="ExternalSetpoint" Id="{a2bf1c81-8843-4280-a370-a856ca37652a}" />
+    <Folder Name="Group" Id="{15b18c0c-c114-42c6-81c4-6f4fec930060}" />
+    <Folder Name="Movement" Id="{71fc6c5f-a715-4757-9cea-ae0964b87573}" />
+    <Folder Name="Power" Id="{118cfbc8-9c5c-4824-939f-4f4d77b16207}" />
+    <Folder Name="Status" Id="{7c319981-3d18-43ce-a6fc-e8a539b271cb}" />
+    <Folder Name="Track" Id="{b9c51507-74e6-496d-bd54-4011234c577f}" />
+    <Folder Name="XPlanarUtility" Id="{6265d6cf-bf94-4db5-a67a-38e99f167093}" />
+    <Method Name="AddToGroup" Id="{b7083e45-de51-423f-af15-898bfcfa4c12}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD AddToGroup : HRESULT
+VAR_INPUT
+	iGroup : I_XP_Group;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	iGroup.AddMover(THIS^.fbMover, THIS^.fbFeedbackAddToGrp);
+	AddToGroup := S_OK;
+ELSE
+	AddToGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="AxisExtSetpointA" Id="{fc944251-594f-4761-9835-ceaabc6ab57a}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY  AxisExtSetpointA : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{65889034-8d62-4563-b552-b60ca4e44678}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisExtSetpointA := THIS^.AxisSetpointA;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointB" Id="{16cbcef0-5066-4820-a21b-738798c4f728}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointB : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{215c4ac7-6b8d-4dc7-8540-5055409c9467}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisExtSetpointB := THIS^.AxisSetpointB;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointC" Id="{2a314677-bf42-4814-b7ac-de0165d29bac}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointC : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{1c7b3025-08f7-45f5-a2c3-697a1b8882b1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisExtSetpointC := THIS^.AxisSetpointC;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointX" Id="{b19dc23d-5598-48bc-9b91-bc0fe132bd2f}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY  AxisExtSetpointX : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{8470c078-5765-4924-9750-c50ce59fbb6a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisExtSetpointX := THIS^.AxisSetpointX;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointY" Id="{e695c413-25e3-4988-9728-08b568281a89}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointY : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{b2fc17c0-db31-4c7f-8997-35b60b657b02}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisExtSetpointY := THIS^.AxisSetpointY;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointZ" Id="{639e3520-cd36-4fc2-8d78-1ebb959583f9}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointZ : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{467c598f-4c9e-404c-855a-9a750795db1e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AxisExtSetpointZ := THIS^.AxisSetpointZ;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="CommandMode" Id="{f7143276-b906-4e49-bda1-4004ee4ca8cc}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Indicates the command mode of an enabled PlanarMover, i.e. how setpoints are currently produced. *)
+PROPERTY CommandMode : MC_PLANAR_MOVER_COMMAND_MODE]]></Declaration>
+      <Get Name="Get" Id="{e3e26a33-5872-4c5d-8cbf-9d667220d9a1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CommandMode := THIS^.fbMover.MCTOPLC.STD.CommandMode;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="CurrentTrack" Id="{64a558ec-5550-4dfa-a4d4-01d74944ec8a}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CurrentTrack : I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{5d361579-61d9-4068-8f35-769aa0c95778}">
+        <Declaration><![CDATA[VAR
+	ipTrackObj : I_CH_Object;
+	ipTrack : I_XP_Track;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF iXpSystem <> 0 THEN
+	ipTrackObj := iXpSystem.Tracks.FindOID(THIS^.PlanarMover.MCTOPLC.SETONTRACK.TrackOID);
+	ToXpTrack(ipTrackObj,ipTrack);
+END_IF
+
+CurrentTrack := ipTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Disable" Id="{b8cb871a-a3c3-4b84-ac07-f23f90d00314}" FolderPath="Power\">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Disable;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbMover.Disable(THIS^.fbFeedbackDisable);
+Disable := S_OK;
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="DistToTrack" Id="{df1c51b6-4a3a-485b-b199-4d9e3147af19}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD DistToTrack : LREAL
+VAR_INPUT
+	iTrack : I_XP_Track;
+END_VAR
+VAR
+	fPositionOnTrack : LREAL;
+	trackPosition, moverPosition : PositionXYC;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[moverPosition.x := PositionSet.x;
+moverPosition.y := PositionSet.y;
+moverPosition.c := PositionSet.c;
+
+//Get Pos on track in mm
+fPositionOnTrack := iTrack.PlanarTrack.GetArcLengthClosestTo(geometry:=moverPosition);
+
+//Convert pos on track in XY
+iTrack.PlanarTrack.GetPositionAt(arcLength := fPositionOnTrack, position:=trackPosition);
+
+//Get distance to mover
+DistToTrack := SQRT(EXPT((trackPosition.x - moverPosition.x),2)+EXPT((trackPosition.y - moverPosition.y),2));	
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="DynConstraint" Id="{697abf3e-8902-4714-b92e-712b3abb529c}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[PROPERTY DynConstraint : REFERENCE TO DynamicConstraint_Container]]></Declaration>
+      <Get Name="Get" Id="{4d6e021c-1cf9-45fd-bcd1-89fc9b79e5ec}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[DynConstraint REF= THIS^.fbDynConstraintContainer;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Enable" Id="{6cc533e9-b130-4dda-9303-da74bf481acf}" FolderPath="Power\">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Enable;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+
+	THIS^.fbMover.Enable(fbFeedbackEnable);
+	Enable := S_OK;
+ELSE
+	Enable := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{21a8add4-c8d4-4076-ab40-e5faffdc25ae}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	
+	ipSystem : I_CH_Object;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
+	
+	
+	(* Register to the Xplanar System
+	   1. Test if the interface exists
+	   2. Test if the object implements a "System for Mover" interface 
+	*)
+	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.iXpSystem) THEN
+		THIS^.iXpSystem.RegisterMover(THIS^);
+	END_IF
+
+END_IF
+
+bFBInitCalledOnce := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Feedback" Id="{5ec6e350-9706-452f-beac-38fa18f64b32}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{8883467e-e104-4f54-9601-4bfc49c0d708}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Feedback := THIS^.fbFeedback;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Halt" Id="{4d9969b0-eb07-4339-86a6-2d2b9d71a0ef}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD Halt : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Halt;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbMover.Halt(	commandFeedback := THIS^.fbFeedbackHalt, 
+					constraint 		:= THIS^.fbDynConstraintContainer 
+				   );
+
+Halt := S_OK;
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Initialize" Id="{1afc7bf5-00ad-4187-ac31-771ca8ca47fe}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+
+VAR
+	bWaitForAxisInit : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.Mapped THEN
+	//Error
+	Initialize := E_FAIL;
+	
+	
+ELSIF NOT bInitDone THEN
+	//Busy
+	Initialize := S_PENDING;
+	
+	//Set all move dynamic constraint to the axis default value.
+	THIS^.SetDynConstraint_X(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
+	THIS^.SetDynConstraint_Y(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);	
+	THIS^.SetDynConstraint_Z(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);	
+	THIS^.SetDynConstraint_A(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);	
+	THIS^.SetDynConstraint_B(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
+	THIS^.SetDynConstraint_C(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
+	THIS^.SetDynConstraint_Path(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
+
+	//Ignor link missing error. Only wait in Pending
+	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointX.Initialize());
+	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointY.Initialize());
+	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointZ.Initialize());
+	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointA.Initialize());
+	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointB.Initialize());
+	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointC.Initialize());
+	
+	bInitDone := NOT bWaitForAxisInit;	
+ELSE	
+	//Done
+	Initialize := S_OK;	
+END_IF
+
+
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
+THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
+//Set done or keep in busy state	
+THIS^.fbFeedback.HR := Initialize;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="JoinTrack" Id="{01c81af4-4f47-42d8-8d45-d28138d10e79}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD JoinTrack : HRESULT
+VAR_INPUT
+	iTrack : I_XP_Track;
+END_VAR
+VAR
+	joinTrackOptions : ST_JoinTrackOptions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF iTrack <> 0 THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.JoinTrack;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+
+	joinTrackOptions.useOrientation := FALSE;	
+	THIS^.fbMover.JoinTrack(commandFeedback	:= THIS^.fbFeedbackJoinTrack, 
+								targetTrack	:= iTrack.PlanarTrack, 
+								constraint	:= THIS^.fbDynConstraintContainer,
+								options		:= joinTrackOptions);								
+	JoinTrack := S_OK;
+ELSE
+	JoinTrack := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="LagDistanceXY" Id="{fcf48610-378f-4081-835f-ac8255e20692}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Retruns lentgh of hypotenuse of the x and y error. (>=0[mm]) *)
+PROPERTY LagDistanceXY : LREAL 
+]]></Declaration>
+      <Get Name="Get" Id="{e2520c51-1749-41b4-ae6b-97b024a8cfc5}">
+        <Declaration><![CDATA[VAR
+	fErrorX, fErrorY : LREAL;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// Set - Act
+fErrorX := THIS^.fbMover.MCTOPLC.SET.SetPos.X - THIS^.fbMover.MCTOPLC.ACT.ActPos.X;
+fErrorY := THIS^.fbMover.MCTOPLC.SET.SetPos.Y - THIS^.fbMover.MCTOPLC.ACT.ActPos.Y;
+
+
+//Dist to center. Phytagoras -> c = sqrt( A^2 + B^2)
+LagDistanceXY := SQRT(EXPT(fErrorX,2) + EXPT(fErrorY,2));
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedGap" Id="{ca47efdf-1e96-4e64-b8e6-43f733c3da42}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
+      <Get Name="Get" Id="{fbbf4cb3-58d2-4862-af4b-6981a711799e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastCmdTargedGap := fLastCmdTargedGap;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedPosition" Id="{6482a76a-6491-4c21-89ec-7fa30453a7d3}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedPosition : LREAL]]></Declaration>
+      <Get Name="Get" Id="{8ec5f96b-7922-4cd0-b523-21fd282e52d5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastCmdTargedPosition := fLastCmdTargedPosition;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedTrack" Id="{4a89196f-6c6d-425e-991b-80e0f510161a}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedTrack: I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{474e9fbb-3f66-4e12-bb99-199d288e7964}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastCmdTargedTrack := ipLastCmdTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Mapped" Id="{dcb60397-9711-4709-befc-4d0421e5330c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{5ccf050e-f19f-4d36-8ab0-244c8a390056}">
+        <Declaration><![CDATA[VAR
+	bMcToPlcNotMapped 	: BOOL;
+	bPlcToMcNotMapped 	: BOOL;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//F_GetMappingStatus is not working on IO Data Pointer
+	//bPlcToMcNotMapped := F_GetMappingStatus(ADR(THIS^.fbMover.PlcToMc), SIZEOF(THIS^.fbMover.PlcToMc)) <> EPlcMappingStatus.MS_Mapped;
+	//bMcToPlcNotMapped := F_GetMappingStatus(ADR(THIS^.fbMover.McToPlc), SIZEOF(THIS^.fbMover.McToPlc)) <> EPlcMappingStatus.MS_Mapped;
+
+	
+Mapped := THIS^.fbMover.MCTOPLC.STD.MoverOID <> 0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Mode" Id="{caa3da53-3a25-4b03-9028-732dc39426fa}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mode : MC_PLANAR_MOVER_COMMAND_MODE]]></Declaration>
+      <Get Name="Get" Id="{bf2d901a-fe14-42df-b4ab-181d74468c10}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Mode := THIS^.fbMover.MCTOPLC.STD.CommandMode;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="MoveA" Id="{a5f4d8aa-5be8-48e7-b2a8-67dcf29ce4aa}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveA : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveA;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbMover.MoveA(commandFeedback	:= THIS^.fbFeedbackMoveA, 
+					targetPosition	:= fPosition, 
+					constraint		:= THIS^.fbDynConstraintContainer
+					);
+
+MoveA := S_OK;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveB" Id="{bc2d3440-6541-47d1-a277-4ebeccb28445}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveB : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveB;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbMover.MoveB(commandFeedback	:= THIS^.fbFeedbackMoveB, 
+					targetPosition	:= fPosition, 
+					constraint		:= THIS^.fbDynConstraintContainer
+					);
+
+MoveB := S_OK;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveC" Id="{16252da5-1d7c-45c2-87ec-a378debf7dca}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveC : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+	
+	(* Addition turns to move in modulo movement (positive or negative). *)
+	additionalTurns : UDINT := 0;
+	
+	(* Direction in which the target is approached. *)
+	direction : Tc3_Mc3Definitions.MC_DIRECTION := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionNonModulo;
+END_VAR
+VAR
+	stMoveCOptions : ST_MoveCOptions;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveC;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+
+stMoveCOptions.additionalTurns := additionalTurns;
+stMoveCOptions.direction := direction;
+
+
+THIS^.fbMover.MoveC(commandFeedback	:= THIS^.fbFeedbackMoveC, 
+					targetPosition	:= fPosition, 
+					constraint		:= THIS^.fbDynConstraintContainer, 
+					options			:= stMoveCOptions
+					);
+
+MoveC := S_OK;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveOnTrack" Id="{adfbf623-ad3d-4634-a0ef-a7968978cb31}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD MoveOnTrack : HRESULT
+VAR_INPUT
+	ipTrack : I_XP_Track;
+	fPosition : LREAL;
+	fGap : LREAL;
+END_VAR
+
+VAR
+	moveOptions: ST_MoveOnTrackOptions;
+	//fMoverDiagonal : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[moveOptions.direction := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionPositive;
+moveOptions.additionalTurns := 0;
+
+//Use fix gap if requested gap is to small
+moveOptions.gap := MAX(fGap, XPlanarParameterlist.F_MOVER_MINIMUM_GAP_ON_TRACK);
+
+IF ipTrack <> 0 THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveOnTrack;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+
+	THIS^.fbMover.MoveOnTrack(
+		commandFeedback			:= THIS^.fbFeedbackMoveOnTrack,
+		targetTrack				:= ipTrack.PlanarTrack, 
+		targetPositionOnTrack	:= fPosition, 
+		constraint				:= THIS^.fbDynConstraintPath, 
+		options					:= moveOptions);
+	
+	//Store the values
+	fLastCmdTargedPosition 	:= fPosition; //the last commanded target position [mm]
+	fLastCmdTargedGap 		:= moveOptions.gap; //the last commanded target gap
+	ipLastCmdTrack		 	:= ipTrack; //the last commanded target track	
+	
+	
+	MoveOnTrack := S_OK;
+ELSE
+	MoveOnTrack := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveOnTrack_ShortestWay" Id="{afa896ac-c697-48d6-a29f-92f3cf71b66b}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD MoveOnTrack_ShortestWay : HRESULT
+VAR_INPUT
+	ipTrack : I_XP_Track;
+	fPosition : LREAL;
+	fGap : LREAL;
+END_VAR
+
+VAR
+	moveOptions: ST_MoveOnTrackOptions;
+	//fMoverDiagonal : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[moveOptions.direction := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionShortestWay;
+moveOptions.additionalTurns := 0;
+
+//Use fix gap if requested gap is to small
+moveOptions.gap := MAX(fGap, XPlanarParameterlist.F_MOVER_MINIMUM_GAP_ON_TRACK);
+
+
+IF ipTrack <> 0 THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveOnTrack;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	THIS^.fbMover.MoveOnTrack(
+		commandFeedback			:= THIS^.fbFeedbackMoveOnTrack,
+		targetTrack				:= ipTrack.PlanarTrack, 
+		targetPositionOnTrack	:= fPosition, 
+		constraint				:= THIS^.fbDynConstraintPath, 
+		options					:= moveOptions);
+				
+	fLastCmdTargedPosition 	:= fPosition; //the last commanded target position [mm]
+	fLastCmdTargedGap 		:= moveOptions.gap; //the last commanded target gap
+	ipLastCmdTrack		 	:= ipTrack; //the last commanded target track	
+		
+	MoveOnTrack_ShortestWay := S_OK;
+ELSE
+	MoveOnTrack_ShortestWay := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveOnTrackToStation" Id="{d6eeb16a-1b2f-4acf-8273-82244551a1e3}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD MoveOnTrackToStation : HRESULT
+VAR_INPUT
+	ipStation : I_XP_Station;
+	fGap : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ipStation <> 0 AND_THEN ipStation.AccocietedTrack <> 0 THEN
+
+	MoveOnTrackToStation := MoveOnTrack(ipTrack:= ipStation.AccocietedTrack, 
+										fPosition:= ipStation.PositionOnTrack, 
+										fGap:= fGap);
+ELSE
+	MoveOnTrackToStation := E_FAIL;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveXY" Id="{b4ad76d6-6055-4cdd-b12e-43b97b8b8ec6}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveXY : HRESULT
+VAR_INPUT
+	fPosition_X : LREAL;
+	fPosition_Y : LREAL;
+END_VAR
+VAR
+	fbTargetPosition 	: PositionXYC;
+	stMoveOptions 		: ST_MoveToPositionOptions;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveXY;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+
+
+fbTargetPosition.SetValuesXY(x := fPosition_X, y := fPosition_Y);
+
+stMoveOptions.useOrientation := FALSE;
+
+THIS^.fbMover.MoveToPosition(	commandFeedback	:= THIS^.fbFeedbackMoveXY, 
+								targetPosition	:= fbTargetPosition,
+								constraint		:= THIS^.fbDynConstraintContainer, 
+								options			:= stMoveOptions);
+
+MoveXY := S_OK;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveZ" Id="{9f0e7f33-dcf7-4035-82ba-ccff9e3df6b3}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveZ : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveZ;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+
+THIS^.fbMover.MoveZ(commandFeedback	:= THIS^.fbFeedbackMoveZ, 
+					targetPosition	:= fPosition, 
+					constraint		:= THIS^.fbDynConstraintContainer
+					);
+
+MoveZ := S_OK;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="OID" Id="{0abeb532-afdc-4dc2-9ab6-0807e7d91aa1}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY OID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{599206fd-ce8e-4e24-8135-4fd698fd4855}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[OID := THIS^.fbMover.MCTOPLC.STD.MoverOID;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ParentStation" Id="{d9fe781b-0162-464e-80ee-068bdadaaf97}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ParentStation : I_XP_Station
+]]></Declaration>
+      <Get Name="Get" Id="{11f40b20-0e02-418d-9959-a2eb7cec4d0d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ParentStation := ipParentStation;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{0ef48bce-75a9-45f9-a19f-0ecb454be508}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ipParentStation := ParentStation;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="PlanarMover" Id="{9ab2774b-0de5-4639-aebd-b4fa0b2af3a1}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarMover : REFERENCE TO MC_PlanarMover]]></Declaration>
+      <Get Name="Get" Id="{57faf404-2cc0-4ca0-a853-1d3ac688b597}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PlanarMover ref= THIS^.fbMover;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PositionAct" Id="{384f3b6f-aeb2-44fd-ba87-4a2d1688cf55}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Contains the information of the Planar Mover passed from MC to PLC. XYZABC [mm] *)
+PROPERTY PositionAct : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{c5fb2017-f63e-4e5e-bf3c-d6d5c0e1ae48}">
+        <Declaration><![CDATA[VAR_INST
+	{attribute 'hide'}
+	copyOfActPosition :  MoverVector;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
+copyOfActPosition := THIS^.fbMover.MCTOPLC.ACT.ActPos;
+PositionAct REF= copyOfActPosition;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{4a0153f5-97b4-4376-baf2-04d64afb83b5}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{06559a55-124b-46e7-b48f-ab959cd8f5a1}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PositionOnTrack := THIS^.fbMover.MCTOPLC.SETONTRACK.SetPos;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PositionSet" Id="{ba1334d9-7a50-49e6-980d-a4811196b2e6}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the current planar mover setpoint XYZABC [mm] *)
+PROPERTY PositionSet : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{443bc0d2-54d2-481e-8023-c27bddd711ad}">
+        <Declaration><![CDATA[VAR_INST
+	{attribute 'hide'}
+	copyOfSetPosition :  MoverVector;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
+copyOfSetPosition := THIS^.fbMover.MCTOPLC.SET.SetPos;
+PositionSet REF= copyOfSetPosition;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ProductData" Id="{fca2bcf7-b4de-439b-aac0-63af2ca5a335}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PUBLIC ProductData : I_XP_ProductData]]></Declaration>
+      <Get Name="Get" Id="{f1a5a648-1e72-439f-867d-1fe8abbd1615}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ProductData := ipProductData;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{eddec3e2-9e9a-4c44-93fd-db88e177fd9c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// No change. Same interface is set again
+IF ipProductData = ProductData THEN
+	;//Noting
+	
+ELSE
+
+	// If allready an interface is linked. Unlink
+	IF ipProductData <> 0 THEN
+		ipProductData.LinkToMover(0);
+		ipProductData := 0;
+	END_IF
+	
+	// Link and store new interface
+	IF ProductData <> 0 THEN
+		ProductData.LinkToMover(THIS^);
+		ipProductData := ProductData;
+	END_IF
+END_IF
+]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="RemoveFromGroup" Id="{98f88a01-188a-4f7e-9d14-88c771b60702}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
+
+VAR
+	iGroup: INT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.RemoveFromGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	THIS^.fbMover.RemoveFromGroup(THIS^.fbFeedbackRmvFromGrp);
+	
+	RemoveFromGroup := S_OK;
+ELSE
+	RemoveFromGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Reset" Id="{c8def4ef-0dd7-4936-ac99-b601ff6334d8}" FolderPath="Power\">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Reset;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbMover.Reset(THIS^.fbFeedbackReset);
+Reset := S_OK;
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDynConstraint_A" Id="{258e8b01-9716-4568-9659-e1dc2f970166}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_A : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbDynConstraintCoordinates.SetLimit(	Coordinate := Coord_Mcs_A1, 
+											V := V, 
+											A := A, 
+											D := D, 
+											J := J);
+											
+//Changes to the origin constraint do not affect the copy of the constraint in the instance of the DynamicConstraint_Container.
+//For this reason, the container is being refreshed here							
+fbDynConstraintContainer.Clear();
+fbDynConstraintContainer.AddConstraint(fbDynConstraintPath);
+fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDynConstraint_B" Id="{147c23e1-aaca-4dc9-8299-af07290b454e}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_B : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbDynConstraintCoordinates.SetLimit(	Coordinate := Coord_Mcs_B1, 
+											V := V, 
+											A := A, 
+											D := D, 
+											J := J);											
+
+//Changes to the origin constraint do not affect the copy of the constraint in the instance of the DynamicConstraint_Container.
+//For this reason, the container is being refreshed here							
+fbDynConstraintContainer.Clear();
+fbDynConstraintContainer.AddConstraint(fbDynConstraintPath);
+fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDynConstraint_C" Id="{e293519e-04ca-495a-ae35-acc5845f3f05}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_C : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbDynConstraintCoordinates.SetLimit(	Coordinate := Coord_Mcs_C1, 
+											V := V, 
+											A := A, 
+											D := D, 
+											J := J);											
+
+//Changes to the origin constraint do not affect the copy of the constraint in the instance of the DynamicConstraint_Container.
+//For this reason, the container is being refreshed here							
+fbDynConstraintContainer.Clear();
+fbDynConstraintContainer.AddConstraint(fbDynConstraintPath);
+fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDynConstraint_Path" Id="{2d8fba68-553d-426e-9766-a0ba4279103b}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_Path : BOOL //One dimensional dynamic constraint along the XY-components of a path, ignoring non-tangential effects.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbDynConstraintPath.SetValuesVADJ(V := V, 
+										A := A, 
+										D := D, 
+										J := J);											
+
+//Changes to the origin constraint do not affect the copy of the constraint in the instance of the DynamicConstraint_Container.
+//For this reason, the container is being refreshed here							
+fbDynConstraintContainer.Clear();
+fbDynConstraintContainer.AddConstraint(fbDynConstraintPath);
+fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDynConstraint_X" Id="{427b41aa-b67d-4b25-99cf-dcd6b6e12269}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_X : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbDynConstraintCoordinates.SetLimit(	Coordinate := Coord_Mcs_X, 
+											V := V, 
+											A := A, 
+											D := D, 
+											J := J);											
+
+//Changes to the origin constraint do not affect the copy of the constraint in the instance of the DynamicConstraint_Container.
+//For this reason, the container is being refreshed here							
+fbDynConstraintContainer.Clear();
+fbDynConstraintContainer.AddConstraint(fbDynConstraintPath);
+fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDynConstraint_Y" Id="{bd3c1d00-af64-45d0-a1d8-ae8483cb4e94}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_Y : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbDynConstraintCoordinates.SetLimit(	Coordinate := Coord_Mcs_Y, 
+											V := V, 
+											A := A, 
+											D := D, 
+											J := J);											
+
+//Changes to the origin constraint do not affect the copy of the constraint in the instance of the DynamicConstraint_Container.
+//For this reason, the container is being refreshed here							
+fbDynConstraintContainer.Clear();
+fbDynConstraintContainer.AddConstraint(fbDynConstraintPath);
+fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDynConstraint_Z" Id="{0fe5ae40-476d-4ab9-ab87-925a572ad011}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_Z : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbDynConstraintCoordinates.SetLimit(	Coordinate := Coord_Mcs_Z, 
+											V := MC_DEFAULT, 
+											A := A, 
+											D := D, 
+											J := J);											
+
+//Changes to the origin constraint do not affect the copy of the constraint in the instance of the DynamicConstraint_Container.
+//For this reason, the container is being refreshed here							
+fbDynConstraintContainer.Clear();
+fbDynConstraintContainer.AddConstraint(fbDynConstraintPath);
+fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="StartExternalSetpoint" Id="{4f4a938c-622d-47f0-8bbe-7f1aa75cb8f5}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[METHOD StartExternalSetpoint : HRESULT
+VAR
+	startOptions : ST_ExternalSetpointGenerationOptions;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF THIS^.fbMover.Error THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Error active/not ready
+
+// Check, that all axis standing on 0.0
+ELSIF (AxisSetpointX.SetPosition <> 0.0 OR AxisSetpointY.SetPosition <> 0.0  OR AxisSetpointZ.SetPosition <> 0.0  OR AxisSetpointA.SetPosition <> 0.0  OR AxisSetpointB.SetPosition <> 0.0  OR AxisSetpointC.SetPosition <> 0.0) THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Error, to prevent the mover from making a jump in relative mode, each axis should be set to position 0 		
+	
+ELSIF (AxisSetpointX.Mapped AND AxisSetpointX.Error) OR
+		(AxisSetpointY.Mapped AND AxisSetpointY.Error) OR
+		(AxisSetpointZ.Mapped AND AxisSetpointZ.Error) OR
+		(AxisSetpointA.Mapped AND AxisSetpointA.Error) OR
+		(AxisSetpointB.Mapped AND AxisSetpointB.Error) OR
+		(AxisSetpointC.Mapped AND AxisSetpointC.Error) THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Axis Error active
+	
+ELSE
+
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.StartExternalSetpoint;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	AxisSetpointX.PowerOn();
+	AxisSetpointY.PowerOn();
+	AxisSetpointZ.PowerOn();
+	AxisSetpointA.PowerOn();
+	AxisSetpointB.PowerOn();
+	AxisSetpointC.PowerOn();
+
+	startOptions.mode := MC_EXTERNAL_SET_POSITION_MODE.Relative;
+	THIS^.fbMover.StartExternalSetpointGeneration(THIS^.fbFeedbackExtStart,startOptions);
+	
+	StartExternalSetpoint := S_OK;	
+END_IF
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="StopExternalSetpoint" Id="{afa5ab34-a1f6-437c-aae3-df93db1b7b7f}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[METHOD StopExternalSetpoint : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AxisSetpointX.PowerOff();
+AxisSetpointY.PowerOff();
+AxisSetpointZ.PowerOff();
+AxisSetpointA.PowerOff();
+AxisSetpointB.PowerOff();
+AxisSetpointC.PowerOff();
+
+
+THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.StopExternalSetpoint;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbMover.StopExternalSetpointGeneration(THIS^.fbFeedbackExtStop);
+StopExternalSetpoint := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TargetStationGroupID" Id="{126f0d16-a041-46ed-a396-2cbc60d632b5}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargetStationGroupID : STRING]]></Declaration>
+      <Get Name="Get" Id="{f47b6c12-409e-4a37-bc20-97294fcfcafe}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TargetStationGroupID := THIS^.sTargedStation;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{e2830ca2-bb79-47b3-8db1-40364793a2cf}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.sTargedStation := TargetStationGroupID;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="TcIoXPlanarMover" Id="{8b11592d-c5fc-49f9-8ea2-4c230e1380b3}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TcIoXPlanarMover : Tc3_XPlanarUtility.I_TcIoXPlanarMover]]></Declaration>
+      <Get Name="Get" Id="{94982195-fa79-480b-85bc-04315239c2d2}">
+        <Declaration><![CDATA[VAR
+	nLoopIndex : UINT;
+	ipPlanarMover : I_TcIoXPlanarMover;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FOR nLoopIndex := 1 TO UDINT_TO_UINT(Param_TcIoXPlanarEnvironment.MaxXPlanarMoversPerXpu) DO
+	ipPlanarMover := iXpSystem.Enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
+	IF ipPlanarMover <> 0 AND_THEN ipPlanarMover.GetNcMoverOid() = OID THEN
+		TcIoXPlanarMover := iXpSystem.enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
+		RETURN;
+	END_IF
+END_FOR]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Update" Id="{392ff8f6-dff3-42fc-aff2-06120a04576e}">
+      <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+// ********************** Set feedback depending on active command *******************************
+IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
+	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+END_IF
+
+CASE THIS^.eActiveCommand OF
+	E_NcAxisCommands.None: 
+		//Display if a Mover Error is active during no command is active
+		IF THIS^.fbMover.Error AND NOT fbFeedback.Error THEN 
+			IF THIS^.fbMover.ErrorId <> 1810(*ignore ADSERR_DEVICE_INVALIDSTATE*) THEN
+				fbFeedback.ErrorId 			:= THIS^.fbMover.ErrorID;
+				fbFeedback.ActiveCommand 	:= TO_STRING(E_NcAxisCommands.None);	
+				fbFeedback.ClearObjectInfo();
+			END_IF
+		END_IF
+
+	E_NcAxisCommands.Initialize:
+		fbFeedback.Busy 			:= NOT THIS^.bInitDone;
+		fbFeedback.Done 			:= THIS^.bInitDone;
+		fbFeedback.ErrorId 			:= 0;
+		fbFeedback.ClearObjectInfo();
+		                        	
+	E_NcAxisCommands.MoveA:     	
+		fbFeedback.Busy 			:= fbFeedbackMoveA.Busy;
+		fbFeedback.Done 			:= fbFeedbackMoveA.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackMoveA.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackMoveA.objectInfo;
+                                	
+	E_NcAxisCommands.MoveB:     	
+		fbFeedback.Busy 			:= fbFeedbackMoveB.Busy;
+		fbFeedback.Done 			:= fbFeedbackMoveB.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackMoveB.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackMoveB.objectInfo;
+                                	
+	E_NcAxisCommands.MoveC:     	
+		fbFeedback.Busy 			:= fbFeedbackMoveC.Busy;
+		fbFeedback.Done 			:= fbFeedbackMoveC.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackMoveC.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackMoveC.objectInfo;
+                                	
+	E_NcAxisCommands.MoveXY:    	
+		fbFeedback.Busy 			:= fbFeedbackMoveXY.Busy;
+		fbFeedback.Done 			:= fbFeedbackMoveXY.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackMoveXY.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackMoveXY.objectInfo;
+                                	
+	E_NcAxisCommands.MoveZ:     	
+		fbFeedback.Busy 			:= fbFeedbackMoveZ.Busy;
+		fbFeedback.Done 			:= fbFeedbackMoveZ.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackMoveZ.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackMoveZ.objectInfo;
+                                	
+	E_NcAxisCommands.Enable:    	
+		fbFeedback.Busy 			:= fbFeedbackEnable.Busy;
+		fbFeedback.Done 			:= fbFeedbackEnable.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackEnable.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackEnable.objectInfo;
+                                	
+	E_NcAxisCommands.Disable:   	
+		fbFeedback.Busy 			:= fbFeedbackDisable.Busy;
+		fbFeedback.Done 			:= fbFeedbackDisable.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackDisable.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackDisable.objectInfo;
+                                	
+	E_NcAxisCommands.Reset:     	
+		fbFeedback.Busy 			:= fbFeedbackReset.Busy;
+		fbFeedback.Done 			:= fbFeedbackReset.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackReset.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackReset.objectInfo;
+                                	
+	E_NcAxisCommands.Halt:      	
+		fbFeedback.Busy 			:= fbFeedbackHalt.Busy;
+		fbFeedback.Done 			:= fbFeedbackHalt.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackHalt.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackHalt.objectInfo;
+
+	E_NcAxisCommands.AddToGroupe:
+		fbFeedback.Busy 			:= fbFeedbackAddToGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackAddToGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackAddToGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackAddToGrp.objectInfo;
+
+	E_NcAxisCommands.RemoveFromGroupe:
+		fbFeedback.Busy 			:= fbFeedbackRmvFromGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackRmvFromGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackRmvFromGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackRmvFromGrp.objectInfo;
+		
+	E_NcAxisCommands.JoinTrack:
+		fbFeedback.Busy 			:= fbFeedbackJoinTrack.Busy;
+		fbFeedback.Done 			:= fbFeedbackJoinTrack.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackJoinTrack.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackJoinTrack.objectInfo;
+		
+	E_NcAxisCommands.MoveOnTrack:
+		fbFeedback.Busy 			:= fbFeedbackMoveOnTrack.Busy;
+		fbFeedback.Done 			:= fbFeedbackMoveOnTrack.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackMoveOnTrack.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackMoveOnTrack.objectInfo;
+		
+	
+	//Add the 6 axis to the feedback			
+	E_NcAxisCommands.StartExternalSetpoint:
+ 		fbFeedback.Busy 		:= fbFeedbackExtStart.Busy;
+		fbFeedback.Done 		:= fbFeedbackExtStart.Done;
+		fbFeedback.ErrorId 		:= fbFeedbackExtStart.ErrorID;
+		fbFeedback.ClearObjectInfo();
+		IF AxisSetpointX.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointX.Feedback.HR);END_IF
+		IF AxisSetpointY.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointY.Feedback.HR);END_IF
+		IF AxisSetpointZ.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointZ.Feedback.HR);END_IF
+		IF AxisSetpointA.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointA.Feedback.HR);END_IF
+		IF AxisSetpointB.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointB.Feedback.HR);END_IF
+		IF AxisSetpointC.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointC.Feedback.HR);END_IF
+		
+	//Add the 6 axis to the feedback	
+	E_NcAxisCommands.StopExternalSetpoint:
+		fbFeedback.Busy 		:= fbFeedbackExtStop.Busy;
+		fbFeedback.Done 		:= fbFeedbackExtStop.Done;
+		fbFeedback.ErrorId 		:= fbFeedbackExtStop.ErrorID;
+		fbFeedback.ClearObjectInfo(); 
+		IF AxisSetpointX.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointX.Feedback.HR);END_IF
+		IF AxisSetpointY.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointY.Feedback.HR);END_IF
+		IF AxisSetpointZ.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointZ.Feedback.HR);END_IF
+		IF AxisSetpointA.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointA.Feedback.HR);END_IF
+		IF AxisSetpointB.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointB.Feedback.HR);END_IF
+		IF AxisSetpointC.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointC.Feedback.HR);END_IF
+		
+		
+	ELSE//External command in subclass
+		;
+END_CASE
+
+
+// **********************  Stop to execute commands on .done or .error ***************************
+IF fbFeedback.Done OR THIS^.fbFeedback.Error THEN
+	eActiveCommand 				:= E_NcAxisCommands.None;
+END_IF
+
+//Update xplanar object
+THIS^.fbMover.Update();
+THIS^.UpdateExternalSetpoint();
+
+
+//Update feedback object
+fbFeedbackExtStart.Update(); 
+fbFeedbackExtStop.Update(); 
+fbFeedbackMoveA.Update(); 
+fbFeedbackMoveB.Update(); 
+fbFeedbackMoveC.Update(); 
+fbFeedbackMoveXY.Update(); 
+fbFeedbackMoveZ.Update(); 
+fbFeedbackEnable.Update(); 
+fbFeedbackDisable.Update(); 
+fbFeedbackReset.Update(); 
+fbFeedbackAddToGrp.Update(); 
+fbFeedbackRmvFromGrp.Update(); 
+fbFeedbackHalt.Update(); 
+fbFeedbackJoinTrack.Update(); 
+fbFeedbackMoveOnTrack.Update();
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UpdateExternalSetpoint" Id="{d324887b-a4fd-42e1-ab24-f67baaf90acf}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[METHOD PROTECTED UpdateExternalSetpoint : HRESULT
+VAR_INPUT
+END_VAR
+VAR
+	SetPos, SetVelo, SetAcc : MoverVector;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[SetPos.X := AxisSetpointX.SetPosition;
+SetPos.Y := AxisSetpointY.SetPosition;
+SetPos.Z := AxisSetpointZ.SetPosition;
+SetPos.A := AxisSetpointA.SetPosition;
+SetPos.B := AxisSetpointB.SetPosition;
+SetPos.C := AxisSetpointC.SetPosition;
+
+SetVelo.X := AxisSetpointX.SetVelocity;
+SetVelo.Y := AxisSetpointY.SetVelocity;
+SetVelo.Z := AxisSetpointZ.SetVelocity;
+SetVelo.A := AxisSetpointA.SetVelocity;
+SetVelo.B := AxisSetpointB.SetVelocity;
+SetVelo.C := AxisSetpointC.SetVelocity;
+
+SetAcc.X := AxisSetpointX.Setacceleration;
+SetAcc.Y := AxisSetpointY.Setacceleration;
+SetAcc.Z := AxisSetpointZ.Setacceleration;
+SetAcc.A := AxisSetpointA.Setacceleration;
+SetAcc.B := AxisSetpointB.Setacceleration;
+SetAcc.C := AxisSetpointC.Setacceleration;
+
+THIS^.fbMover.SetExternalSetpoint(	setPosition 		:= SetPos, 
+									setVelocity 		:= SetVelo,
+									setAcceleration 	:= SetAcc);
+
+AxisSetpointX.Update();
+AxisSetpointY.Update();
+AxisSetpointZ.Update();
+AxisSetpointA.Update();
+AxisSetpointB.Update();
+AxisSetpointC.Update();]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="UtilityMover" Id="{cab4f1ac-f949-4b0f-9abb-2fd50f7eddd0}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityMover : Tc3_XPlanarUtility.I_McPlanarMover]]></Declaration>
+      <Get Name="Get" Id="{43cd8752-c959-4b42-b896-ad915e653b55}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[UtilityMover := THIS^.fbUtilityMover;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>
