@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<TcModuleClass>
+	<DataTypes>
+		<DataType>
+			<Name GUID="{C4DB23B4-621C-426F-92C8-56D934368BF7}">CHALET_XPlanar_Events</Name>
+			<DisplayName TxtId=""><![CDATA[CHALET_XPlanar]]></DisplayName>
+			<EventId>
+				<Name Id="1">VariableLinkMissing</Name>
+				<DisplayName TxtId=""><![CDATA[The following variable is not linked: {0}]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="2">TimeOutEnabling</Name>
+				<DisplayName TxtId=""><![CDATA[Timeout on system enabling step {0}]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="3">ErrorEnabling</Name>
+				<DisplayName TxtId=""><![CDATA[Error on system enabling step {0}]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<Hides>
+				<Hide GUID="{71D0B18E-9F4C-4470-A72E-03F37AF2D65C}"/>
+				<Hide GUID="{EAFA496A-E6D8-4C28-9E01-2EBDF8092020}"/>
+				<Hide GUID="{BBA3FF90-68CF-4D0E-8489-1E3A7C775B72}"/>
+				<Hide GUID="{639F5649-EDBE-425F-B2A7-CDA6E60711A6}"/>
+			</Hides>
+		</DataType>
+		<DataType>
+			<Name GUID="{42AFA347-FCEA-4A90-B20E-A075C64D2AF0}">CHALET_XTS_Events</Name>
+			<DisplayName TxtId=""><![CDATA[CHALET_XTS]]></DisplayName>
+			<EventId>
+				<Name Id="1">EtherCatSlaveNotInOpMode</Name>
+				<DisplayName TxtId=""><![CDATA[EtherCat slave controller is not in OP-Mode. State: {0}]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="2">NoCommunication</Name>
+				<DisplayName TxtId=""><![CDATA[Connection to device not established]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="3">DublicateStationNames</Name>
+				<DisplayName TxtId=""><![CDATA[Duplicate station name {0}]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="4">DublicateStationPositions</Name>
+				<DisplayName TxtId=""><![CDATA[Duplicate station positions. Station {0} and {1}]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="5">ErrorFBinit</Name>
+				<DisplayName TxtId=""><![CDATA[Fatal error in FB_Init. Invalid parameters]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="6">InitializationInvalideParameter</Name>
+				<DisplayName TxtId=""><![CDATA[Initialization not possible. Invalid parameters]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="7">StationPositionLargerAsTrack</Name>
+				<DisplayName TxtId=""><![CDATA[Station position on track is lager than CA-Group Track length]]></DisplayName>
+				<Severity>Error</Severity>
+			</EventId>
+			<Hides>
+				<Hide GUID="{68C7D88F-954A-479B-8DC4-7E75A88C134D}"/>
+				<Hide GUID="{EE9CFF77-C7A9-406B-B3AA-C7F1FE523B16}"/>
+				<Hide GUID="{937E266A-6AA9-4E25-A916-966ED594566D}"/>
+				<Hide GUID="{17664CCD-EB0F-4CF3-A5FB-0B7361A95984}"/>
+				<Hide GUID="{BAB3FC53-C059-4F97-9659-A8A103E896FE}"/>
+				<Hide GUID="{C5D9B88D-D9D9-4F44-9386-4B93BBF568AA}"/>
+				<Hide GUID="{C3702711-6CD8-4D13-AA92-D5CE2E148E3C}"/>
+				<Hide GUID="{7856A61E-0487-43BB-821C-4FA772D03E89}"/>
+				<Hide GUID="{CE5AC8E7-164F-4CC0-941D-41EFB8654389}"/>
+				<Hide GUID="{97D4D1C7-AC86-4CE2-AF38-59B1B0AFDF26}"/>
+				<Hide GUID="{4EB2B7FE-0A77-4D93-B948-6C605EB657EE}"/>
+				<Hide GUID="{0EA5E67A-1DE4-4599-96A6-73EE81C00372}"/>
+				<Hide GUID="{3370830A-344E-421C-A492-96E6A599729E}"/>
+				<Hide GUID="{5100642C-EF1C-4DE1-81D6-B904636385C2}"/>
+				<Hide GUID="{9668F103-7ACD-4135-9487-24865C0B9B3D}"/>
+				<Hide GUID="{19308691-06E3-4118-A6F6-0F4AF48269BA}"/>
+				<Hide GUID="{FE52AA3F-2707-49C9-A159-DBE4F3CB8B76}"/>
+				<Hide GUID="{0755DBDA-0FC0-40AA-B4D6-6EA148A5EE64}"/>
+				<Hide GUID="{F644A89F-085C-4C17-B16F-59F05C54135E}"/>
+				<Hide GUID="{2B5802F6-3F63-4E2B-A677-8E865A43709E}"/>
+				<Hide GUID="{B226C872-43C5-4F26-8672-A1F10AD9F53E}"/>
+			</Hides>
+		</DataType>
+	</DataTypes>
+</TcModuleClass>
