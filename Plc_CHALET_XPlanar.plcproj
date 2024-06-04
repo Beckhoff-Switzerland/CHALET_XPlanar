@@ -27,29 +27,14 @@
     </DeploymentEvents>
     <Released>false</Released>
     <Company>Beckhoff CH</Company>
-    <ProjectVersion>3.0.0</ProjectVersion>
+    <ProjectVersion>4.2.5</ProjectVersion>
     <Title>CHALET_XPlanar</Title>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="COMPONENTs\Casting\ToXpMover.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Casting\ToXpStation.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Casting\ToXpTrack.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="COMPONENTs\Feedback\FB_XP_Feedback.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Feedback\I_XP_Feedback.TcIO">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\FUN_GetDistToPosModulo.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\FUN_InLimitTest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Mover\FB_XP_Mover.TcPOU">
@@ -65,6 +50,39 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Mover\ProductData\I_XP_ProductData.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Casting\ToXpMover.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Casting\ToXpStation.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Casting\ToXpTrack.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\FB_XP_Path.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\F_GetDistToPosModulo.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\F_InLimitTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\I_XP_Path.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Trigger\FB_XP_Trigger.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Trigger\I_XP_Trigger.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Zone\FB_XP_SoretedListOfMover.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Zone\I_XP_Zone.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Stationen\FB_XP_Station.TcPOU">
@@ -90,6 +108,7 @@
     </Compile>
     <Compile Include="COMPONENTs\Stationen\ST_PathFinder_1.TcDUT">
       <SubType>Code</SubType>
+      <ExcludeFromBuild>false</ExcludeFromBuild>
     </Compile>
     <Compile Include="COMPONENTs\System\FB_XP_System.TcPOU">
       <SubType>Code</SubType>
@@ -107,18 +126,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Track\I_XP_Track_PLC.TcIO">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Trigger\FB_XP_Trigger.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Trigger\I_XP_Trigger.TcIO">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Zone\FB_XP_Zone.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Zone\I_XP_Zone.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="XPlanarParameterlist.TcGVL">
@@ -184,19 +191,18 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="COMPONENTs" />
-    <Folder Include="COMPONENTs\Casting" />
     <Folder Include="COMPONENTs\Mover\ProductData" />
     <Folder Include="COMPONENTs\Feedback" />
+    <Folder Include="COMPONENTs\Optional" />
+    <Folder Include="COMPONENTs\Optional\Casting" />
+    <Folder Include="COMPONENTs\Optional\Trigger" />
+    <Folder Include="COMPONENTs\Optional\Zone" />
     <Folder Include="COMPONENTs\Stationen" />
     <Folder Include="COMPONENTs\Track" />
     <Folder Include="COMPONENTs\Environment" />
     <Folder Include="COMPONENTs\Group" />
     <Folder Include="COMPONENTs\Mover" />
     <Folder Include="COMPONENTs\System" />
-    <Folder Include="COMPONENTs\Trigger">
-      <ExcludeFromBuild>false</ExcludeFromBuild>
-    </Folder>
-    <Folder Include="COMPONENTs\Zone" />
   </ItemGroup>
   <ItemGroup>
     <SubObject Include="FB_CH_List.AddObject" />
@@ -211,8 +217,17 @@
     <SubObject Include="FB_CH_List.ResetIterator" />
     <SubObject Include="FB_CH_List.Size" />
     <SubObject Include="FB_CH_List.Size.Get" />
+    <SubObject Include="FB_XP_System.ValidLUID">
+      <ExcludeFromBuild>true</ExcludeFromBuild>
+    </SubObject>
     <SubObject Include="I_CH_Feedback.ActiveCommand" />
     <SubObject Include="I_CH_Feedback.LastCommandAccepted" />
+    <SubObject Include="I_XP_System_PLC.ValidLUID">
+      <ExcludeFromBuild>true</ExcludeFromBuild>
+    </SubObject>
+    <SubObject Include="I_XP_Track_PLC.MoversOnTrack">
+      <ExcludeFromBuild>true</ExcludeFromBuild>
+    </SubObject>
   </ItemGroup>
   <ItemGroup>
     <PlaceholderResolution Include="CAA Callback">
@@ -374,6 +389,10 @@
       <SubType>Content</SubType>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <PinnedGlobalDataType Include="ST_CHALET_XPlanar_Events" />
+    <PinnedGlobalDataType Include="ST_CHALET_XTS_Events" />
+  </ItemGroup>
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
@@ -394,6 +413,18 @@
         <o>
           <v n="Name">"{29BD8D0C-3586-4548-BB48-497B9A01693F}"</v>
           <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+            <v>NamingConventions</v>
+            <o>
+              <v n="Name">"NamingConventions"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+            <v>Metrics</v>
+            <o>
+              <v n="Name">"Metrics"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
             <v>Rules</v>
             <o>
               <v n="Name">"Rules"</v>
@@ -456,7 +487,10 @@
               <d n="Values" t="Hashtable" />
             </o>
           </d>
-          <d n="Values" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>PerformStaticAnalyse</v>
+            <v>False</v>
+          </d>
         </o>
         <v>{40450F57-0AA3-4216-96F3-5444ECB29763}</v>
         <o>

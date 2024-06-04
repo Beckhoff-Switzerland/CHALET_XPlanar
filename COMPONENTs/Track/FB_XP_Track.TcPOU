@@ -24,13 +24,18 @@ VAR
 	ipTracksEndAtThis : ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track;
 	{attribute 'hide'} 
 	ipTracksStartFromThis : ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track;
-	//HMI - The track is divided into an array of coordinates to display the track course on a visualization
-	afTrackPoints		: ARRAY[0..XplanarParameterlist.N_TRACE_POINTS] OF PositionXY;
+	{attribute 'hide'}  
+	fbListOfStationsOnTrack : FB_CH_List;
+	{attribute 'hide'}  
+	bIsClosedLoop : BOOL;
 	
-
+	
 	{attribute 'hide'}
-	// ipXpSystem Is Not Valid at this point, call the konstruktor again in the FB_Init
-	fbSortedListMoversOnTrack	: FB_XP_Zone(ipXpSystem);
+	fbListOfMoversOnTrack : FB_CH_List;
+	{attribute 'hide'}  
+	fbTracksAhead : FB_CH_List;
+	{attribute 'hide'}  
+	fbTracksBehinde : FB_CH_List;
 END_VAR
 
 // Planar-Feedback objects
@@ -99,29 +104,18 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="CalcTrackPoints" Id="{9dce1fbd-e0e4-4664-bace-b74870c30cc8}">
-      <Declaration><![CDATA[METHOD PROTECTED CalcTrackPoints : HRESULT
-VAR_INPUT
+    <Property Name="ClosedLoop" Id="{bc7aad9c-7b6f-43f4-8dab-47f5b074584c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ClosedLoop : BOOL]]></Declaration>
+      <Get Name="Get" Id="{f4dc2ca0-cdfd-4b16-a4e6-b8afeb5ebf80}">
+        <Declaration><![CDATA[VAR
 END_VAR
-VAR
-    nIdx      : UINT;
-    fbPosition : PositionXYC;
-	fLength   : LREAL;
-END_VAR]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[fLength := THIS^.fbTrack.GetLength();
-
-FOR nIdx := 0 TO XplanarParameterlist.N_TRACE_POINTS DO
-	THIS^.fbTrack.GetPositionAt(fLength/(XplanarParameterlist.N_TRACE_POINTS)*nIdx, fbPosition);
-	
-	THIS^.afTrackPoints[nIdx].x := fbPosition.x;
-	THIS^.afTrackPoints[nIdx].y := fbPosition.y;
-	//THIS^.afTrackPoints[nIdx].c := fbPosition.c;
-END_FOR
-
-CalcTrackPoints := S_OK;]]></ST>
-      </Implementation>
-    </Method>
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ClosedLoop := bIsClosedLoop;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="Configure" Id="{9fcb3d34-7c7a-4018-bb61-a13ff9565f1b}" FolderPath="Enable/Disable\">
       <Declaration><![CDATA[METHOD Configure : HRESULT // This is called once during system enabling
 VAR_INPUT
@@ -157,8 +151,8 @@ END_VAR
 VAR CONSTANT
 	N_IDX_OFFSET_PREVIOUS_TRACK 	: UDINT := 16#050300D5; // Parameter(online) in Planar Track object
 	N_IDX_OFFSET_SUBSEQUENT_TRACK 	: UDINT := 16#050300D6; // Parameter(online) in Planar Track object	
+	N_IDX_OFFSET_IS_CLOSED_LOOP		: UDINT := 16#050300E1; // Parameter(online) in Planar Track object	
 	
-	N_PORT_MET_TASK 				: UINT := 521; //ZZZ TODO this port is not fix. REad from the TcCom object
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -168,15 +162,35 @@ CASE nSeqConfiguring OF
 		Configuring := S_OK;
 		
 	10: //Start
-		//No config is done here. Set Track elements direkt in the Track TcCom Object
-		nSeqConfiguring := 700;
+		nSeqConfiguring := 400;
 		
-	700: //Calculate an array of track points. These can then be visualized on an HMI, for example
-		THIS^.CalcTrackPoints();
-		nSeqConfiguring := 800;
+		
+		
+		
+		
+	//CLOSED LOOP
+	400: // Closed loop - Read from Track object
+		fbAdsRead.PORT		:= THIS^.ipXpSystem.METAdsPort ; 
+		fbAdsRead.IDXGRP	:= THIS^.OID;
+		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_IS_CLOSED_LOOP; 
+		fbAdsRead.LEN		:= SIZEOF(THIS^.bIsClosedLoop);
+		fbAdsRead.DESTADDR	:= ADR(THIS^.bIsClosedLoop);
+			
+		fbAdsRead.READ := TRUE;
+		nSeqConfiguring := 402;
 	
+	402: // Wait for reading - Read from Track object
+		IF fbAdsRead.ERR THEN
+			//Error
+			nSeqConfiguring := nSeqConfiguring + 1000;
+		ELSIF NOT fbAdsRead.BUSY THEN
+			//Done
+			nSeqConfiguring := 800;
+		END_IF		
+		
 	
-	
+
+		
 	//PREVIOUS_TRACK
 	800: // Prepare - Read from Track object
 		fbAdsRead.READ := FALSE;
@@ -184,7 +198,7 @@ CASE nSeqConfiguring OF
 		nSeqConfiguring := 801;
 	
 	801: // Start read - Read from Track object
-		fbAdsRead.PORT		:= N_PORT_MET_TASK; 
+		fbAdsRead.PORT		:= THIS^.ipXpSystem.METAdsPort ; 
 		fbAdsRead.IDXGRP	:= THIS^.OID;
 		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_PREVIOUS_TRACK; 
 		fbAdsRead.LEN		:= SIZEOF(TrackOTCID);
@@ -198,6 +212,7 @@ CASE nSeqConfiguring OF
 			//Error, the reason for this could be that this track has no connected tracks
 			//Continous with SUBSEQUENT_TRACK
 			nSeqConfiguring := 850;
+
 		ELSIF fbAdsRead.ERR THEN
 			//Error
 			nSeqConfiguring := nSeqConfiguring + 1000;
@@ -207,11 +222,13 @@ CASE nSeqConfiguring OF
 		END_IF
 	
 	803: // Convert to I_XP_Track - Read from Track object
+		fbTracksBehinde.Clear();
 		FOR nIdx := 0 TO (XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1) DO
 			//Get Obj
 			ipEachTrackObj := THIS^.ipXpSystem.Tracks.FindOID(TrackOTCID[nIdx]);
 			//convert obj -> I_XP_Track
 			ToXpTrack(ipEachTrackObj, ipTracksEndAtThis[nIdx]);	
+			fbTracksBehinde.AddObject(ipEachTrackObj);
 		END_FOR
 		nSeqConfiguring := 850;		
 	
@@ -225,7 +242,7 @@ CASE nSeqConfiguring OF
 		nSeqConfiguring := 851;
 	
 	851: // Start read - Read from Track object
-		fbAdsRead.PORT		:= N_PORT_MET_TASK;
+		fbAdsRead.PORT		:= THIS^.ipXpSystem.METAdsPort ;
 		fbAdsRead.IDXGRP	:= THIS^.OID;
 		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_SUBSEQUENT_TRACK;
 		fbAdsRead.LEN		:= SIZEOF(TrackOTCID);
@@ -247,22 +264,17 @@ CASE nSeqConfiguring OF
 		END_IF
 	
 	853: // Convert to I_XP_Track - Read from Track object
+		fbTracksAhead.Clear();
 		FOR nIdx := 0 TO (XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1) DO
 			//Get Obj
 			ipEachTrackObj := THIS^.ipXpSystem.Tracks.FindOID(TrackOTCID[nIdx]);
 			//convert obj -> I_XP_Track
 			ToXpTrack(ipEachTrackObj, ipTracksStartFromThis[nIdx]);	
+			fbTracksAhead.AddObject(ipEachTrackObj);
 		END_FOR
 		nSeqConfiguring := 900;
 	
-	
-		
-	
-	
 	900: // Config the internal FB_Zone
-		THIS^.fbSortedListMoversOnTrack.AccocietedTrack 		:= (THIS^);
-		THIS^.fbSortedListMoversOnTrack.StartPositionOnTrack	:= 0;
-		THIS^.fbSortedListMoversOnTrack.EndPositionOnTrack 		:= THIS^.Length;
 		nSeqConfiguring := 999;
 		
 	999: // Done
@@ -284,7 +296,10 @@ PROPERTY CtsMoversOnTrack : UINT]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[CtsMoversOnTrack := THIS^.fbSortedListMoversOnTrack.CtsMoversInZone;]]></ST>
+          <ST><![CDATA[THIS^.Prepare();//Prepare a list movers on this track
+
+
+CtsMoversOnTrack := TO_UINT(THIS^.fbListOfMoversOnTrack.Size);]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -357,7 +372,7 @@ IF NOT bFBInitCalledOnce THEN
 		THIS^.ipXpSystem.RegisterTrack(THIS^);
 	END_IF
 	
-	THIS^.fbSortedListMoversOnTrack.FB_init(FALSE,FALSE, THIS^.ipXpSystem);
+
 END_IF
 
 bFBInitCalledOnce := TRUE;]]></ST>
@@ -379,24 +394,37 @@ END_VAR
       <Declaration><![CDATA[METHOD Initialize : HRESULT
 VAR
 	hr : HRESULT;
-END_VAR]]></Declaration>
+	ipStation : I_XP_Station;
+	stVarInfo : __SYSTEM.VAR_INFO;
+END_VAR
+VAR_INST
+	//This error cannot be reset. Requires a reset cold
+	{attribute 'hide'}	
+	fbInitError : FB_TcAlarm;
+END_VAR
+]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT THIS^.Mapped THEN
-	//Error
+        <ST><![CDATA[// Check if link to track is mapped
+IF NOT THIS^.Mapped THEN
+	IF NOT fbInitError.bRaised THEN 
+		//This error cannot be reset. Requires a reset cold
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		stVarInfo := __VARINFO(fbTrack);
+		fbInitError.ipArguments.AddString(stVarInfo.Symbol);
+		fbInitError.Raise(0);
+	END_IF
 	Initialize := E_FAIL;
+	RETURN;
+END_IF
 
-ELSIF NOT bInitDone THEN
+
+IF NOT bInitDone THEN
 	//Busy
 	Initialize := S_PENDING;
 	
-	//Config the internal FB_Zone
-	THIS^.fbSortedListMoversOnTrack.AccocietedTrack 		:= (THIS^);
-	THIS^.fbSortedListMoversOnTrack.StartPositionOnTrack	:= 0;
-	THIS^.fbSortedListMoversOnTrack.EndPositionOnTrack 		:= 0; //End should be the length of track. But is not sure defind at this point
-	THIS^.fbSortedListMoversOnTrack.ListOfMoversToCheck 	:= THIS^.ipXpSystem.Movers; // All Movers in system
 	
 	//Done as sone list is initilized
-	bInitDone := (S_OK = THIS^.fbSortedListMoversOnTrack.Initialize());
+	bInitDone := TRUE;
 	
 ELSE	
 	//Done
@@ -415,6 +443,7 @@ THIS^.fbFeedback.HR := Initialize;
     </Method>
     <Property Name="Length" Id="{71eaadbd-1c54-42e9-8d1d-8f27bd48dc86}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//[mm]
 PROPERTY Length : LREAL]]></Declaration>
       <Get Name="Get" Id="{a130a9f2-5c04-404e-92e9-c79382f2a810}">
         <Declaration><![CDATA[VAR
@@ -441,21 +470,10 @@ Mapped := NOT bMcToPlcNotMapped;]]></ST>
         </Implementation>
       </Get>
     </Property>
-    <Property Name="MoversOnTrack" Id="{49b68c60-de23-4b53-aaa9-2a7753359f37}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY MoversOnTrack : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF I_XP_Mover_PLC // Return a sorted list of movers on track. Index 0 is the mover in Front]]></Declaration>
-      <Get Name="Get" Id="{64ad0539-d4a2-4d87-83e2-35972250cdb1}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[MoversOnTrack REF= THIS^.fbSortedListMoversOnTrack.MoversInZone;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
     <Property Name="OID" Id="{90983f23-ab27-4c9b-83fe-ad4ce837aabc}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY OID : OTCID]]></Declaration>
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
       <Get Name="Get" Id="{2f957262-8fdd-45d3-9100-ac31a63822a2}">
         <Declaration><![CDATA[VAR
 END_VAR
@@ -477,6 +495,53 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="Prepare" Id="{9d189cd9-e796-449e-9a38-2edf6ad5313b}">
+      <Declaration><![CDATA[(* Time-critical information is processed here, which can then be polled via the property every cycle. 
+The update method is usually at the end of the program and then it is already 'outdated'. *)
+METHOD PRIVATE Prepare : HRESULT
+VAR
+	ipThisTrack : I_XP_Track;
+	ipStation : I_XP_Station;
+	ipMover : I_XP_Mover;
+
+END_VAR
+
+VAR_INST
+	{attribute 'hide'}
+	nLastUpdatedCycleCount : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check if this Cycle the dates are allready prepared
+IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount THEN
+	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
+
+	//Creat a list of all Stations on this Track
+	ipThisTrack := THIS^;
+	THIS^.fbListOfStationsOnTrack.Clear();
+	THIS^.ipXpSystem.Stations.ResetIterator();
+	WHILE THIS^.ipXpSystem.Stations.HasNextObject() DO
+		IF ToXpStation(THIS^.ipXpSystem.Stations.GetNextObject(), ipStation) AND_THEN ipStation.AccocietedTrack <> 0 AND_THEN ipStation.AccocietedTrack = ipThisTrack THEN
+			THIS^.fbListOfStationsOnTrack.AddObject(ipStation);
+		END_IF
+	END_WHILE
+	THIS^.ipXpSystem.Stations.RestoreIterator();
+	
+	
+	//Creat a list of all Movers on this Track
+	ipThisTrack := THIS^;
+	THIS^.fbListOfMoversOnTrack.Clear();
+	THIS^.ipXpSystem.Movers.ResetIterator();
+	WHILE THIS^.ipXpSystem.Movers.HasNextObject() DO
+		IF ToXpMover(THIS^.ipXpSystem.Movers.GetNextObject(), ipMover) AND_THEN ipMover.CurrentTrack <> 0 AND_THEN ipMover.CurrentTrack = ipThisTrack THEN
+			THIS^.fbListOfMoversOnTrack.AddObject(ipStation);
+		END_IF
+	END_WHILE
+	THIS^.ipXpSystem.Movers.RestoreIterator();
+	
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="RemoveFromGroup" Id="{9de749e7-be9a-4037-a8c7-8d2d3b16d041}" FolderPath="Group\">
       <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
 ]]></Declaration>
@@ -520,8 +585,52 @@ Reset := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="StationsOnTrack" Id="{ca95f937-74e0-4a2d-ac82-7e91487478dd}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces to stations on this track
+PROPERTY StationsOnTrack : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{769e0be7-7ee5-4c9d-9d14-1c198e779f31}">
+        <Declaration><![CDATA[VAR
+	ipStation : I_XP_Station;
+	ipThisTrack : I_XP_Track;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare a list stations on this track
+
+StationsOnTrack := THIS^.fbListOfStationsOnTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TracksAhead" Id="{92a74ea1-3481-47a8-9934-6351bc6b2d7e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces from other tracks
+PROPERTY TracksAhead : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{d246ae69-e060-4256-a29d-debc90cb7228}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TracksAhead := fbTracksAhead;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TracksBehinde" Id="{be356905-91c0-4b9d-8181-4d4abe69740c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces from other tracks
+PROPERTY TracksBehinde : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{a20b6cd6-324d-464a-8647-9c8338f041f6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TracksBehinde:= fbTracksBehinde;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="TracksEndAtThis" Id="{74b0ded5-e929-46ca-b828-5466efe653e0}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//zzz Todo Delet me
 PROPERTY TracksEndAtThis : REFERENCE TO  ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track]]></Declaration>
       <Get Name="Get" Id="{e11bad87-2af8-410b-a2af-e0cb16dd4cb1}">
         <Declaration><![CDATA[VAR

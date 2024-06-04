@@ -9,6 +9,10 @@
 	for the user. In addition, the user has the possibility to influence or control the state of the real mover via the Planar mover. *)	
 FUNCTION_BLOCK FB_XP_Mover EXTENDS FB_CH_Object IMPLEMENTS I_XP_Mover, I_XP_Mover_PLC
 VAR
+	fbRoute : FB_CH_List;
+END_VAR
+
+VAR
 	//Link to MC-Mover
 	fbMover : MC_PlanarMover;
 	
@@ -32,6 +36,8 @@ VAR
 	fLastCmdTargedPosition : LREAL; //the last commanded target position [mm]
 	{attribute 'hide'}	
 	fLastCmdTargedGap 	: LREAL; //the last commanded target gap
+	{attribute 'hide'}		
+//	fDistToParentStation : LREAL; //Distance to the responsible parent station [mm]
 	{attribute 'hide'}		
 	ipLastCmdTrack : I_XP_Track;
 	{attribute 'hide'}
@@ -254,6 +260,34 @@ Disable := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="DistToParentStation" Id="{7318bf17-d807-4416-9e99-18f45b6519ca}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Distance to the responsible parent station [mm]
+PROPERTY DistToParentStation : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{f210e1e2-3a19-426e-b9e1-7aab2065228e}">
+        <Declaration><![CDATA[VAR
+	fDistToParentStationTemp : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	ipPath : I_XP_Path;
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//Get distance to targed station
+//check each path behind the parentstation if the mover is on it
+THIS^.ParentStation.PathsBehinde.ResetIterator();
+WHILE THIS^.ParentStation.PathsBehinde.HasNextObject() DO
+	IF __QUERYINTERFACE(THIS^.ParentStation.PathsBehinde.GetNextObject(), ipPath) THEN
+		//get shortest distance
+		fDistToParentStationTemp:= MIN(ipPath.DistanceToDestiantion(ipTrack:= THIS^.CurrentTrack, fPosOnTrack := THIS^.PositionOnTrack), fDistToParentStationTemp);
+	END_IF
+END_WHILE
+THIS^.ParentStation.PathsBehinde.RestoreIterator();
+
+
+DistToParentStation := fDistToParentStationTemp;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="DistToTrack" Id="{df1c51b6-4a3a-485b-b199-4d9e3147af19}" FolderPath="Track\">
       <Declaration><![CDATA[METHOD DistToTrack : LREAL
 VAR_INPUT
@@ -376,20 +410,35 @@ Halt := S_OK;
     </Method>
     <Method Name="Initialize" Id="{1afc7bf5-00ad-4187-ac31-771ca8ca47fe}">
       <Declaration><![CDATA[METHOD Initialize : HRESULT
-
 VAR
 	bWaitForAxisInit : BOOL;
-END_VAR]]></Declaration>
+	hrExtAxis : HRESULT;
+	stVarInfo : __SYSTEM.VAR_INFO;
+END_VAR
+
+VAR_INST
+	//This error cannot be reset. Requires a reset cold
+	{attribute 'hide'}	
+	fbInitError : FB_TcAlarm;
+END_VAR
+]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT THIS^.Mapped THEN
-	//Error
+        <ST><![CDATA[// Check if link to MC-Mover is mapped
+IF NOT THIS^.Mapped THEN
+	IF NOT fbInitError.bRaised THEN 
+		//This error cannot be reset. Requires a reset cold
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		stVarInfo := __VARINFO(fbMover);
+		fbInitError.ipArguments.AddString(stVarInfo.Symbol);
+		fbInitError.Raise(0);
+	END_IF
 	Initialize := E_FAIL;
+	RETURN;
+END_IF
+
+
 	
-	
-ELSIF NOT bInitDone THEN
-	//Busy
-	Initialize := S_PENDING;
-	
+IF NOT bInitDone THEN
 	//Set all move dynamic constraint to the axis default value.
 	THIS^.SetDynConstraint_X(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
 	THIS^.SetDynConstraint_Y(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);	
@@ -399,15 +448,18 @@ ELSIF NOT bInitDone THEN
 	THIS^.SetDynConstraint_C(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
 	THIS^.SetDynConstraint_Path(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
 
-	//Ignor link missing error. Only wait in Pending
-	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointX.Initialize());
-	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointY.Initialize());
-	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointZ.Initialize());
-	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointA.Initialize());
-	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointB.Initialize());
-	bWaitForAxisInit := bWaitForAxisInit OR (S_Pending = AxisSetpointC.Initialize());
+	//Call Init of Setpointaxis only, if mapped
+	IF AxisSetpointX.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointX.Initialize());END_IF
+	IF AxisSetpointY.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointY.Initialize());END_IF
+	IF AxisSetpointZ.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointZ.Initialize());END_IF
+	IF AxisSetpointA.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointA.Initialize());END_IF
+	IF AxisSetpointB.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointB.Initialize());END_IF
+	IF AxisSetpointC.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointC.Initialize());END_IF
 	
-	bInitDone := NOT bWaitForAxisInit;	
+	bInitDone := (hrExtAxis = S_OK);	
+	
+	//Pending
+	Initialize := S_PENDING;;	
 ELSE	
 	//Done
 	Initialize := S_OK;	
@@ -436,7 +488,7 @@ END_VAR]]></Declaration>
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
-	joinTrackOptions.useOrientation := FALSE;	
+	joinTrackOptions.useOrientation := TRUE;	
 	THIS^.fbMover.JoinTrack(commandFeedback	:= THIS^.fbFeedbackJoinTrack, 
 								targetTrack	:= iTrack.PlanarTrack, 
 								constraint	:= THIS^.fbDynConstraintContainer,
@@ -711,6 +763,7 @@ END_IF
 VAR_INPUT
 	ipStation : I_XP_Station;
 	fGap : LREAL;
+
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -781,7 +834,8 @@ MoveZ := S_OK;
     </Method>
     <Property Name="OID" Id="{0abeb532-afdc-4dc2-9ab6-0807e7d91aa1}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY OID : OTCID]]></Declaration>
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
       <Get Name="Get" Id="{599206fd-ce8e-4e24-8135-4fd698fd4855}">
         <Declaration><![CDATA[VAR
 END_VAR
@@ -868,6 +922,29 @@ PositionSet REF= copyOfSetPosition;]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Method Name="Prepare" Id="{75ebe37d-1d93-4e15-83bc-21b836e7791f}">
+      <Declaration><![CDATA[(* Time-critical information is processed here, which can then be polled via the property every cycle. 
+The update method is usually at the end of the program and then it is already 'outdated'. *)
+METHOD PRIVATE Prepare : HRESULT
+VAR
+
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	nLastUpdatedCycleCount : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check if this Cycle the dates are allready prepared
+IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount THEN
+	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
+
+	
+
+		
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="ProductData" Id="{fca2bcf7-b4de-439b-aac0-63af2ca5a335}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PUBLIC ProductData : I_XP_ProductData]]></Declaration>
@@ -952,6 +1029,18 @@ Reset := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="Route" Id="{225c188a-e791-4700-b379-0e23d03c467b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Route : REFERENCE TO FB_CH_List]]></Declaration>
+      <Get Name="Get" Id="{6fce2f11-b3c5-45b0-b007-152ec2b18eb4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Route ref= THIS^.fbRoute;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="SetDynConstraint_A" Id="{258e8b01-9716-4568-9659-e1dc2f970166}" FolderPath="DynamicConstraint\">
       <Declaration><![CDATA[METHOD SetDynConstraint_A : BOOL //Dynamic constraints for individual coordinates.
 VAR_INPUT
@@ -1135,12 +1224,12 @@ ELSIF (AxisSetpointX.SetPosition <> 0.0 OR AxisSetpointY.SetPosition <> 0.0  OR 
 	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
 	//Error, to prevent the mover from making a jump in relative mode, each axis should be set to position 0 		
 	
-ELSIF (AxisSetpointX.Mapped AND AxisSetpointX.Error) OR
-		(AxisSetpointY.Mapped AND AxisSetpointY.Error) OR
-		(AxisSetpointZ.Mapped AND AxisSetpointZ.Error) OR
-		(AxisSetpointA.Mapped AND AxisSetpointA.Error) OR
-		(AxisSetpointB.Mapped AND AxisSetpointB.Error) OR
-		(AxisSetpointC.Mapped AND AxisSetpointC.Error) THEN
+ELSIF (AxisSetpointX.Mapped AND AxisSetpointX.Feedback.Error) OR
+		(AxisSetpointY.Mapped AND AxisSetpointY.Feedback.Error) OR
+		(AxisSetpointZ.Mapped AND AxisSetpointZ.Feedback.Error) OR
+		(AxisSetpointA.Mapped AND AxisSetpointA.Feedback.Error) OR
+		(AxisSetpointB.Mapped AND AxisSetpointB.Feedback.Error) OR
+		(AxisSetpointC.Mapped AND AxisSetpointC.Feedback.Error) THEN
 	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
 	//Axis Error active
 	
@@ -1187,15 +1276,15 @@ THIS^.fbMover.StopExternalSetpointGeneration(THIS^.fbFeedbackExtStop);
 StopExternalSetpoint := S_OK;]]></ST>
       </Implementation>
     </Method>
-    <Property Name="TargetStationGroupID" Id="{126f0d16-a041-46ed-a396-2cbc60d632b5}" FolderPath="Track\">
+    <Property Name="TargetStation" Id="{126f0d16-a041-46ed-a396-2cbc60d632b5}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY TargetStationGroupID : STRING]]></Declaration>
+PROPERTY TargetStation : STRING]]></Declaration>
       <Get Name="Get" Id="{f47b6c12-409e-4a37-bc20-97294fcfcafe}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[TargetStationGroupID := THIS^.sTargedStation;]]></ST>
+          <ST><![CDATA[TargetStation := THIS^.sTargedStation;]]></ST>
         </Implementation>
       </Get>
       <Set Name="Set" Id="{e2830ca2-bb79-47b3-8db1-40364793a2cf}">
@@ -1203,7 +1292,7 @@ END_VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[THIS^.sTargedStation := TargetStationGroupID;]]></ST>
+          <ST><![CDATA[THIS^.sTargedStation := TargetStation;]]></ST>
         </Implementation>
       </Set>
     </Property>
@@ -1424,16 +1513,20 @@ SetAcc.A := AxisSetpointA.Setacceleration;
 SetAcc.B := AxisSetpointB.Setacceleration;
 SetAcc.C := AxisSetpointC.Setacceleration;
 
-THIS^.fbMover.SetExternalSetpoint(	setPosition 		:= SetPos, 
-									setVelocity 		:= SetVelo,
-									setAcceleration 	:= SetAcc);
+IF THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.Enabled THEN
+	THIS^.fbMover.SetExternalSetpoint(	setPosition 		:= SetPos, 
+										setVelocity 		:= SetVelo,
+										setAcceleration 	:= SetAcc);
+END_IF
 
-AxisSetpointX.Update();
-AxisSetpointY.Update();
-AxisSetpointZ.Update();
-AxisSetpointA.Update();
-AxisSetpointB.Update();
-AxisSetpointC.Update();]]></ST>
+
+
+IF AxisSetpointX.Mapped THEN AxisSetpointX.Update() ;END_IF
+IF AxisSetpointY.Mapped THEN AxisSetpointY.Update() ;END_IF
+IF AxisSetpointZ.Mapped THEN AxisSetpointZ.Update() ;END_IF
+IF AxisSetpointA.Mapped THEN AxisSetpointA.Update() ;END_IF
+IF AxisSetpointB.Mapped THEN AxisSetpointB.Update() ;END_IF
+IF AxisSetpointC.Mapped THEN AxisSetpointC.Update() ;END_IF]]></ST>
       </Implementation>
     </Method>
     <Property Name="UtilityMover" Id="{cab4f1ac-f949-4b0f-9abb-2fd50f7eddd0}" FolderPath="XPlanarUtility\">

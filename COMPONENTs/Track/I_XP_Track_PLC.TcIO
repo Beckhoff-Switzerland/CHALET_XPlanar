@@ -20,6 +20,7 @@ PROPERTY Feedback : I_XP_Feedback]]></Declaration>
     </Property>
     <Property Name="Length" Id="{0d6552b5-faf4-4152-b9d7-fe806ca06267}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//[mm]
 PROPERTY Length : LREAL]]></Declaration>
       <Get Name="Get" Id="{dbe2f754-111a-4078-97a8-d4db148490e4}">
         <Declaration><![CDATA[]]></Declaration>
@@ -33,16 +34,10 @@ PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="MoversOnTrack" Id="{53972edb-88c0-42cc-9cdb-04d0a2927421}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY MoversOnTrack : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF I_XP_Mover_PLC // Return a sorted list of movers on track. Index 0 is the mover in Front]]></Declaration>
-      <Get Name="Get" Id="{ed22cb85-d7e9-40e3-9614-7bbca330378b}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Property Name="OID" Id="{bd1cf5af-57a1-4927-b6f2-46edb4bf8d4c}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY OID : OTCID]]></Declaration>
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
       <Get Name="Get" Id="{442d39cf-4546-4a1a-a631-6d7be7b51430}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
@@ -51,6 +46,30 @@ PROPERTY OID : OTCID]]></Declaration>
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PlanarTrack : REFERENCE TO MC_PlanarTrack]]></Declaration>
       <Get Name="Get" Id="{3cfbf816-5585-4cce-adb5-63e4897036bd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationsOnTrack" Id="{bab9c82e-80cb-4b84-a9a8-d947fb34b427}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces to stations on this track
+PROPERTY StationsOnTrack : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{fbccfe6e-bcfc-4280-834d-3732a1fcf525}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TracksAhead" Id="{fdb2da1a-9d03-4c17-89f5-8063a4fe9283}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces from other tracks
+PROPERTY TracksAhead : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{bdaf5fdc-2ae4-451c-ac6e-86f33fecc61c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TracksBehinde" Id="{471485d7-74d5-464d-a7c9-64cb6cf6358c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces from other tracks
+PROPERTY TracksBehinde : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{c40f8818-c15e-4b1f-8a96-6cf955be010a}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

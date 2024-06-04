@@ -13,13 +13,14 @@ VAR_GLOBAL CONSTANT
 	B_ADD_ENVIROMENT_TO_GROUP: BOOL := TRUE;	
 		
 	(*Pathfinder max recursion search depth in stations*)
-	N_MAX_SEARCH_DEPTH: UINT := 5;
+	N_MAX_SEARCH_DEPTH: UINT := 50;
 	
-	(*get an array of points of track in this size *)
-	N_TRACE_POINTS : UINT := 100;
+	(*The movers are only sent to the next free station on the way to the destination. 
+	The distance in mm can be specified here to indicate how much further away the new move command can already be sent.  *)
+	F_DIST_SET_NEW_MOVE_CMD_BEFORE_REACHING_PARENT_STATION : LREAL := 100.0;
 	
-	(*NOT SUPPORTET ATM FIX 3- max tracks after a track switch *)
-	N_MAX_STATIONS_AHEAD_OR_BEHIND : UINT := 3;	
+	(*max tracks after a track switch *)
+	N_MAX_STATIONS_AHEAD_OR_BEHIND : UINT := 10;	
 	
 	//Velocity during enabling move on track. 0=Default
 	F_ENABLING_ON_TRACK_VELOCITY	: LREAL := 0;

@@ -106,13 +106,8 @@ END_IF]]></ST>
 	RETURN;
 END_IF
 
-IF (THIS^.ipListOfMoversToCheck <> 0) AND (THIS^.ipAccocietedTrack <> 0) THEN
-	THIS^.bInitDone := TRUE;
-	Initialize := S_OK;
-ELSE
-	Initialize := E_FAIL;
-END_IF
 
+THIS^.bInitDone := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -206,7 +201,12 @@ END_VAR
 
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[//Check if this Cycle the dates are allready prepared
+        <ST><![CDATA[IF NOT bInitDone OR (THIS^.ipListOfMoversToCheck = 0) OR (THIS^.ipAccocietedTrack = 0) THEN
+	Prepare := E_FAIL;
+	RETURN;
+END_IF
+
+//Check if this Cycle the dates are allready prepared
 IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount THEN
 	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
 	
@@ -354,18 +354,22 @@ MEMSET(destAddr:=ADR(aMoversPositionLastCycle),n:=SIZEOF(aMoversPositionLastCycl
 MEMSET(destAddr:=ADR(aMoversTrackLastCycle),n:=SIZEOF(aMoversTrackLastCycle),fillByte:=0);
 
 nIndex := 0;
-THIS^.ipListOfMoversToCheck.ResetIterator();
-WHILE THIS^.ipListOfMoversToCheck.HasNextObject() DO
-	
-	//Cheack all Movers fill the actposition in the array
-	IF ToXpMover(THIS^.ipListOfMoversToCheck.GetNextObject(),ipMover) THEN
-		aMoversInterfaceLastCycle[nIndex] 	:= ipMover;
-		aMoversPositionLastCycle[nIndex] 	:= ipMover.PositionOnTrack;
-		aMoversTrackLastCycle[nIndex]		:= ipMover.CurrentTrack;
-		nIndex := nIndex +1;
-	END_IF
-	
-END_WHILE	]]></ST>
+IF ipListOfMoversToCheck <> 0 THEN
+	THIS^.ipListOfMoversToCheck.ResetIterator();
+	WHILE THIS^.ipListOfMoversToCheck.HasNextObject() DO
+		
+		//Cheack all Movers fill the actposition in the array
+		IF ToXpMover(THIS^.ipListOfMoversToCheck.GetNextObject(),ipMover) THEN
+			aMoversInterfaceLastCycle[nIndex] 	:= ipMover;
+			aMoversPositionLastCycle[nIndex] 	:= ipMover.PositionOnTrack;
+			aMoversTrackLastCycle[nIndex]		:= ipMover.CurrentTrack;
+			nIndex := nIndex +1;
+		END_IF
+		
+	END_WHILE	
+	THIS^.ipListOfMoversToCheck.RestoreIterator();
+END_IF
+]]></ST>
       </Implementation>
     </Method>
   </POU>

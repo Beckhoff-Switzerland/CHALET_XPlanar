@@ -7,16 +7,9 @@
     <Folder Name="Simulation" Id="{01c439b8-7664-4918-9dab-6a825793f5ac}" />
     <Property Name="AccocietedTrack" Id="{ecd4795b-11eb-43bb-a6eb-3daf45b9d80f}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Track on which the station is located
 PROPERTY AccocietedTrack : I_XP_Track]]></Declaration>
       <Get Name="Get" Id="{fb619953-4ad9-443d-8a2f-cff658b61ebe}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
-    <Property Name="AreMoversInPlace" Id="{7a6f6934-2de8-455e-a17f-0d7483cfddd9}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY AreMoversInPlace : BOOL
-]]></Declaration>
-      <Get Name="Get" Id="{ad4e2403-8735-4696-ab47-b34f3d965a4f}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -41,11 +34,21 @@ PROPERTY Feedback : I_CH_Feedback]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="InterfaceToMover" Id="{2680e90e-4101-45db-ac85-5a0747917732}" FolderPath="Interaction with process\">
+    <Property Name="Filter" Id="{5b5be999-8d93-4df0-9410-0a0a51b18987}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-(* Return interface to mover in station. Return 0 if no mover is in station *)
-PROPERTY InterfaceToMover : I_XP_Mover]]></Declaration>
-      <Get Name="Get" Id="{4794413a-64a8-4205-b3ce-cf4c689b2744}">
+//Filter content, movers with one of these targets may not approach or drive over the station
+PROPERTY Filter : STRING]]></Declaration>
+      <Get Name="Get" Id="{d27e2cb1-0192-4d26-a0e7-34fb6447184d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{ebdf5da4-b1c6-42ff-ba9e-89a6b7c05b93}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="LUID" Id="{57ece9db-5384-475e-8df1-666e7d5d63f6}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LUID : STRING //Locally unique identifier]]></Declaration>
+      <Get Name="Get" Id="{ba4d0d61-6d0c-4e90-9714-8ca492781884}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -70,6 +73,14 @@ PROPERTY MoverQueueSize : UINT]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
+    <Property Name="MoversInPlace" Id="{7a6f6934-2de8-455e-a17f-0d7483cfddd9}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversInPlace : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{ad4e2403-8735-4696-ab47-b34f3d965a4f}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="MoversInQueue" Id="{4c938db1-dc07-4fcd-87c8-d201711e6dbb}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY MoversInQueue : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF I_XP_Mover_PLC // Return a sorted list of movers in this zone. Index 0 is the mover in Front]]></Declaration>
@@ -79,6 +90,7 @@ PROPERTY MoversInQueue : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParam
     </Property>
     <Property Name="PositionOnTrack" Id="{43fdffe2-b360-4cd4-a4b1-fd5a234944a6}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//[mm] from the beginning of the assigned track
 PROPERTY PositionOnTrack : LREAL]]></Declaration>
       <Get Name="Get" Id="{13b8ef0b-99e2-4694-9388-a3f76d783946}">
         <Declaration><![CDATA[]]></Declaration>
@@ -86,6 +98,7 @@ PROPERTY PositionOnTrack : LREAL]]></Declaration>
     </Property>
     <Property Name="PositionOnTrackXY" Id="{f8d42ec9-db00-437b-bcf3-cb30e5c8e65b}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position on the assigned track
 PROPERTY PositionOnTrackXY : REFERENCE TO PositionXY]]></Declaration>
       <Get Name="Get" Id="{4a461d48-3add-4c57-a772-a972e7cc1046}">
         <Declaration><![CDATA[]]></Declaration>
@@ -93,6 +106,7 @@ PROPERTY PositionOnTrackXY : REFERENCE TO PositionXY]]></Declaration>
     </Property>
     <Property Name="PositionXY" Id="{1401c6d0-f9d2-4965-bb14-cbae22665e8b}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Planned position, not necessarily on the track
 PROPERTY PositionXY : REFERENCE TO  PositionXY]]></Declaration>
       <Get Name="Get" Id="{d9f5686e-21da-48e7-add8-90d9dfe45f12}">
         <Declaration><![CDATA[]]></Declaration>
@@ -118,31 +132,23 @@ PROPERTY ReadyToRecvMovers : BOOL ]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
-    <Method Name="SendMoversToGroup" Id="{e4962851-2911-4718-9137-a79853d76b03}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[METHOD SendMoversToGroup : I_CH_Feedback
-VAR_INPUT 
-	sTargetStationGroupID : STRING;
-END_VAR
-]]></Declaration>
+    <Method Name="SendMoversToStation" Id="{e4962851-2911-4718-9137-a79853d76b03}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[METHOD SendMoversToStation : I_CH_Feedback //All movers in the station are sent to this destination
+VAR_INPUT
+	sTargetStation: STRING;//unique station name or group of stations
+END_VAR]]></Declaration>
     </Method>
     <Method Name="SimulationMode" Id="{e1ab33af-73d3-48a1-a683-cb1f02beb4b7}" FolderPath="Simulation\">
       <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
 METHOD SimulationMode : HRESULT
 VAR_INPUT
-	fProcessDuration 			: LREAL; //[s]
-	sTargedStationGroupID		: STRING; //group of the targed station to automatic send after the duration
-END_VAR
-]]></Declaration>
+	fProcessDuration 		: LREAL; //[s]
+	sTargedStation	: STRING; //Group of the targed station to automatic send after the duration
+END_VAR]]></Declaration>
     </Method>
-    <Property Name="StationGroupID" Id="{5d46c9f8-7f8a-4530-828f-a29e7de7afde}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY StationGroupID : STRING]]></Declaration>
-      <Get Name="Get" Id="{d078026a-6151-46b6-aa55-764743cd51a9}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Property Name="StationsAhead" Id="{a15a8190-632c-447b-bb8d-df59fa6aeeb2}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of stations before this station
 PROPERTY StationsAhead : I_CH_List]]></Declaration>
       <Get Name="Get" Id="{7db66501-c0e7-41de-8144-cecc1479a705}">
         <Declaration><![CDATA[]]></Declaration>
@@ -150,8 +156,16 @@ PROPERTY StationsAhead : I_CH_List]]></Declaration>
     </Property>
     <Property Name="StationsBehinde" Id="{3c4906d7-428a-4fa9-9a93-76bf40a245cc}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of stations behinde this station
 PROPERTY StationsBehinde : I_CH_List]]></Declaration>
       <Get Name="Get" Id="{773577f4-83bf-4e7b-a3bf-ba926ea33d06}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TargetGroupe" Id="{5d46c9f8-7f8a-4530-828f-a29e7de7afde}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargetGroupe : STRING]]></Declaration>
+      <Get Name="Get" Id="{d078026a-6151-46b6-aa55-764743cd51a9}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

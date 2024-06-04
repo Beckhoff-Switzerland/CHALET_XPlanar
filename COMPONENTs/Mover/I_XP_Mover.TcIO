@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Mover" Id="{567b42ec-b45f-4b7f-a752-c8a31c59e383}">
-    <Declaration><![CDATA[INTERFACE I_XP_Mover EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XP_Mover  EXTENDS __SYSTEM.IQueryInterface, I_CH_Object
 
 ]]></Declaration>
     <Folder Name="Group" Id="{98522917-210e-4a16-96b2-caa3ecaab952}" />
@@ -30,6 +30,14 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="DistToParentStation" Id="{2c112004-530c-4dd4-a1ce-66f19e205f05}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY DistToParentStation : LREAL //Distance to the responsible parent station [mm]
+]]></Declaration>
+      <Get Name="Get" Id="{473b0278-14bf-4f75-8e75-ed9d5b853830}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="DistToTrack" Id="{5cf89fed-3711-4b0d-8593-11510bed9c97}" FolderPath="Track\">
       <Declaration><![CDATA[METHOD DistToTrack : LREAL
 VAR_INPUT
@@ -171,7 +179,8 @@ END_VAR
     </Method>
     <Property Name="OID" Id="{35394ce9-108d-478b-a7be-1635eb9da0ae}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY OID : OTCID]]></Declaration>
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
       <Get Name="Get" Id="{002f69cf-fb5b-41bc-aab5-c98b0b8b64b5}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
@@ -211,9 +220,16 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Property Name="TargetStationGroupID" Id="{97d05437-e2dc-4493-893c-aaa23f5d0855}" FolderPath="Track\">
+    <Property Name="Route" Id="{90767d52-dc47-4331-940e-058ec6f4c00c}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY TargetStationGroupID : String]]></Declaration>
+PROPERTY Route : REFERENCE TO FB_CH_List]]></Declaration>
+      <Get Name="Get" Id="{e498b67f-8337-4325-997a-fa93ee597621}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TargetStation" Id="{97d05437-e2dc-4493-893c-aaa23f5d0855}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargetStation : String]]></Declaration>
       <Get Name="Get" Id="{26e06e6e-e8c2-43da-8d32-f6cc1563b105}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>

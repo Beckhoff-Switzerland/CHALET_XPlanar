@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
-  <POU Name="FUN_InLimitTest" Id="{8a35013a-7fd7-4aad-9450-c14e30e8b2f5}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION FUN_InLimitTest : BOOL
+  <POU Name="F_InLimitTest" Id="{8a35013a-7fd7-4aad-9450-c14e30e8b2f5}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_InLimitTest : BOOL
 VAR_INPUT
 	fMinimum 	: LREAL;
 	fMaximum 	: LREAL;
@@ -13,14 +13,14 @@ END_VAR]]></Declaration>
 // 5 Test
 // 1 Min
 IF fMinimum <= fMaximum THEN
-	FUN_InLimitTest := (fInput >= fMinimum) AND (fInput <= fMaximum);
+	F_InLimitTest := (fInput >= fMinimum) AND (fInput <= fMaximum);
 	
 //Modulo case	
 // 6 | 6  Max
 // 5 | 9  Test
 // 8 | 8  Min
 ELSIF fMinimum > fMaximum THEN
-	FUN_InLimitTest := NOT((fInput > fMaximum) AND (fInput < fMinimum));
+	F_InLimitTest := NOT((fInput > fMaximum) AND (fInput < fMinimum));
 END_IF
 	
 ]]></ST>

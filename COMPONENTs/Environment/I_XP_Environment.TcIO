@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Environment" Id="{82d4e6a8-d939-49b0-818e-86b258207442}">
-    <Declaration><![CDATA[INTERFACE I_XP_Environment]]></Declaration>
+    <Declaration><![CDATA[INTERFACE I_XP_Environment  EXTENDS __SYSTEM.IQueryInterface, I_CH_Object]]></Declaration>
     <Method Name="AddToGroup" Id="{f4493e59-ad90-4dac-89cb-3c35b7abff5c}">
       <Declaration><![CDATA[METHOD AddToGroup : HRESULT
 VAR_INPUT
@@ -41,7 +41,8 @@ PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
     </Property>
     <Property Name="OID" Id="{d57780a8-d816-4f3a-87e8-b26abdce176d}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY OID : OTCID]]></Declaration>
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
       <Get Name="Get" Id="{392b3d6c-8a64-48ae-8401-41ec1794064d}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>

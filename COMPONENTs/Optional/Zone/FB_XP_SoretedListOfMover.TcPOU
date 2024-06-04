@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XP_SoretedListOfMover" Id="{9b5c2aba-5d65-4390-8f35-cbd4e5d75462}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+// Check zone start to end in positive direktion.
+FUNCTION_BLOCK FB_XP_SoretedListOfMover EXTENDS FB_CH_Object IMPLEMENTS I_XP_Zone
+VAR
+	{attribute 'hide'}
+	bInitDone : BOOL;
+	{attribute 'hide'}
+	ipXpStation : I_XP_Station; //Interface to XPlanar station 
+	{attribute 'hide'}
+	ipListOfMoversToCheck : CHALET_BaseComponents.I_CH_LIST;
+	{attribute 'hide'}
+	aMoversInZone : ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF I_XP_Mover_PLC;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Property Name="CtsMoversInZone" Id="{5fcab65a-c45f-48aa-9861-8c583938c821}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsMoversInZone : UINT
+]]></Declaration>
+      <Get Name="Get" Id="{8b39be2e-11bb-4852-a3c8-d4c2357f42e8}">
+        <Declaration><![CDATA[VAR
+	nIndex : UDINT;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare Time-critical information
+
+//Check array for entrys, exit if fisrt empty arrayindex is found.
+FOR nIndex := 0 TO (CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1) DO
+	IF (aMoversInZone[nIndex] <> 0) THEN
+		CtsMoversInZone := CtsMoversInZone +1;
+	ELSE
+		RETURN;
+	END_IF
+END_FOR]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="FB_init" Id="{6e983b48-77a3-4dff-900b-b1bd15863c70}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipXpStation : I_XP_Station; //Interface to XPlanar station 
+	ipListOfMoversToCheck : CHALET_BaseComponents.I_CH_LIST;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
+	;
+END_IF
+
+THIS^.ipXpStation := ipXpStation;
+THIS^.ipListOfMoversToCheck := ipListOfMoversToCheck;
+
+
+bFBInitCalledOnce := TRUE;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Initialize" Id="{bded9a3f-15e5-4382-a88c-b201de005416}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF THIS^.ipXpStation = 0 THEN
+	//No valide interface
+	Initialize := E_FAIL;
+	RETURN;
+END_IF
+
+IF THIS^.ipListOfMoversToCheck = 0 THEN
+	//No valide interface
+	Initialize := E_FAIL;
+	RETURN;
+END_IF
+
+
+bInitDone := TRUE;
+Initialize := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="MoversInZone" Id="{d637c274-a77a-4857-a4ee-3f4555864a74}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+// Return a sorted list of movers in this zone. Index 0 is the mover in Front.
+PROPERTY MoversInZone : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF I_XP_Mover_PLC ]]></Declaration>
+      <Get Name="Get" Id="{8409ff4e-605e-4576-a1bf-903a1943eced}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare Time-critical information
+
+MoversInZone REF= THIS^.aMoversInZone;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Prepare" Id="{f7cecc17-4d6f-4b63-bc01-d1776bce3f38}">
+      <Declaration><![CDATA[(* Time-critical information is processed here, which can then be polled via the property every cycle. 
+The update method is usually at the end of the program and then it is already 'outdated'. *)
+METHOD PRIVATE Prepare : HRESULT
+VAR
+	nLoopIndex : UDINT;
+	ipMoverPlc : I_XP_Mover_PLC;
+	ipMover : I_XP_Mover;
+	ipPath : I_XP_Path;
+	fDistToStart : LREAL;
+	aDisanceToStart : ARRAY [0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF LREAL;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	nLastUpdatedCycleCount : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT bInitDone OR ipXpStation.AccocietedTrack = 0 THEN
+	Prepare := E_FAIL;
+	RETURN;
+END_IF
+
+//Check if this Cycle the dates are allready prepared
+IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount THEN
+	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
+
+	//Clear array
+	MEMSET(destAddr:=ADR(aMoversInZone),n:=SIZEOF(aMoversInZone),fillByte:=0);
+	
+	//Cheack all Movers and generate a sorted list of all mover in this zone.
+	THIS^.ipListOfMoversToCheck.ResetIterator();
+	WHILE THIS^.ipListOfMoversToCheck.HasNextObject() DO
+		//Check each mover in this stations list
+		IF __QUERYINTERFACE(THIS^.ipListOfMoversToCheck.GetNextObject(),ipMoverPlc) THEN
+			
+			//mover and distance are known from this point and are now sorted into the array
+			fDistToStart := ipMoverPlc.DistToParentStation;
+			ipMoverPlc := ipMoverPlc;
+			
+			//Check array of movers and decide if the current one is closer to 
+			FOR nLoopIndex := 0 TO (CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1) DO
+				//empty array position
+				IF aMoversInZone[nLoopIndex] = 0 THEN
+					aMoversInZone[nLoopIndex] := ipMoverPlc;
+					aDisanceToStart[nLoopIndex] := fDistToStart;
+					EXIT;
+					
+				//Closer Mover found, move whole array 	
+				ELSIF aDisanceToStart[nLoopIndex] > fDistToStart THEN
+					MEMMOVE(srcAddr := ADR(aMoversInZone[nLoopIndex]), destAddr := ADR(aMoversInZone[nLoopIndex+1]), n := (SIZEOF(aMoversInZone[0])*(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1-nLoopIndex)));
+					MEMMOVE(srcAddr := ADR(aDisanceToStart[nLoopIndex]), destAddr := ADR(aDisanceToStart[nLoopIndex+1]), n := (SIZEOF(aDisanceToStart[0])*(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1-nLoopIndex)));
+					aMoversInZone[nLoopIndex] := ipMoverPlc;
+					aDisanceToStart[nLoopIndex] := fDistToStart;
+					EXIT;
+					
+				//check next position	
+				ELSE 
+					;
+				END_IF
+			END_FOR
+		END_IF
+	END_WHILE
+	THIS^.ipListOfMoversToCheck.RestoreIterator();
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{a57b36be-57e2-46fb-ac48-3faaf13c289d}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR
+
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Nothing todo in Update. Check Prepare]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

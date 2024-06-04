@@ -139,14 +139,32 @@ END_VAR
     </Property>
     <Method Name="Initialize" Id="{40324653-7238-423b-a8fd-05ed7a18c09e}">
       <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR
+	stVarInfo : __SYSTEM.VAR_INFO;
+END_VAR
+VAR_INST
+	//This error cannot be reset. Requires a reset cold
+	{attribute 'hide'}	
+	fbInitError : FB_TcAlarm;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT THIS^.Mapped THEN
-	//Error
+        <ST><![CDATA[// Check if link to envirement is mapped
+IF NOT THIS^.Mapped THEN
+	IF NOT fbInitError.bRaised THEN 
+		//This error cannot be reset. Requires a reset cold
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		stVarInfo := __VARINFO(fbEnvironment);
+		fbInitError.ipArguments.AddString(stVarInfo.Symbol);
+		fbInitError.Raise(0);
+	END_IF
 	Initialize := E_FAIL;
+	RETURN;
+END_IF
 
-	
-ELSIF NOT bInitDone THEN
+
+
+IF NOT bInitDone THEN
 	//Busy
 	Initialize := S_PENDING;
 	
@@ -189,7 +207,8 @@ Mapped := NOT bMcToPlcNotMapped;]]></ST>
     </Property>
     <Property Name="OID" Id="{7ae2b0fe-be79-4b9e-9fc2-a7d176f204c5}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY OID : OTCID]]></Declaration>
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
       <Get Name="Get" Id="{88f94db8-1661-4f49-b868-d54d29985f73}">
         <Declaration><![CDATA[VAR
 END_VAR

@@ -3,6 +3,12 @@
   <Itf Name="I_XP_System_PLC" Id="{c3b3d3ce-c3c0-4441-bc62-ab81925683e6}">
     <Declaration><![CDATA[INTERFACE I_XP_System_PLC EXTENDS I_CH_Object
 ]]></Declaration>
+    <Method Name="CheckTargetExists" Id="{41af54e4-98a3-42b3-a270-0f5a5953c6eb}">
+      <Declaration><![CDATA[METHOD CheckTargetExists : BOOL //Return TRUE if target is existing
+VAR_INPUT
+	sStation	: STRING; //Group of the targed station or LUID
+END_VAR]]></Declaration>
+    </Method>
     <Method Name="Disable" Id="{0e1c17f7-3e58-40a2-9be7-754489d0378a}">
       <Declaration><![CDATA[METHOD Disable : I_CH_Feedback
 VAR_INPUT
@@ -96,13 +102,6 @@ PROPERTY Triggers : CHALET_BaseComponents.I_CH_LIST
     <Method Name="Update" Id="{09407e8b-d7ce-4a68-a4f9-b085d0bf0c23}">
       <Declaration><![CDATA[METHOD Update : HRESULT
 VAR_INPUT
-END_VAR
-]]></Declaration>
-    </Method>
-    <Method Name="ValideStationGroupID" Id="{41af54e4-98a3-42b3-a270-0f5a5953c6eb}">
-      <Declaration><![CDATA[METHOD ValideStationGroupID : BOOL //Return TRUE if group is existing
-VAR_INPUT
-	sStationGroupID	: STRING; //Group of the targed station
 END_VAR
 ]]></Declaration>
     </Method>

@@ -1,0 +1,173 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XP_Path" Id="{a479f742-a551-40e5-a493-f32ce50e69f9}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'enable_dynamic_creation'}
+{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+FUNCTION_BLOCK FB_XP_Path EXTENDS FB_CH_Object IMPLEMENTS I_XP_Path
+VAR
+	fbTracksUsed : FB_CH_List;
+	ipStartStation, ipDestinationStation : I_XP_Station;
+	fPathLength : LREAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="DistanceToDestiantion" Id="{49fa156c-c599-49f7-8c5b-c2e0b1d7c185}">
+      <Declaration><![CDATA[METHOD DistanceToDestiantion : LREAL
+VAR_INPUT
+	ipTrack : I_XP_Track;
+	fPosOnTrack : LREAL;
+END_VAR
+VAR
+	ipTrackTemp : I_XP_Track; 
+	bStartTrackFound : BOOL := FALSE;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ipTrack = 0 THEN
+	//Error -  invalide interface
+	DistanceToDestiantion := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	RETURN;
+END_IF
+
+IF NOT fbTracksUsed.FindObject(ipTrack) OR fPosOnTrack < 0 OR  fPosOnTrack > ipTrack.Length THEN
+	//Error -  position not on track
+	DistanceToDestiantion := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	RETURN;
+END_IF
+
+//the whole thing works because the tracklist is sorted from start to finish
+fbTracksUsed.ResetIterator();
+WHILE fbTracksUsed.HasNextObject() DO
+	IF ToXpTrack(fbTracksUsed.GetNextObject(),ipTrackTemp) THEN
+		//start countion on requestet track
+		IF ipTrackTemp = ipTrack OR bStartTrackFound THEN
+			bStartTrackFound := TRUE;
+			DistanceToDestiantion := DistanceToDestiantion + ipTrackTemp.Length;
+ 		END_IF
+	END_IF
+END_WHILE	
+
+DistanceToDestiantion := DistanceToDestiantion - fPosOnTrack;
+DistanceToDestiantion := DistanceToDestiantion - THIS^.StationDestination.AccocietedTrack.Length + THIS^.StationDestination.PositionOnTrack;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Length" Id="{9957ab4a-c60a-4dda-8b93-f3628e87faf2}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Length : LREAL]]></Declaration>
+      <Get Name="Get" Id="{200d8c22-a772-4dfe-ac22-68adb8102b4c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Length := THIS^.fPathLength;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{da0da2b0-41d5-4c9d-ab98-d16d71e56be3}">
+        <Declaration><![CDATA[
+VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.fPathLength := Length;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="LUID" Id="{26d11d55-a790-4b46-8b31-b39f504198af}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LUID : STRING //Locally unique identifier]]></Declaration>
+      <Get Name="Get" Id="{e088ce95-219f-484b-a793-c4a4c26a3f58}">
+        <Declaration><![CDATA[VAR
+	sTempName : STRING;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF ipStartStation <> 0 AND ipDestinationStation <> 0 THEN
+	sTempName := CONCAT(sTempName, ipStartStation.LUID);
+	sTempName := CONCAT(sTempName, ' to ' );
+	sTempName := CONCAT(sTempName, ipDestinationStation.LUID);
+	
+ELSIF ipStartStation <> 0 THEN
+	sTempName := CONCAT(sTempName, ipStartStation.LUID);
+	sTempName := CONCAT(sTempName, ' to ?' );
+
+ELSIF ipDestinationStation <> 0 THEN
+	sTempName := CONCAT(sTempName, '? to ' );
+	sTempName := CONCAT(sTempName, ipDestinationStation.LUID);
+	
+ELSE 
+	sTempName := ' Unknown path';
+END_IF
+
+
+LUID := sTempName;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PointerToThis" Id="{7cb45473-79bc-4eb8-b536-e692625fe3db}">
+      <Declaration><![CDATA[PROPERTY PointerToThis : POINTER TO FB_XP_Path]]></Declaration>
+      <Get Name="Get" Id="{41c51cb3-dcf5-493f-a0fd-76991d480e5a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PointerToThis := ADR(THIS^);]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StationDestination" Id="{1b455b3b-bd79-486d-9910-39e95da55283}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationDestination : I_XP_Station]]></Declaration>
+      <Get Name="Get" Id="{e8310971-86a0-43ac-9a0f-6b8c4a2bb8ad}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StationDestination := THIS^.ipDestinationStation;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{8358497b-03af-4ad4-a8b3-32fd9425ecfd}">
+        <Declaration><![CDATA[
+VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.ipDestinationStation := StationDestination;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="StationStart" Id="{22f96e9a-bf89-4243-809d-d2d258473025}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationStart  : I_XP_Station]]></Declaration>
+      <Get Name="Get" Id="{f3060c35-9b14-48ce-8c37-20e0c7535eaa}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StationStart := THIS^.ipStartStation;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{e84cf6fc-7f5b-48ae-8af3-01d8c941bb25}">
+        <Declaration><![CDATA[
+VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.ipStartStation := StationStart;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="TracksUsed" Id="{5170e2b5-479c-4450-80bf-4959ba6b1bca}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TracksUsed : REFERENCE TO FB_CH_List]]></Declaration>
+      <Get Name="Get" Id="{cf560e5a-4d4f-4c60-a8c0-e624ca89ff50}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TracksUsed REF= THIS^.fbTracksUsed;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

@@ -66,6 +66,14 @@ PROPERTY CurrentTrack : I_XP_Track]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="DistToParentStation" Id="{22fa7e66-5191-4ca0-862b-12f2ab300e2e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY DistToParentStation : LREAL //Distance to the responsible parent station [mm]
+]]></Declaration>
+      <Get Name="Get" Id="{86891467-5806-43e3-86f6-b719891f9a5a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="DynConstraint" Id="{c966e1a8-1da6-47c7-81c5-b00755d2c520}" FolderPath="DynamicConstraint\">
       <Declaration><![CDATA[PROPERTY DynConstraint : REFERENCE TO DynamicConstraint_Container]]></Declaration>
       <Get Name="Get" Id="{15c85705-8eb2-489b-b2bb-18d3faaf3da6}">
@@ -176,7 +184,8 @@ END_VAR
     </Method>
     <Property Name="OID" Id="{7a866113-9bad-4a56-ae1b-6e863d4962f3}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY OID : OTCID]]></Declaration>
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
       <Get Name="Get" Id="{cf548f20-e1bb-47fa-9f8c-a527feaa35bd}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
@@ -309,12 +318,17 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Property Name="TargetStationGroupID" Id="{651db133-db00-45b8-81f5-ffcbfefb230d}" FolderPath="Track\">
+    <Property Name="TargetStation" Id="{651db133-db00-45b8-81f5-ffcbfefb230d}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY TargetStationGroupID : STRING]]></Declaration>
+PROPERTY TargetStation : STRING]]></Declaration>
       <Get Name="Get" Id="{69a560fe-9184-4378-8b65-27f38b1d02d0}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
+      <Set Name="Set" Id="{620ebb3e-356f-4589-b369-a813b79e912c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Set>
     </Property>
     <Property Name="TcIoXPlanarMover" Id="{a25e8f89-0fcd-4a3b-85ce-126595fd0c34}" FolderPath="XPlanarUtility\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
