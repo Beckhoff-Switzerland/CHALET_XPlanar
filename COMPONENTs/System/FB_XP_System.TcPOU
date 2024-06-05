@@ -37,8 +37,8 @@ VAR
 	{attribute 'hide'}
 	fbFeedback : FB_CH_Feedback;
 	
-	//ZZZ TODO this port is not fix. REad from the TcCom object
-	nMETAdsPort : UINT;
+	//ZZZ TODO this port is not fix. REad from the task object
+	nXPlanarTaskAdsPort : UINT;
 END_VAR
 VAR CONSTANT
 	{attribute 'hide'}
@@ -998,13 +998,13 @@ VAR_INPUT
 	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
 	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
 	
-	METAdsPort : UINT; 
+	XPlanarTaskAdsPort : UINT; 
 END_VAR
 VAR
 	fbGetCurTaskIdx  : GETCURTASKINDEX;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[THIS^.nMETAdsPort := METAdsPort;]]></ST>
+        <ST><![CDATA[THIS^.nXPlanarTaskAdsPort := XPlanarTaskAdsPort;]]></ST>
       </Implementation>
     </Method>
     <Property Name="Feedback" Id="{10eb58e3-c35a-47ee-a75d-dc8749c15338}">
@@ -1380,19 +1380,6 @@ ELSE
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Property Name="METAdsPort" Id="{89ae55d7-58b0-488a-b2b5-f6d0b5ffd761}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY METAdsPort : UINT
-]]></Declaration>
-      <Get Name="Get" Id="{ce0da1c5-21cc-40f8-ba98-2194b3870dfa}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[METAdsPort := nMETAdsPort;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
     <Property Name="Movers" Id="{9353d17a-03c8-4198-a8d5-5b1dd965a722}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Movers : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
@@ -1736,6 +1723,19 @@ END_VAR]]></Declaration>
 ValidLUID := (ipStation <> 0);]]></ST>
       </Implementation>
     </Method>
+    <Property Name="XPlanarTaskAdsPort" Id="{89ae55d7-58b0-488a-b2b5-f6d0b5ffd761}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY XPlanarTaskAdsPort : UINT
+]]></Declaration>
+      <Get Name="Get" Id="{ce0da1c5-21cc-40f8-ba98-2194b3870dfa}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[XPlanarTaskAdsPort := nXPlanarTaskAdsPort;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="Zones" Id="{796ef09e-3844-42a2-af82-f422cc25cd4f}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Zones : CHALET_BaseComponents.I_CH_LIST

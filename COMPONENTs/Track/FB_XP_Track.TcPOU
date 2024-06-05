@@ -170,7 +170,7 @@ CASE nSeqConfiguring OF
 		
 	//CLOSED LOOP
 	400: // Closed loop - Read from Track object
-		fbAdsRead.PORT		:= THIS^.ipXpSystem.METAdsPort ; 
+		fbAdsRead.PORT		:= THIS^.ipXpSystem.XPlanarTaskAdsPort ; 
 		fbAdsRead.IDXGRP	:= THIS^.OID;
 		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_IS_CLOSED_LOOP; 
 		fbAdsRead.LEN		:= SIZEOF(THIS^.bIsClosedLoop);
@@ -198,7 +198,7 @@ CASE nSeqConfiguring OF
 		nSeqConfiguring := 801;
 	
 	801: // Start read - Read from Track object
-		fbAdsRead.PORT		:= THIS^.ipXpSystem.METAdsPort ; 
+		fbAdsRead.PORT		:= THIS^.ipXpSystem.XPlanarTaskAdsPort ; 
 		fbAdsRead.IDXGRP	:= THIS^.OID;
 		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_PREVIOUS_TRACK; 
 		fbAdsRead.LEN		:= SIZEOF(TrackOTCID);
@@ -242,7 +242,7 @@ CASE nSeqConfiguring OF
 		nSeqConfiguring := 851;
 	
 	851: // Start read - Read from Track object
-		fbAdsRead.PORT		:= THIS^.ipXpSystem.METAdsPort ;
+		fbAdsRead.PORT		:= THIS^.ipXpSystem.XPlanarTaskAdsPort ;
 		fbAdsRead.IDXGRP	:= THIS^.OID;
 		fbAdsRead.IDXOFFS	:= N_IDX_OFFSET_SUBSEQUENT_TRACK;
 		fbAdsRead.LEN		:= SIZEOF(TrackOTCID);
