@@ -169,23 +169,26 @@ PROPERTY TargetGroupe : STRING]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="TargetPosMonitoringTime" Id="{248ac04f-c2c7-421c-b0b7-e716c9300d00}" FolderPath="Interaction with process\">
+    <Property Name="TargetPosMonitoringTime" Id="{970bc219-7ccc-471b-9ee8-b02596d4444e}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//A time that is waited as soon as the mover is in the station (including the monitoring window) before “MoversInPlace” is set. e.g. used to stabilize the workpiece
 PROPERTY TargetPosMonitoringTime : TIME]]></Declaration>
-      <Get Name="Get" Id="{713f3cb7-1b59-427d-b1fc-069999c1dbdf}">
+      <Get Name="Get" Id="{80ebb02c-a0ed-4759-a389-dfb3eb995814}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
-      <Set Name="Set" Id="{ec7a6fce-e9bb-4ed3-b675-958e7c45a585}">
+      <Set Name="Set" Id="{fe77fe42-21f9-486d-b05c-9045e65af45c}">
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
-    <Property Name="TargetPosWindow" Id="{2373307b-8be4-416c-a09a-bdfc17a17500}" FolderPath="Interaction with process\">
+    <Property Name="TargetPosWindow" Id="{3dc077cf-2f1b-4f93-b1b5-27b779f57f8c}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//How many mm before the mover reaches the position is “MoversInPlace” set for the process. 
+//This distance can also be set very large (e.g. 100mm) for moving past without stopping.
 PROPERTY TargetPosWindow : LREAL]]></Declaration>
-      <Get Name="Get" Id="{f259b64a-063e-496a-8729-13237556cb41}">
+      <Get Name="Get" Id="{d791583e-a404-4c62-8f67-9b1ee893ddfb}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
-      <Set Name="Set" Id="{65f5f787-a9cc-454b-bcf4-a5edb0834125}">
+      <Set Name="Set" Id="{c8fd3cb6-99e2-44d6-844c-7edc3c3266ea}">
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>

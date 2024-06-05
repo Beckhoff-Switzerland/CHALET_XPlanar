@@ -329,7 +329,8 @@ fbFeedbackRmvFromGrp.Update();
       </Implementation>
     </Method>
     <Property Name="UtilityEnvirement" Id="{2e740e9d-ce68-40bf-aad7-1f44d441a8bc}">
-      <Declaration><![CDATA[PROPERTY UtilityEnvirement : Tc3_XPlanarUtility.I_Environment]]></Declaration>
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityEnvirement : Tc3_XPlanarUtility.I_Environment]]></Declaration>
       <Get Name="Get" Id="{722af0ec-c8ab-4b67-b67b-63ac0647ba49}">
         <Declaration><![CDATA[VAR
 END_VAR

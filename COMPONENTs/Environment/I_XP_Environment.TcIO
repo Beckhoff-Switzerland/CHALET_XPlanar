@@ -65,7 +65,8 @@ END_VAR
 ]]></Declaration>
     </Method>
     <Property Name="UtilityEnvirement" Id="{fd24b682-4ff6-4ca5-a2e9-fb815df216ce}">
-      <Declaration><![CDATA[PROPERTY UtilityEnvirement : Tc3_XPlanarUtility.I_Environment]]></Declaration>
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityEnvirement : Tc3_XPlanarUtility.I_Environment]]></Declaration>
       <Get Name="Get" Id="{3f66a6a5-9ba4-4ba0-923f-e7c56dd321a6}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
