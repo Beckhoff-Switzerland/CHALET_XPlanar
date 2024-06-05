@@ -7,8 +7,8 @@
 	Parameters:
 		xPos, yPos 			= Absolute position of the station on the xPlanar.
 		ipAccocietedTrack 	= The track on which the station is located. If the XY position is not on this track, the next possible track position is assumed on this track.
-		sUnigueName 		= Unique name that may only exist once.
-		sTargetGroupe 		= A name for a group to which this station belongs. Important for redundant stations
+		sUniqueName 		= Unique name that may only exist once.
+		sTargetGroup 		= A name for a group to which this station belongs. Important for redundant stations
  *)	
 FUNCTION_BLOCK FB_XP_Station EXTENDS FB_CH_Object IMPLEMENTS I_XP_Station, I_XP_Station_PLC
 VAR
@@ -22,8 +22,8 @@ VAR
 	bInitDone : BOOL;
 	{attribute 'hide'}	
 	bTrackIsSetInFbInit : BOOL;
-	
-
+	{attribute 'hide'}	
+	bMoversInPlace : BOOL;
 	{attribute 'hide'}                   	
 	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
 	{attribute 'hide'}	
@@ -31,7 +31,7 @@ VAR
 	{attribute 'hide'}
 	bReadyToRecvMovers 		: BOOL := TRUE;
 	{attribute 'hide'}
-	sStationGroupID : STRING;
+	sTargetGroup 				: STRING;
 	
 	{attribute 'hide'}
 	bSuppressDynamicsChange		: BOOL; // Suppress to change the dynamic(Gap+velocity) of passing movers. This is usefull in startup
@@ -83,7 +83,7 @@ VAR
 	sSimulationTargedStation	: STRING; //GroupID of the targed station to automatic send after the duration
 	
 	
-	// ipXpSystem Is Not Valid at this point, call the konstruktor again in the FB_Init
+	//ipXpSystem Is Not Valid at this point, call the konstruktor again in the FB_Init
 	{attribute 'hide'}
 	fbTrigger 					: FB_XP_Trigger(ipXpSystem);
 	{attribute 'hide'}
@@ -393,9 +393,9 @@ VAR_INPUT
 	
 	ipSystem 			: I_CH_Object;
 	ipAccocietedTrack 	: I_XP_Track;//track on which the station is located
-	sUnigueName		: STRING;		//expl.:'Loading' unique identification for this station
-	sTargetGroupe		: STRING;	//to which group of stations does this station belong? e.g. several stations can belong to one 'Infeed' if this is implemented redundantly.
-	nMoverQueueSize 		: UINT;
+	sUniqueName			: STRING;		//expl.:'Loading' unique identification for this station
+	sTargetGroup		: STRING;	//to which group of stations does this station belong? e.g. several stations can belong to one 'Infeed' if this is implemented redundantly.
+	nMoverQueueSize 	: UINT;
 	xPos, yPos			: LREAL; 	
 END_VAR
 
@@ -433,18 +433,18 @@ IF NOT bFBInitCalledOnce THEN
 	 
 	
 	//"" is maybe entered in an waiting or dynamic station and the name is not important
-	IF sUnigueName <> '' THEN 
-		THIS^.fbSourceInfo.sName := sUnigueName;
+	IF sUniqueName <> '' THEN 
+		THIS^.fbSourceInfo.sName := sUniqueName;
 	ELSE
-		sUnigueName := THIS^.fbSourceInfo.sName;
+		sUniqueName := THIS^.fbSourceInfo.sName;
 	END_IF
 
 	
 	//"" is maybe entered in an waiting or dynamic station and the name is not important
-	IF sTargetGroupe <> '' THEN 
-		THIS^.sStationGroupID := sTargetGroupe;
+	IF sTargetGroup <> '' THEN 
+		THIS^.sTargetGroup := sTargetGroup;
 	ELSE
-		THIS^.sStationGroupID := THIS^.fbSourceInfo.sName;
+		THIS^.sTargetGroup := THIS^.fbSourceInfo.sName;
 	END_IF
 
 	
@@ -641,24 +641,45 @@ fbPathElementsToCheck.AddObject(pFbPath^);
 //On first pathsearch get an Station who is further ahead than this
 fSeachStartPoint := THIS^.PositionOnTrack;
 
+
+
 //While list is not empty
 WHILE NOT fbPathElementsToCheck.IsEmpty DO
 	__QUERYINTERFACE(fbPathElementsToCheck.GetRandomObject(), ipPathCurrentLoop);
 	__QUERYINTERFACE(ipPathCurrentLoop.TracksUsed.GetNextObject(),ipLastAddedTrack);
 	
-	//Check current Track for stations
-	//Get a List of all stations on track Position > Startpoint
-	ipLastAddedTrack.StationsOnTrack.ResetIterator();
-	fbListStationsToGetClosest.Clear();
-	WHILE ipLastAddedTrack.StationsOnTrack.HasNextObject() DO
-		IF ToXpStation(ipLastAddedTrack.StationsOnTrack.GetNextObject(),ipStation) THEN
-			IF ipLastAddedTrack.ClosedLoop OR ipStation.PositionOnTrack > fSeachStartPoint THEN
-				fbListStationsToGetClosest.AddObject(ipStation);
-			END_IF
-		END_IF
-	END_WHILE	
 	
-	//Get closest to 0mm
+	//Closed loop
+	IF ipLastAddedTrack.ClosedLoop THEN
+		//on closed-loop add all stations of this track to list
+		fbListStationsToGetClosest.Duplicate(ipLastAddedTrack.StationsOnTrack);
+	
+		//remove THIS station from list if more than on station is existing
+		IF fbListStationsToGetClosest.Size > 1 THEN
+			fbListStationsToGetClosest.RemoveObject(THIS^);
+		END_IF
+	
+		
+	
+	ELSE
+		//Not closed loop	
+		//Get a List of all stations on track Position > Startpoint
+		ipLastAddedTrack.StationsOnTrack.ResetIterator();
+		fbListStationsToGetClosest.Clear();
+		WHILE ipLastAddedTrack.StationsOnTrack.HasNextObject() DO
+			IF ToXpStation(ipLastAddedTrack.StationsOnTrack.GetNextObject(),ipStation) THEN
+				//Add all station ahead to list. on closed-loop add all stations of this track to list
+				IF ipStation.PositionOnTrack > fSeachStartPoint THEN
+					fbListStationsToGetClosest.AddObject(ipStation);
+				END_IF
+			END_IF
+		END_WHILE	
+	END_IF
+		
+	
+
+	
+	//Get closest to startpos(0mm)
 	WHILE fbListStationsToGetClosest.Size > 1 DO
 		fbListStationsToGetClosest.ResetIterator();
 		__QUERYINTERFACE(fbListStationsToGetClosest.GetNextObject(),ipStation1);
@@ -935,59 +956,12 @@ END_VAR
 PROPERTY MoversInPlace : BOOL
 ]]></Declaration>
       <Get Name="Get" Id="{c7e37cd7-d140-4f9f-8a5d-1562df3fdd70}">
-        <Declaration><![CDATA[VAR
-	bTempMoverInPosition : BOOL;
-	nLoopIndex : UINT;
-	fExpectedDistanceToParent : LREAL;
-	nCycleCount : UDINT;
-	nCycleTime_ms : UDINT;
-END_VAR
-VAR_INST
-	{attribute 'hide'}
-	nCycleCountInPos : UDINT;
-END_VAR
-]]></Declaration>
+        <Declaration><![CDATA[]]></Declaration>
         <Implementation>
-          <ST><![CDATA[//If queuesize is zero, mover is never in place.
-IF nMoverQueueSize = 0 OR THIS^.ipAccocietedTrack = 0 OR NOT ipXpSystem.Enabled THEN
-	MoversInPlace := FALSE;
-	RETURN;
-END_IF
+          <ST><![CDATA[THIS^.Prepare();//Prepare time-critical information, if not already done
 
-//Get this task cycle Count and time 
-nCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
-nCycleTime_ms := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleTime(*100ns*) / 10_000 ;
 
-bTempMoverInPosition := TRUE;
-fExpectedDistanceToParent := 0;
-FOR nLoopIndex := 0 TO (THIS^.nMoverQueueSize-1) DO
-	IF THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex] <> 0 THEN
-		//Check position and Gap
-		IF nLoopIndex <> 0 THEN
-			fExpectedDistanceToParent := fExpectedDistanceToParent + THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].LastCmdTargedGap;
-		END_IF
-		bTempMoverInPosition := bTempMoverInPosition AND (ABS(THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].DistToParentStation - fExpectedDistanceToParent) <= fTargetPosWindow );
-		
-		//Check Target Position Monitoring 
-		IF bTempMoverInPosition AND nCycleCountInPos = 0 THEN
-			nCycleCountInPos := nCycleCount;
-		ELSIF NOT bTempMoverInPosition THEN
-			nCycleCountInPos := 0;
-		END_IF
-		bTempMoverInPosition := bTempMoverInPosition AND (tTargetPosMonitoringTime = T#0MS OR nCycleCountInPos + TIME_TO_UDINT(tTargetPosMonitoringTime)/nCycleTime_ms  <  nCycleCount);  
-		
-		//Check if velocity is 0
-		bTempMoverInPosition := bTempMoverInPosition AND (THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].PlanarMover.MCTOPLC.SETONTRACK.SetVelo = 0.0);
-		
-		//Check mover has this station as targed
-		bTempMoverInPosition := bTempMoverInPosition AND (THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].TargetStation = THIS^.TargetGroupe) OR (THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].TargetStation = THIS^.LUID);
-	ELSE	
-		bTempMoverInPosition := FALSE;
-		RETURN;
-	END_IF
-END_FOR
-
-MoversInPlace := bTempMoverInPosition;]]></ST>
+MoversInPlace := bMoversInPlace;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -1101,6 +1075,82 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="Prepare" Id="{275db71b-a688-4538-acbf-7e343d5efe51}">
+      <Declaration><![CDATA[(* 
+	Use this Methode to calculate time sensitive date once each cycle. Example: read analog input and convert before do get Signal propertie
+*)
+METHOD PROTECTED Prepare : HRESULT
+VAR_INST
+	{attribute 'hide'}	
+	nLastUpdatedCycleCount : UDINT;
+END_VAR
+
+VAR
+	nLoopIndex : UINT;
+	fExpectedDistanceToParent : LREAL;
+	nCycleTime_ms : UDINT;
+	bTempMoverInPosition : BOOL;
+	bTempMoverVeloZero : BOOL;
+	bTempMoverInMonitoringTime : BOOL;
+	bTempMoverThisStationAsTarged : BOOL;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	nCycleCountInPos : UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check if this Cycle the dates are allready prepared. This is important for time sensitive informations.
+IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.TaskIndex].CycleCount THEN
+	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.TaskIndex].CycleCount ;
+
+
+	(* Check if mover is in place. Time and Position window *)
+	//If queuesize is zero, mover is never in place.
+	IF nMoverQueueSize = 0 OR THIS^.ipAccocietedTrack = 0 OR NOT ipXpSystem.Enabled THEN
+		THIS^.bMoversInPlace := FALSE;
+		nCycleCountInPos := 0;
+	ELSE
+		//Get this task cycle Count and time 
+		nCycleTime_ms := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleTime(*100ns*) / 10_000 ;
+		
+		bTempMoverInPosition := TRUE; bTempMoverVeloZero := TRUE; bTempMoverThisStationAsTarged := TRUE;
+		fExpectedDistanceToParent := 0;
+		FOR nLoopIndex := 0 TO (THIS^.nMoverQueueSize-1) DO
+			IF THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex] <> 0 THEN
+				//Check position and Gap - 1 mover do not have a gap
+				IF nLoopIndex <> 0 THEN
+					fExpectedDistanceToParent := fExpectedDistanceToParent + THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].LastCmdTargedGap;
+				END_IF
+				bTempMoverInPosition := bTempMoverInPosition AND (ABS(THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].DistToParentStation - fExpectedDistanceToParent) <= fTargetPosWindow );
+				bTempMoverVeloZero := bTempMoverVeloZero AND (THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].PlanarMover.MCTOPLC.SETONTRACK.SetVelo = 0.0);
+				bTempMoverThisStationAsTarged := bTempMoverThisStationAsTarged AND ((THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].TargetStation = THIS^.TargetGroupe) OR (THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].TargetStation = THIS^.LUID));
+			END_IF
+		END_FOR
+			
+		//start time if mover position is ok
+		IF bTempMoverInPosition  THEN
+			nCycleCountInPos := nCycleCountInPos + 1;
+		ELSE
+			nCycleCountInPos := 0;
+		END_IF
+		
+		bTempMoverInMonitoringTime := (UDINT_TO_TIME(nCycleCountInPos * nCycleTime_ms) >= tTargetPosMonitoringTime);
+				
+		THIS^.bMoversInPlace := bTempMoverInPosition AND bTempMoverInMonitoringTime AND bTempMoverThisStationAsTarged;// AND bTempMoverVeloZero;
+	END_IF
+	
+	
+	
+	
+	
+	
+	
+	
+END_IF
+	]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="ProcessSimulationActive" Id="{558cdc10-8e4a-47c5-b8f1-2ae6941bfbd7}" FolderPath="Simulation\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY ProcessSimulationActive : BOOL]]></Declaration>
@@ -1553,12 +1603,13 @@ PROPERTY TargetGroupe : STRING]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[TargetGroupe := THIS^.sStationGroupId;]]></ST>
+          <ST><![CDATA[TargetGroupe := THIS^.sTargetGroup;]]></ST>
         </Implementation>
       </Get>
     </Property>
     <Property Name="TargetPosMonitoringTime" Id="{81d90649-20ef-4a9c-9703-330f00f22de3}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//A time that is waited as soon as the mover is in the station (including the monitoring window) before “MoversInPlace” is set. e.g. used to stabilize the workpiece
 PROPERTY TargetPosMonitoringTime : TIME]]></Declaration>
       <Get Name="Get" Id="{b1f9a2cd-e20f-4dc7-9408-ecb1000afbd7}">
         <Declaration><![CDATA[VAR
@@ -1579,6 +1630,8 @@ END_VAR
     </Property>
     <Property Name="TargetPosWindow" Id="{1aa1186f-3d36-4525-ae09-16e12d5d9214}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//How many mm before the mover reaches the position is “MoversInPlace” set for the process. 
+//This distance can also be set very large (e.g. 100mm) for moving past without stopping.
 PROPERTY TargetPosWindow : LREAL]]></Declaration>
       <Get Name="Get" Id="{c24d224e-ad7a-4c2c-9108-af9f8e637691}">
         <Declaration><![CDATA[VAR
@@ -1629,7 +1682,7 @@ IF NOT bInitDone THEN
 	RETURN;
 END_IF
 
-
+THIS^.Prepare();//Prepare time-critical information, if not already done
 
 
 // ********************** Set feedback depending on active command *******************************
