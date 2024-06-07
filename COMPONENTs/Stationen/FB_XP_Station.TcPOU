@@ -1089,6 +1089,7 @@ VAR
 	nLoopIndex : UINT;
 	fExpectedDistanceToParent : LREAL;
 	nCycleTime_ms : UDINT;
+	bMoverInQueue : BOOL;
 	bTempMoverInPosition : BOOL;
 	bTempMoverVeloZero : BOOL;
 	bTempMoverInMonitoringTime : BOOL;
@@ -1122,9 +1123,14 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.TaskIndex
 				IF nLoopIndex <> 0 THEN
 					fExpectedDistanceToParent := fExpectedDistanceToParent + THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].LastCmdTargedGap;
 				END_IF
+				bMoverInQueue		:= TRUE;
 				bTempMoverInPosition := bTempMoverInPosition AND (ABS(THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].DistToParentStation - fExpectedDistanceToParent) <= fTargetPosWindow );
 				bTempMoverVeloZero := bTempMoverVeloZero AND (THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].PlanarMover.MCTOPLC.SETONTRACK.SetVelo = 0.0);
 				bTempMoverThisStationAsTarged := bTempMoverThisStationAsTarged AND ((THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].TargetStation = THIS^.TargetGroupe) OR (THIS^.fbSortedListMoversInQueue.MoversInZone[nLoopIndex].TargetStation = THIS^.LUID));
+			ELSE
+				//Missing mover in queue
+				bMoverInQueue := FALSE;
+				EXIT;
 			END_IF
 		END_FOR
 			
@@ -1137,7 +1143,7 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.TaskIndex
 		
 		bTempMoverInMonitoringTime := (UDINT_TO_TIME(nCycleCountInPos * nCycleTime_ms) >= tTargetPosMonitoringTime);
 				
-		THIS^.bMoversInPlace := bTempMoverInPosition AND bTempMoverInMonitoringTime AND bTempMoverThisStationAsTarged;// AND bTempMoverVeloZero;
+		THIS^.bMoversInPlace := bMoverInQueue AND bTempMoverInPosition AND bTempMoverInMonitoringTime AND bTempMoverThisStationAsTarged;// AND bTempMoverVeloZero;
 	END_IF
 	
 	

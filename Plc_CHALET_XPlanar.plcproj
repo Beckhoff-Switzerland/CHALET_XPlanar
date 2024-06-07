@@ -27,7 +27,7 @@
     </DeploymentEvents>
     <Released>false</Released>
     <Company>Beckhoff CH</Company>
-    <ProjectVersion>4.3.2</ProjectVersion>
+    <ProjectVersion>4.3.3</ProjectVersion>
     <Title>CHALET_XPlanar</Title>
   </PropertyGroup>
   <ItemGroup>
