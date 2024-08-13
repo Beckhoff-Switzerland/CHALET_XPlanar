@@ -17,7 +17,7 @@ VAR
 	{attribute 'hide'}
 	iXpSystem : I_XP_System_Registration;
 	{attribute 'hide'}               	
-	fbFeedback 			: FB_XP_Feedback;
+	fbFeedback 			: FB_XP_Feedback(ipSourceInfo := fbSourceInfo);	
 	{attribute 'hide'}                   	
 	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
 
@@ -172,7 +172,7 @@ END_VAR
 IF NOT THIS^.Mapped THEN
 	IF NOT fbInitError.bRaised THEN 
 		//This error cannot be reset. Requires a reset cold
-		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
 		stVarInfo := __VARINFO(fbGroup);
 		fbInitError.ipArguments.AddString(stVarInfo.Symbol);
 		fbInitError.Raise(0);

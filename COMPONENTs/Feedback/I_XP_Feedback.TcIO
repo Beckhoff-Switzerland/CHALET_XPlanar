@@ -10,6 +10,24 @@ PROPERTY ObjectInfo : REFERENCE TO PlanarObjectInfo]]></Declaration>
       <Get Name="Get" Id="{347b8903-1db1-4e0c-aee8-08385285e022}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
+      <Set Name="Set" Id="{11e52423-84e5-42f6-abb8-1ceabca64e7b}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="ObjectInfoEx" Id="{a8770830-0bf4-4097-921d-67c4a657d392}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Indicates which object one would collide with. *)
+PROPERTY ObjectInfoEx : REFERENCE TO ST_PlanarObjectInfoEx]]></Declaration>
+      <Get Name="Get" Id="{3d238742-5e78-4caa-a50e-b567381b957c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{0b09ac3e-9700-4039-b87a-6b16d1b40fda}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Set>
     </Property>
   </Itf>
 </TcPlcObject>

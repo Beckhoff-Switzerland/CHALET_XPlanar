@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Mover" Id="{567b42ec-b45f-4b7f-a752-c8a31c59e383}">
-    <Declaration><![CDATA[INTERFACE I_XP_Mover  EXTENDS __SYSTEM.IQueryInterface, I_CH_Object
+    <Declaration><![CDATA[INTERFACE I_XP_Mover  EXTENDS I_CH_Object
 
 ]]></Declaration>
     <Folder Name="Group" Id="{98522917-210e-4a16-96b2-caa3ecaab952}" />
@@ -161,6 +161,30 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="MoverHeight" Id="{76c6d44a-94ed-48c4-9cd2-c16943cbfbe2}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Height that is used for internal collision checks.[mm] *)
+PROPERTY MoverHeight : LREAL]]></Declaration>
+      <Get Name="Get" Id="{f2df1a97-8161-4b33-9f5a-2f1a9f725c3c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverIsNotPresent" Id="{e40a60ae-99d6-49fb-9646-536fda4eeb14}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Mover could not be detected or was removed from the system
+PROPERTY MoverIsNotPresent : BOOL]]></Declaration>
+      <Get Name="Get" Id="{c2d50c85-1348-4406-b3e6-8ecfb2a1f6d9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverWidth" Id="{42c814e0-a325-4307-ab17-9bd20fefdcf3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Width that is used for internal collision checks.[mm] *)
+PROPERTY MoverWidth : LREAL]]></Declaration>
+      <Get Name="Get" Id="{e1b9ed3e-d64e-4296-94c2-cbaaf162b575}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="MoveXY" Id="{20f1e13d-5751-45ab-9270-b581d1f529c5}" FolderPath="Movement\">
       <Declaration><![CDATA[METHOD MoveXY : HRESULT
 VAR_INPUT
@@ -203,10 +227,26 @@ PROPERTY PlanarMover : REFERENCE TO MC_PlanarMover]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="PositionAtDisable" Id="{c249cbc7-6194-4e84-afc7-5747aa64f16e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the last valide planar mover setpoint XYZABC [mm] *)
+PROPERTY PositionAtDisable : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{72308883-7511-4aff-bc17-cc1075676282}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="PositionOnTrack" Id="{518cae7c-639f-4ece-a5ee-c588dfd0a161}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PositionOnTrack : Lreal]]></Declaration>
       <Get Name="Get" Id="{c83c88c8-455b-4b56-a2c8-b018d056ed98}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionSet" Id="{fad00538-d046-475d-8f0f-0fc6a3c679d5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the current planar mover setpoint XYZABC [mm] *)
+PROPERTY PositionSet : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{21971bf4-080a-478b-ae5f-8566ea986574}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -224,6 +264,14 @@ END_VAR
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Route : REFERENCE TO FB_CH_List]]></Declaration>
       <Get Name="Get" Id="{e498b67f-8337-4325-997a-fa93ee597621}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Standstill" Id="{6b971fc0-1d52-4798-a038-7ace9a2ec219}" FolderPath="Movement\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Velocity is zero *)
+PROPERTY Standstill : BOOL]]></Declaration>
+      <Get Name="Get" Id="{b94c2963-6ded-418e-9184-4696eea57475}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

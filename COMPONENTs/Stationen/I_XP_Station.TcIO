@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Station" Id="{3d974a17-7bf1-45ea-a1bb-e6a1207524fe}">
-    <Declaration><![CDATA[INTERFACE I_XP_Station EXTENDS __SYSTEM.IQueryInterface, I_CH_Object
+    <Declaration><![CDATA[INTERFACE I_XP_Station EXTENDS I_CH_Object
 
 ]]></Declaration>
     <Property Name="AccocietedTrack" Id="{f1f8fb4d-f5e8-4293-ab6b-e19a472e59da}">
@@ -41,6 +41,13 @@ PROPERTY CtsEmptySpaceInQueue : UDINT]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="CtsMoversInQueue" Id="{7a8ac52b-d8b4-46c2-af98-ad00f1a720fd}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsMoversInQueue : UDINT]]></Declaration>
+      <Get Name="Get" Id="{92717f46-0e8a-4f98-a1ea-f807eabab1a8}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="DeleteMoversQueue" Id="{4df869e3-43c4-41fb-9494-0537850d74ad}">
       <Declaration><![CDATA[METHOD DeleteMoversQueue : HRESULT
 VAR_INPUT
@@ -56,6 +63,14 @@ PROPERTY Filter : STRING]]></Declaration>
       <Set Name="Set" Id="{84bcc4bb-4e27-4145-8bbf-6e51a5e53ce9}">
         <Declaration><![CDATA[]]></Declaration>
       </Set>
+    </Property>
+    <Property Name="MoversInPlace" Id="{0ac094d8-21dd-4bed-9c5a-66becba2a927}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversInPlace : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{3f8d5da7-f95f-4c2c-bcd6-5db015e4c0cf}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
     </Property>
     <Property Name="PathsAhead" Id="{0435d021-9e32-4506-b359-a43a32741a81}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}

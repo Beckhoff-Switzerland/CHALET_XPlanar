@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Track_PLC" Id="{e6e7f968-03d3-4a49-a729-42c6442c0da9}">
-    <Declaration><![CDATA[INTERFACE I_XP_Track_PLC EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XP_Track_PLC EXTENDS I_CH_Object
 
 ]]></Declaration>
     <Property Name="CtsMoversOnTrack" Id="{a3257dbe-6eca-46f1-99cd-8564a818db88}">

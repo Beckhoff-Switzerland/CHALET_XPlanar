@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Group" Id="{fabb6f0b-72a4-4daf-a291-c2351034b2a2}">
-    <Declaration><![CDATA[INTERFACE I_XP_Group  EXTENDS __SYSTEM.IQueryInterface, I_CH_Object
+    <Declaration><![CDATA[INTERFACE I_XP_Group  EXTENDS I_CH_Object
 ]]></Declaration>
     <Method Name="AddEnvironment" Id="{ccd48f0c-5eab-407f-ad34-a982d77e9dee}">
       <Declaration><![CDATA[METHOD AddEnvironment : HRESULT

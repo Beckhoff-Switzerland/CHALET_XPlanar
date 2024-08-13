@@ -27,14 +27,20 @@
     </DeploymentEvents>
     <Released>false</Released>
     <Company>Beckhoff CH</Company>
-    <ProjectVersion>4.3.3</ProjectVersion>
+    <ProjectVersion>4.4.9</ProjectVersion>
     <Title>CHALET_XPlanar</Title>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="COMPONENTs\Environment\I_XP_Enviroment_PLC.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="COMPONENTs\Feedback\FB_XP_Feedback.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Feedback\I_XP_Feedback.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Feedback\ST_PlanarObjectInfoEx.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Mover\FB_XP_Mover.TcPOU">
@@ -128,6 +134,12 @@
     <Compile Include="COMPONENTs\Track\I_XP_Track_PLC.TcIO">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="FUNCTIONs\F_DistXYVectors.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_RotatePositionXY.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="XPlanarParameterlist.TcGVL">
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
@@ -142,7 +154,6 @@
     <PlaceholderReference Include="CHALET_Nc">
       <DefaultResolution>CHALET_Nc, * (Beckhoff CH)</DefaultResolution>
       <Namespace>CHALET_Nc</Namespace>
-      <PublishSymbolsInContainer>true</PublishSymbolsInContainer>
     </PlaceholderReference>
     <PlaceholderReference Include="Tc2_EtherCAT">
       <DefaultResolution>Tc2_EtherCAT, * (Beckhoff Automation GmbH)</DefaultResolution>
@@ -185,7 +196,7 @@
       <Namespace>Tc3_Physics</Namespace>
     </PlaceholderReference>
     <PlaceholderReference Include="Tc3_XPlanarUtility">
-      <DefaultResolution>Tc3_XPlanarUtility, * (Beckhoff Automation GmbH &amp; Co. KG)</DefaultResolution>
+      <DefaultResolution>Tc3_XPlanarUtility, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc3_XPlanarUtility</Namespace>
     </PlaceholderReference>
   </ItemGroup>
@@ -203,6 +214,7 @@
     <Folder Include="COMPONENTs\Group" />
     <Folder Include="COMPONENTs\Mover" />
     <Folder Include="COMPONENTs\System" />
+    <Folder Include="FUNCTIONs" />
   </ItemGroup>
   <ItemGroup>
     <SubObject Include="FB_CH_List.AddObject" />
@@ -217,132 +229,18 @@
     <SubObject Include="FB_CH_List.ResetIterator" />
     <SubObject Include="FB_CH_List.Size" />
     <SubObject Include="FB_CH_List.Size.Get" />
-    <SubObject Include="FB_XP_System.ValidLUID">
+    <SubObject Include="FB_XP_System.CreateHelpStations">
       <ExcludeFromBuild>true</ExcludeFromBuild>
     </SubObject>
     <SubObject Include="I_CH_Feedback.ActiveCommand" />
     <SubObject Include="I_CH_Feedback.LastCommandAccepted" />
-    <SubObject Include="I_XP_System_PLC.ValidLUID">
-      <ExcludeFromBuild>true</ExcludeFromBuild>
-    </SubObject>
     <SubObject Include="I_XP_Track_PLC.MoversOnTrack">
       <ExcludeFromBuild>true</ExcludeFromBuild>
     </SubObject>
   </ItemGroup>
   <ItemGroup>
-    <PlaceholderResolution Include="CAA Callback">
-      <Resolution>CAA Callback Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CAA MemBlockMan">
-      <Resolution>CAA Memory Block Manager Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CAA ResMan">
-      <Resolution>CAA Ressource Manager Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CAA Types">
-      <Resolution>CAA Types Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
     <PlaceholderResolution Include="CHALET_BaseComponents">
       <Resolution>CHALET_BaseComponents, * (Beckhoff CH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpApp">
-      <Resolution>CmpApp, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpBitmapPool">
-      <Resolution>CmpBitmapPool, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpDynamicText">
-      <Resolution>CmpDynamicText, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpEventMgr">
-      <Resolution>CmpEventMgr, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpLog">
-      <Resolution>CmpLog, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpSchedule">
-      <Resolution>CmpSchedule, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpTargetVisu">
-      <Resolution>CmpTargetVisu, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpVisuHandler">
-      <Resolution>CmpVisuHandler, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Collections">
-      <Resolution>Collections, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Component Manager">
-      <Resolution>Component Manager, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="FloatingPointUtils">
-      <Resolution>FloatingPointUtils, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Standard">
-      <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Standard64">
-      <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="StringUtils">
-      <Resolution>StringUtils, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysCpuHandling">
-      <Resolution>SysCpuHandling, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysDir">
-      <Resolution>SysDir, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysFile">
-      <Resolution>SysFile, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysMem">
-      <Resolution>SysMem, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysProcess">
-      <Resolution>SysProcess, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysShm">
-      <Resolution>SysShm, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTarget">
-      <Resolution>SysTarget, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemBase">
-      <Resolution>VisuElemBase, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemMeter">
-      <Resolution>VisuElemMeter, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElems">
-      <Resolution>VisuElems, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemsSpecialControls">
-      <Resolution>VisuElemsSpecialControls, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemsWinControls">
-      <Resolution>VisuElemsWinControls, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemTextEditor">
-      <Resolution>VisuElemTextEditor, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="system_visuinputs">
-      <Resolution>VisuInputs, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuInputs">
-      <Resolution>VisuInputs, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuNativeControl">
-      <Resolution>VisuNativeControl, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTime">
-      <Resolution>SysTime, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTimeCore">
-      <Resolution>SysTimeCore, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTimeRtc">
-      <Resolution>SysTimeRtc, * (System)</Resolution>
     </PlaceholderResolution>
     <PlaceholderResolution Include="Tc2_EtherCAT">
       <Resolution>Tc2_EtherCAT, * (Beckhoff Automation GmbH)</Resolution>
@@ -374,15 +272,6 @@
     <PlaceholderResolution Include="Tc3_Physics">
       <Resolution>Tc3_Physics, * (Beckhoff Automation GmbH)</Resolution>
     </PlaceholderResolution>
-    <PlaceholderResolution Include="Tc3_XPlanarUtility">
-      <Resolution>Tc3_XPlanarUtility, * (Beckhoff Automation GmbH &amp; Co. KG)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Util">
-      <Resolution>Util, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="VisuDialogs">
-      <Resolution>VisuDialogs, * (System)</Resolution>
-    </PlaceholderResolution>
   </ItemGroup>
   <ItemGroup>
     <Content Include="LICENSE.md">
@@ -390,8 +279,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <PinnedGlobalDataType Include="MoverDetectionStatus" />
+    <PinnedGlobalDataType Include="ST_CHALET_Base_Events" />
     <PinnedGlobalDataType Include="ST_CHALET_XPlanar_Events" />
-    <PinnedGlobalDataType Include="ST_CHALET_XTS_Events" />
+    <PinnedGlobalDataType Include="ST_Tc3_NcErrorCodes" />
   </ItemGroup>
   <ProjectExtensions>
     <PlcProjectOptions>

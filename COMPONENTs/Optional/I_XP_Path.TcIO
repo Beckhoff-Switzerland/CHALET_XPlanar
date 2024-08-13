@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Path" Id="{d0a7e409-20e8-490f-be78-3b4ffcbf57b0}">
-    <Declaration><![CDATA[INTERFACE I_XP_Path  EXTENDS __SYSTEM.IQueryInterface, I_CH_Object
+    <Declaration><![CDATA[INTERFACE I_XP_Path  EXTENDS I_CH_Object
 ]]></Declaration>
     <Method Name="DistanceToDestiantion" Id="{16fcaeeb-05bd-43dc-9bde-b5fbe4442f30}">
       <Declaration><![CDATA[METHOD DistanceToDestiantion : LREAL

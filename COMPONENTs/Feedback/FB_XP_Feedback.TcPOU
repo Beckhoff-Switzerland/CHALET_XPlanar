@@ -10,7 +10,7 @@ END_VAR
 VAR
 	(* Indicates which object one would collide with. *)
 	{attribute 'hide'}
-	_objectInfo : PlanarObjectInfo;
+	_objectInfo : ST_PlanarObjectInfoEx;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -23,6 +23,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^._ObjectInfo.Id := 0;
+THIS^._ObjectInfo.ipObject := 0;
 THIS^._ObjectInfo.ObjectType := EPlanarObjectType.None;]]></ST>
       </Implementation>
     </Method>
@@ -35,9 +36,46 @@ PROPERTY ObjectInfo : REFERENCE TO PlanarObjectInfo]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[objectInfo REF= THIS^._objectInfo;]]></ST>
+          <ST><![CDATA[objectInfo REF= THIS^._objectInfo;
+
+]]></ST>
         </Implementation>
       </Get>
+      <Set Name="Set" Id="{56bc4194-e62a-43f7-afc6-ab7b6ebdf06b}">
+        <Declaration><![CDATA[
+VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^._objectInfo.Id			:= ObjectInfo.Id;
+THIS^._objectInfo.ObjectType 	:= ObjectInfo.ObjectType;
+THIS^._objectInfo.ipObject 		:= 0;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="ObjectInfoEx" Id="{9136f6c2-df29-47e0-ba76-9636df880a36}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Indicates which object one would collide with. *)
+PROPERTY ObjectInfoEx : REFERENCE TO ST_PlanarObjectInfoEx]]></Declaration>
+      <Get Name="Get" Id="{cdb0d62e-061e-4f1f-921e-ccf3dda7ae0d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[objectInfoEx REF= THIS^._objectInfo;
+
+]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{11859cf4-09f8-4b5f-8585-f342b130d73a}">
+        <Declaration><![CDATA[
+VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^._objectInfo := ObjectInfoEx;]]></ST>
+        </Implementation>
+      </Set>
     </Property>
   </POU>
 </TcPlcObject>

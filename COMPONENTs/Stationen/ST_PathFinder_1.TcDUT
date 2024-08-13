@@ -4,9 +4,11 @@
     <Declaration><![CDATA[TYPE ST_PathFinder_1 :
 STRUCT
 	bTargetFound : BOOL; // Targed Station found on this path. No information about ready or not	
-	fDistToTarged : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;;
+	fDistToTarged : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	fDistShortestMaybeNotReady		: LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
 	ipBestStation : I_XP_Station; //to get to your destination, this would be the best station that can be reached directly and has space for at least 1 mover in the queue. Does not necessarily have to be the destination station
 	ipRouteToParent : I_CH_LIST;
+	bDirectAccessible : BOOL;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

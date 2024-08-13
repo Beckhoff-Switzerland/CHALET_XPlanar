@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Mover_PLC" Id="{6782d671-8977-4e78-ad46-9a03e207fc6f}">
-    <Declaration><![CDATA[INTERFACE I_XP_Mover_PLC EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XP_Mover_PLC EXTENDS I_CH_Object
 ]]></Declaration>
     <Folder Name="DynamicConstraint" Id="{89ab60cc-20b3-4c93-8816-921b4742aad0}" />
     <Folder Name="ExternalSetpoint" Id="{5a587f93-4785-408d-88fb-b76e6ce1b65e}" />
@@ -166,6 +166,30 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="MoverHeight" Id="{d3934eab-8217-4f0d-8cc0-a32474e2f67a}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Height that is used for internal collision checks.[mm] *)
+PROPERTY MoverHeight : LREAL]]></Declaration>
+      <Get Name="Get" Id="{72f28ffa-9550-420b-be83-019d0ac7afd3}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverIsNotPresent" Id="{515fb499-79a9-4b44-be14-d054fc281c9c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Mover could not be detected or was removed from the system
+PROPERTY MoverIsNotPresent : BOOL]]></Declaration>
+      <Get Name="Get" Id="{23f8c345-c9c5-4479-9311-7cdc73a9d2a3}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverWidth" Id="{a4822df2-4e81-4c40-a114-52e1bf841cc2}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Width that is used for internal collision checks.[mm] *)
+PROPERTY MoverWidth : LREAL]]></Declaration>
+      <Get Name="Get" Id="{1fb55ad3-5c6d-44e4-bee5-4f4f1599444a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="MoveXY" Id="{a40220ca-38c9-4124-87f6-c5d28cb28e93}" FolderPath="Movement\">
       <Declaration><![CDATA[METHOD MoveXY : HRESULT
 VAR_INPUT
@@ -308,6 +332,14 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="Standstill" Id="{f148acb4-47c0-41e7-b892-6c653004e288}" FolderPath="Movement\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Velocity is zero *)
+PROPERTY Standstill : BOOL]]></Declaration>
+      <Get Name="Get" Id="{599cee7a-731c-49b5-817c-ffd7f330fc15}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="StartExternalSetpoint" Id="{dfa775fa-11d4-4c40-8dc6-4667d8c90110}" FolderPath="ExternalSetpoint\">
       <Declaration><![CDATA[METHOD StartExternalSetpoint : HRESULT
 ]]></Declaration>

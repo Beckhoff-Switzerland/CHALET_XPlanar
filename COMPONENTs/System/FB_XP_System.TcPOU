@@ -35,10 +35,7 @@ VAR
 	{attribute 'hide'}	
     nSeqDisabling  : UINT := SEQ_DONE;
 	{attribute 'hide'}
-	fbFeedback : FB_CH_Feedback;
-	
-	//ZZZ TODO this port is not fix. REad from the task object
-	nXPlanarTaskAdsPort : UINT;
+	fbFeedback : FB_CH_Feedback(ipSourceInfo := fbSourceInfo);	
 END_VAR
 VAR CONSTANT
 	{attribute 'hide'}
@@ -53,6 +50,39 @@ END_VAR]]></Declaration>
     <Folder Name="Initialize" Id="{db7f5e7a-e80e-4318-bc02-314b03e8e45e}" />
     <Folder Name="Interface PLC" Id="{9ec20fc2-fccf-4614-882f-228a1b0a417b}" />
     <Folder Name="Relations" Id="{99ca6b87-84d3-4869-88e5-3910779689c6}" />
+    <Method Name="CheckForErrors" Id="{e1ce64f5-044e-426f-84a4-38c65b697a08}">
+      <Declaration><![CDATA[METHOD CheckForErrors : BOOL
+VAR
+	ipEachMover : I_XP_Mover;
+	bErrorFound : BOOL;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bErrorFoundOld : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbMovers.ResetIterator();
+WHILE THIS^.fbMovers.HasNextObject() DO
+	IF __QUERYINTERFACE(THIS^.fbMovers.GetNextObject(),ipEachMover) THEN
+			bErrorFound := bErrorFound OR ipEachMover.Feedback.Error;
+			bErrorFound := bErrorFound OR (ipEachMover.PlanarMover.MCTOPLC.STD.ErrorCode <> 0);
+	END_IF
+END_WHILE
+THIS^.fbMovers.RestoreIterator();
+
+//check this system (Enabling disabling)
+bErrorFound := bErrorFound OR THIS^.fbFeedback.Error;
+
+//Do an disable at new error found
+IF bErrorFound AND NOT bErrorFoundOld THEN 
+	THIS^.Disable();
+END_IF
+
+//Keep information
+bErrorFoundOld := bErrorFound;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="CheckTargetExists" Id="{223a3eae-4d4f-4f8d-b876-6654f29a9d34}" FolderPath="Interface PLC\">
       <Declaration><![CDATA[METHOD CheckTargetExists : BOOL //Return TRUE if target is existing
 VAR_INPUT
@@ -63,7 +93,6 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.fbStations.ResetIterator();
-
 WHILE THIS^.fbStations.HasNextObject() DO
 	IF __QUERYINTERFACE(THIS^.fbStations.GetNextObject(),ipEachStation) THEN
 		//Return TRUE if found
@@ -73,8 +102,52 @@ WHILE THIS^.fbStations.HasNextObject() DO
 		END_IF
 	END_IF
 END_WHILE
-
 THIS^.fbStations.RestoreIterator();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CreateHelpStations" Id="{b49a1459-1c90-4237-a025-a4eb624e3171}" FolderPath="Enable/Disable\Strategy\">
+      <Declaration><![CDATA[METHOD PROTECTED CreateHelpStations : HRESULT
+VAR
+
+END_VAR
+VAR_INST
+	{attribute 'hide'}	
+	fbDelayJoiningStation : TON;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE nSeqCreateHelpStations OF
+
+	0: //Init
+		fbDelayJoiningStation.IN := FALSE;
+		nSeqJoiningStation := 10;
+	
+	
+		
+		IF CheckOk(hr) THEN 
+			nSeqJoiningStation := SEQ_DONE;
+		ELSIF FAILED(hr) THEN
+			nSeqJoiningStation := 1000 + nSeqJoiningStation;
+		END_IF			
+
+	
+	1000..1999://Error
+		hr := GetMostSignificant(hr, E_FAIL);
+END_CASE
+
+
+
+//Return value
+IF FAILED(hr) THEN 
+	//Error
+    CreateHelpStations := GetMostSignificant(hr, E_FAIL);
+ELSIF (nSeqCreateHelpStations = SEQ_DONE) THEN
+	//Done
+    CreateHelpStations := S_OK;
+ELSE
+	//Busy
+    CreateHelpStations := S_PENDING;;
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="Disable" Id="{ee25efab-b255-4913-b173-489158e77218}" FolderPath="Enable/Disable\">
@@ -127,13 +200,14 @@ CASE nSeqDisabling OF
 		Disabling := S_OK;
 		
 		
-	1: // Halt movers
+	1: // Halt movers - keep at first position for a fast stop reaction
 		THIS^.fbMovers.ResetIterator();
 		WHILE THIS^.fbMovers.HasNextObject() DO
 			IF ToXpMover(THIS^.fbMovers.GetNextObject(),iTempMover) THEN
 				hr := GetMostSignificant(hr, iTempMover.Halt());
 			END_IF
 		END_WHILE
+		THIS^.fbMovers.RestoreIterator();
 		
 		IF CheckOk(hr) THEN 
 			nSeqDisabling := 20;
@@ -146,14 +220,10 @@ CASE nSeqDisabling OF
 		THIS^.fbMovers.ResetIterator();
 		WHILE THIS^.fbMovers.HasNextObject() DO
 			IF ToXpMover(THIS^.fbMovers.GetNextObject(),iTempMover) THEN
-				bOk := bOk AND iTempMover.PlanarMover.MCTOPLC.SET.SetVelo.x = 0;
-				bOk := bOk AND iTempMover.PlanarMover.MCTOPLC.SET.SetVelo.y = 0;
-				bOk := bOk AND iTempMover.PlanarMover.MCTOPLC.SET.SetVelo.z = 0;
-				bOk := bOk AND iTempMover.PlanarMover.MCTOPLC.SET.SetVelo.a = 0;
-				bOk := bOk AND iTempMover.PlanarMover.MCTOPLC.SET.SetVelo.b = 0;
-				bOk := bOk AND iTempMover.PlanarMover.MCTOPLC.SET.SetVelo.c = 0;
+				bOk := bOk AND iTempMover.Standstill;
 			END_IF
 		END_WHILE
+		THIS^.fbMovers.RestoreIterator();
 		
 		IF bOk THEN 
 			nSeqDisabling := 30;
@@ -204,6 +274,7 @@ CASE nSeqDisabling OF
 			nSeqDisabling := 1000 + nSeqDisabling;
 		END_IF			
 		
+
 		
 	60: // Disabling movers
 		THIS^.fbMovers.ResetIterator();
@@ -389,7 +460,6 @@ CASE nSeqDisabling OF
 		
 		
    140: // Removing envirement from group
-		//IF CheckOk(iEnvironment.HR) OR (iEnvironment.Self.MCTOPLC_STD.GroupOID = 0) THEN 
 		hr := ipEnvironment.Feedback.HR;
 	
 		IF CheckOk(hr) THEN 
@@ -460,27 +530,39 @@ END_VAR
 VAR
 	hr : HRESULT;
 	bWatchDogActive : BOOL;
-	
 	ipTempMover : I_XP_Mover;
 	ipTempMoverPlc : I_XP_Mover_PLC;
 	ipTempStation : I_XP_Station;
 	ipTempTrack : I_XP_Track;
 	
 	lrCRotationShortestPos : LREAL;
-	
+	bOk : BOOL;
 	nSupSeq : UINT;
+	nIdx : UINT;
+	sMoverType : STRING;
+	fDistLastToSet : LREAL;
+	fMaxError : LREAL;
+	nMoversDetected, nMoverExpected : UDINT;
+	bMoverIsMissing : BOOL;
+	eMoverDetectionStatus : MoverDetectionStatus;
 END_VAR
 
 VAR_INST
+	{attribute 'hide'}	
 	fbTimeOutSeq : TON; 
+	{attribute 'hide'}	
 	hrLastCycle 	: HRESULT;
+	{attribute 'hide'}	
 	nlastState	: UINT;
 	
 	{attribute 'hide'}	
 	fbTimeOutEnabling : FB_TcAlarm;
 	{attribute 'hide'}	
 	fbErrorEnabling : FB_TcAlarm;
-END_VAR]]></Declaration>
+	{attribute 'hide'}	
+	fbErrorMoverDetection : FB_TcAlarm;
+END_VAR
+]]></Declaration>
       <Implementation>
         <ST><![CDATA[Enabling := S_PENDING;
 CASE nSeqEnabling OF
@@ -488,26 +570,77 @@ CASE nSeqEnabling OF
 		Enabling := S_OK;	
 		
 	1: //Redetect all movers on real system
+		//timeout is monitored in this sequence
 		bWatchDogActive := TRUE;
-		IF THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetOperationMode() = OperationMode.Normal THEN
-			THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).SetStartMoverRedetection();	
-		END_IF
-		nSeqEnabling := 5;
-
 		
-	5: //Compare detectet and expectet movers	
+		
+		//check if all mover are present
+		THIS^.fbMovers.ResetIterator();
+		WHILE THIS^.fbMovers.HasNextObject() DO
+			IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipTempMover) AND_THEN ipTempMover.MoverIsNotPresent THEN
+				bMoverIsMissing := TRUE;
+			END_IF
+		END_WHILE
+		
+		
+		IF (THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetOperationMode() = OperationMode.Normal) AND bMoverIsMissing THEN
+			THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).SetStartMoverRedetection();
+			nSeqEnabling := 2;
+		ELSE
+			//Skip in simulation
+			nSeqEnabling := 20;
+		END_IF
+		
+
+	2: //Wait for finish redetection
+		//timeout is monitored in this sequence
+		bWatchDogActive := TRUE;
+		
+		eMoverDetectionStatus := THIS^.Enviroment.ProcessingUnitMoverDetectionStatus;
+		IF (eMoverDetectionStatus = MoverDetectionStatus.DetectionSuccessful) THEN
+			//Done
+			nSeqEnabling := 3;
+		END_IF
+		
+		
+		
+	3: //Compare detectet and expectet movers	
 	   //timeout is monitored in this sequence
 		bWatchDogActive := TRUE;
-		IF (THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4220Detected = THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4220Expected AND
-			THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4221Detected = THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4221Expected AND
-			THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4330Detected = THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4330Expected AND
-			THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4550Detected = THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4550Expected AND
-			THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().TotalDetected   = THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().TotalExpected 	
-		   )THEN
-			nSeqEnabling := 20;
-		END_IF	
-			
 		
+		FOR nIdx := 0 TO 5 DO
+			CASE nIdx OF
+				0:  sMoverType		:= 'APM4220';
+					nMoverExpected 	:= THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4220Expected;
+					nMoversDetected := THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4220Detected;
+				1: 	sMoverType		:= 'APM4221';
+					nMoverExpected 	:= THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4221Expected;
+					nMoversDetected := THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4221Detected;
+				2:  sMoverType		:= 'APM4330';
+					nMoverExpected 	:= THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4330Expected;
+					nMoversDetected := THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4330Detected;
+				3:  sMoverType		:= 'APM4550';
+					nMoverExpected 	:= THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4550Expected;
+					nMoversDetected := THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().APM4550Detected;
+				4:  sMoverType		:= 'total mover count';
+					nMoverExpected 	:= THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().TotalExpected;
+					nMoversDetected := THIS^.ipEnvironment.UtilityEnvirement.XpuTcIo(1).GetMoverDetectionInfos().TotalDetected;
+					
+				5: //Succesfull finished
+					nSeqEnabling := 20;	
+			END_CASE	
+
+			IF nMoverExpected <> nMoversDetected THEN
+				//Error
+				nSeqEnabling := 1000 + nSeqEnabling;
+				fbErrorMoverDetection.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.MoverDetectionFailed, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+				//Mover detection failed. Expected {0} found {1} of type {2}
+				fbErrorMoverDetection.ipArguments.AddUDInt(nMoverExpected).AddUDInt(nMoversDetected).AddStringByValue(sMoverType);
+				fbErrorMoverDetection.Raise(0);
+				EXIT;
+			END_IF		
+		END_FOR
+	
 		
 	20: // Reset movers
 		bWatchDogActive := TRUE;
@@ -712,7 +845,6 @@ CASE nSeqEnabling OF
 		END_IF	
 
 
-
 	210: // Enable movers
 		bWatchDogActive := TRUE;
 		THIS^.fbMovers.ResetIterator();
@@ -889,18 +1021,68 @@ CASE nSeqEnabling OF
 		hr := ipGroup.Feedback.HR;
 		
 		IF CheckOk(hr) THEN 
-			nSeqEnabling := 400;
+			nSeqEnabling := 350;
 		ELSIF FAILED(hr) THEN
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF	
+		
+		
+	340: // Check dist last known position to current pos
+		bWatchDogActive := TRUE;
+		THIS^.fbMovers.ResetIterator();
+		WHILE THIS^.fbMovers.HasNextObject() DO
+			IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipTempMover) THEN
+				IF ipTempMover.PositionAtDisable.x <> 0 AND ipTempMover.PositionAtDisable.y <> 0 THEN
+					fDistLastToSet := F_DistXYVectors(ipTempMover.PositionAtDisable, ipTempMover.PositionSet);
+					fMaxError := MAX(fMaxError, fDistLastToSet);
+				END_IF
+			END_IF
+		END_WHILE
+		IF fMaxError < 50 THEN
+			nSeqEnabling := 350;
+		ELSE
+			nSeqEnabling := 400;			
+		END_IF
 
 		
+	350: // Move to last valide known position
+		bWatchDogActive := TRUE;
+		THIS^.fbMovers.ResetIterator();
+		WHILE THIS^.fbMovers.HasNextObject() DO
+			IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipTempMover) THEN
+				IF ipTempMover.PositionAtDisable.x <> 0 AND ipTempMover.PositionAtDisable.y <> 0 THEN
+					hr := GetMostSignificant(hr, ipTempMover.MoveXY(fPosition_X := ipTempMover.PositionAtDisable.x, 
+																	fPosition_Y := ipTempMover.PositionAtDisable.y));
+				END_IF
+			END_IF
+		END_WHILE
+		//Its posible that the command failed. Do not exit SEQ
+		nSeqEnabling := 351;
+
+
 		
+	351: // Wait for standstill
+		bWatchDogActive := TRUE;
+		
+		bOk := TRUE;
+		THIS^.fbMovers.ResetIterator();
+		WHILE THIS^.fbMovers.HasNextObject() DO
+			IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipTempMover) THEN
+				bOk := bOk AND ipTempMover.Standstill;
+			END_IF
+		END_WHILE
+		THIS^.fbMovers.RestoreIterator();
+		
+		IF bOk THEN 
+			nSeqEnabling := 400;
+		END_IF	
+
 		
 	400: (*	Restart of the sequenze "JoiningTrack". Default strategy is that each mover joins the closest track
 			Outsourced to a method for easier overwriting *)
 		THIS^.nSeqJoiningTrack := 0;	
-		nSeqEnabling := 401;	
+		nSeqEnabling := 401;
+	
 
 	401: (*	Default strategy is that each mover joins the closest track
 			Outsourced to a method for easier overwriting *)
@@ -930,8 +1112,6 @@ CASE nSeqEnabling OF
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF	
 
-
-		
 		
 	SEQ_DONE: // Done
 		Enabling := S_OK;
@@ -941,7 +1121,7 @@ CASE nSeqEnabling OF
 		hr := GetMostSignificant(hrLastCycle, E_FAIL);
 		//Only rais if timeout is not active
 		IF NOT fbErrorEnabling.bRaised AND NOT fbTimeOutEnabling.bRaised THEN 
-			fbErrorEnabling.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.ErrorEnabling, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+			fbErrorEnabling.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.ErrorEnabling, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
 			fbErrorEnabling.ipArguments.AddUInt(nSeqEnabling-1000);
 			fbErrorEnabling.Raise(0);
 		END_IF
@@ -950,13 +1130,13 @@ END_CASE
 
 //Timeout after to long stay in one of the following seq.
 fbTimeOutSeq.IN := (nlastState = nSeqEnabling) AND bWatchDogActive;
-fbTimeOutSeq.PT := T#5S;
+fbTimeOutSeq.PT := T#10S;
 fbTimeOutSeq();
 nlastState := nSeqEnabling;
 
 IF fbTimeOutSeq.Q THEN
 	IF NOT fbTimeOutEnabling.bRaised THEN 
-		fbTimeOutEnabling.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.TimeOutEnabling, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		fbTimeOutEnabling.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.TimeOutEnabling, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
 		fbTimeOutEnabling.ipArguments.AddUInt(nSeqEnabling);
 		fbTimeOutEnabling.Raise(0);
 	END_IF
@@ -968,6 +1148,7 @@ END_IF
 IF nSeqEnabling <= SEQ_DONE THEN
 	fbTimeOutEnabling.Clear(0,0);
 	fbErrorEnabling.Clear(0,0);
+	fbErrorMoverDetection.Clear(0,0);
 END_IF
 
 
@@ -992,19 +1173,39 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="FastStop" Id="{82b1759d-bf42-440b-8170-85be7353c176}" FolderPath="Enable/Disable\">
+      <Declaration><![CDATA[METHOD FastStop : I_CH_Feedback
+VAR
+	ipMoverPlc : I_XP_Mover_PLC;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.Movers.ResetIterator();
+WHILE THIS^.Movers.HasNextObject() DO
+	IF __QUERYINTERFACE(THIS^.Movers.GetNextObject(),ipMoverPlc) THEN
+		//Change deceleration to MC_MAXIMUM for each mover
+		ipMoverPlc.SetDynConstraint_Path(V:= MC_DEFAULT, A:= MC_DEFAULT, D:= MC_MAXIMUM, J:= MC_MAXIMUM);
+	END_IF
+END_WHILE
+THIS^.Movers.RestoreIterator();
+
+
+FastStop := THIS^.Disable();
+THIS^.Disabling();]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="FB_init" Id="{99a8553c-1794-4a13-b55a-c788d9332b3c}">
       <Declaration><![CDATA[METHOD FB_init : BOOL
 VAR_INPUT
 	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
 	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
 	
-	XPlanarTaskAdsPort : UINT; 
 END_VAR
 VAR
 	fbGetCurTaskIdx  : GETCURTASKINDEX;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[THIS^.nXPlanarTaskAdsPort := XPlanarTaskAdsPort;]]></ST>
+        <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
     <Property Name="Feedback" Id="{10eb58e3-c35a-47ee-a75d-dc8749c15338}">
@@ -1044,7 +1245,7 @@ THIS^.fbFeedback.Busy 					:= TRUE;
 IF THIS^.bErrorDuringFbInit THEN
 	IF NOT fbInitError.bRaised THEN 
 		//This error cannot be reset. Requires a reset cold
-		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.ErrorFBinit, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.ErrorFBinit, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
 		fbInitError.Raise(0);
 	END_IF
 	Initialize:= E_FAIL;
@@ -1057,7 +1258,7 @@ END_IF
 IF THIS^.ipEnvironment = 0 OR THIS^.ipGroup = 0  THEN
 	IF NOT fbMissingInterfaceAlarm.bRaised THEN 
 		//This error cannot be reset. Requires a reset cold
-		fbMissingInterfaceAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.InitializationInvalideParameter, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		fbMissingInterfaceAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.ErrorFBinit, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
 		fbMissingInterfaceAlarm.Raise(0);
 	END_IF
 	Initialize := E_FAIL;
@@ -1113,8 +1314,12 @@ VAR
 	
 	//during move on track
 	fVelo, fAccDec	: Tc3_Mc3Definitions.MC_LREAL := Tc3_Mc3Definitions.MC_DEFAULT;
+	bStationNotOperational : BOOL;
+	bFound : BOOL;
 END_VAR
 VAR_INST
+	bResetMovers : BOOL;	
+
 	{attribute 'hide'}	
 	fbDelayJoiningStation : TON;
 END_VAR]]></Declaration>
@@ -1132,23 +1337,43 @@ END_VAR]]></Declaration>
 		  If there are still movers in the system that do not have a move command, these are sent to station 1. Typically after starting up
 		  *)
 		
-		//Do for each mover in a station
-		THIS^.fbStations.ResetIterator();    
-		WHILE THIS^.fbStations.HasNextObject() DO
-			ToXpStation(THIS^.fbStations.GetNextObject(),ipEachStation);
-				//Do for all in station assigned Movers
-				ipEachStation.AssignedMovers.ResetIterator();
-				WHILE ipEachStation.AssignedMovers.HasNextObject() DO
-					ToXpMover(ipEachStation.AssignedMovers.GetNextObject(),ipEachMoverInStation);
-					//Send to assigned station - Shortest way
-					hr := GetMostSignificant(hr, ipEachMoverInStation.MoveOnTrack_ShortestWay(ipTrack	:= ipEachStation.AccocietedTrack, 
-																							  fPosition	:= ipEachStation.PositionOnTrack,
-																							  fGap 		:= ipEachMoverInStation.LastCmdTargedGap));
-				END_WHILE
-		END_WHILE        
+//		//Do for each mover in a station
+//		THIS^.fbStations.ResetIterator();    
+//		WHILE THIS^.fbStations.HasNextObject() DO
+//			ToXpStation(THIS^.fbStations.GetNextObject(),ipEachStation);
+//				//Do for all in station assigned Movers
+//				ipEachStation.AssignedMovers.ResetIterator();
+//				WHILE ipEachStation.AssignedMovers.HasNextObject() DO
+//					ToXpMover(ipEachStation.AssignedMovers.GetNextObject(),ipEachMoverInStation);
+//					//Send to assigned station - Shortest way
+//					hr := GetMostSignificant(hr, ipEachMoverInStation.MoveOnTrack_ShortestWay(	ipTrack		:= ipEachMoverInStation.LastCmdTargedTrack, 
+//																							  	fPosition	:= ipEachMoverInStation.LastCmdTargedPosition,
+//																							  	fGap 		:= ipEachMoverInStation.LastCmdTargedGap));
+//																								
+//																								//ipTrack	:= ipEachStation.AccocietedTrack, 
+//																							  	//fPosition	:= ipEachStation.PositionOnTrack,
+//																							  	//fGap 		:= ipEachMoverInStation.LastCmdTargedGap));
+//				END_WHILE
+//				ipEachStation.AssignedMovers.RestoreIterator();
+//		END_WHILE    
+//		THIS^.fbStations.RestoreIterator();       
+//		nSeqJoiningStation := 20;
+
+		//send mover to last known targed
+		THIS^.fbMovers.ResetIterator();
+		WHILE THIS^.fbMovers.HasNextObject() DO
+			IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipEachMover) AND_THEN (ipEachMover.LastCmdTargedTrack <> 0) THEN
+						hr := GetMostSignificant(hr, ipEachMover.MoveOnTrack_ShortestWay(	ipTrack		:= ipEachMover.LastCmdTargedTrack, 
+																						  	fPosition	:= ipEachMover.LastCmdTargedPosition,
+																						  	fGap 		:= ipEachMover.LastCmdTargedGap));
+			END_IF
+		END_WHILE 
+		THIS^.fbMovers.RestoreIterator();     
 		nSeqJoiningStation := 20;
+
+
 		
-	20:	//Test if there is an Mover whitout an active TargedStation (first startup)
+	20:	//Test if there is an Mover whitout an active parent station (first startup)
 		//Send them to first station
 		THIS^.fbStations.ResetIterator();
 		IF THIS^.fbStations.HasNextObject() THEN
@@ -1163,7 +1388,7 @@ END_VAR]]></Declaration>
 			THIS^.fbMovers.ResetIterator();
 			WHILE THIS^.fbMovers.HasNextObject() DO
 				//Do for all Movers whitout a targed station
-				IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipEachMover) AND_THEN (ipEachMover.TargetStation = '') AND_THEN __QUERYINTERFACE(ipEachMover,ipEachMoverPlc) THEN
+				IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipEachMover) AND_THEN (ipEachMover.ParentStation = 0) AND_THEN __QUERYINTERFACE(ipEachMover,ipEachMoverPlc) THEN
 					//Set Path dynamic constraint to settings in XPlanarParameterlist. 0=Defalt
 					IF XPlanarParameterlist.F_ENABLING_ON_TRACK_VELOCITY <> 0 THEN fVelo := XPlanarParameterlist.F_ENABLING_ON_TRACK_VELOCITY;END_IF
 					IF XPlanarParameterlist.F_ENABLING_ON_TRACK_ACC_DEC <> 0 THEN fAccDec := XPlanarParameterlist.F_ENABLING_ON_TRACK_ACC_DEC;END_IF
@@ -1178,11 +1403,14 @@ END_VAR]]></Declaration>
 					IF ipParentStation <> 0 THEN
 						hr := GetMostSignificant(hr, ipEachMover.MoveOnTrackToStation(ipParentStation, XPlanarParameterlist.F_GAP_STARTUP));
 						hr := GetMostSignificant(hr, ipParentStation.AddMoverToQueue(ipEachMover));
-						ipEachMover.TargetStation := ipFirstStation.TargetGroupe;
 					ELSE
 						//If no partent station is existing
 						hr := GetMostSignificant(hr, ipEachMover.MoveOnTrackToStation(ipFirstStation, XPlanarParameterlist.F_GAP_STARTUP));
 						hr := GetMostSignificant(hr, ipFirstStation.AddMoverToQueue(ipEachMover));
+					END_IF
+					
+					//Only override targed if empty
+					IF ipEachMover.TargetStation = '' THEN
 						ipEachMover.TargetStation := ipFirstStation.TargetGroupe;
 					END_IF
 					
@@ -1194,7 +1422,8 @@ END_VAR]]></Declaration>
 															J:= Tc3_Mc3Definitions.MC_DEFAULT);
 		
 				END_IF
-			END_WHILE
+			END_WHILE 
+			THIS^.fbMovers.RestoreIterator();
 		END_IF
 
 		nSeqJoiningStation := 30;
@@ -1216,18 +1445,61 @@ END_VAR]]></Declaration>
 				IF ipEachMover.Feedback.Error THEN
 					hr := GetMostSignificant(hr, ipEachMover.Feedback.HR);
 				//Wait for all movers to stop/finish movement
-				ELSIF NOT (ipEachMover.PlanarMover.MCTOPLC.SETONTRACK.SetVelo = 0.0) THEN
+				ELSIF NOT (ipEachMover.Standstill) THEN
 					hr := GetMostSignificant(hr, S_PENDING);
 				END_IF
 			END_IF
-		END_WHILE
+		END_WHILE 
+		THIS^.fbMovers.RestoreIterator();
 		
 		IF CheckOk(hr) THEN 
-			nSeqJoiningStation := SEQ_DONE;
+			nSeqJoiningStation := 50;
 		ELSIF FAILED(hr) THEN
-			nSeqJoiningStation := 1000 + nSeqJoiningStation;
+			bResetMovers := TRUE;
+			nSeqJoiningStation := 50;
+			//nSeqJoiningStation := 1000 + nSeqJoiningStation;
 		END_IF			
 
+		
+	50: // Check if a mover passes his parent station and is not abel to drive backwarts due to CA
+		THIS^.fbMovers.ResetIterator();
+		WHILE THIS^.fbMovers.HasNextObject() DO
+			IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipEachMover) THEN
+				bStationNotOperational := ipEachMover.ParentStation <> 0 AND_THEN NOT ipEachMover.ParentStation.MoversInPlace;
+				IF ipEachMover.DistToParentStation < 0 AND bStationNotOperational THEN
+					bFound := TRUE;
+				END_IF
+			END_IF
+		END_WHILE 
+		THIS^.fbMovers.RestoreIterator();
+		
+		// IF found, reset all mover
+		IF bFound OR bResetMovers THEN
+			bResetMovers := FALSE;
+			//Clear Mover
+			THIS^.fbMovers.ResetIterator();
+			WHILE THIS^.fbMovers.HasNextObject() DO
+				IF ToXpMover(THIS^.fbMovers.GetNextObject(),ipEachMover) THEN
+					//ipEachMover.TargetStation := '';
+					ipEachMover.ParentStation := 0;
+					ipEachMover.Route.Clear();
+				END_IF
+			END_WHILE 
+			THIS^.fbMovers.RestoreIterator();
+			//Clear Station
+			THIS^.fbStations.ResetIterator();    
+			WHILE THIS^.fbStations.HasNextObject() DO
+				ToXpStation(THIS^.fbStations.GetNextObject(),ipEachStation);
+				ipEachStation.DeleteMoversQueue();
+			END_WHILE    
+			THIS^.fbStations.RestoreIterator();   
+			nSeqJoiningStation := 0;
+		ELSE
+			nSeqJoiningStation := SEQ_DONE;
+		END_IF
+
+	SEQ_DONE:
+		;
 	
 	1000..1999://Error
 		hr := GetMostSignificant(hr, E_FAIL);
@@ -1290,12 +1562,14 @@ END_VAR
 					END_IF
 				END_WHILE
 				
-				//send mover to found closest track
+
 				IF ipClosestTrack <> 0 THEN
 					hr := GetMostSignificant(hr, ipEachMover.JoinTrack(ipClosestTrack));
 				ELSE
 					hr := GetMostSignificant(hr, E_FAIL);
 				END_IF
+			
+				
 			END_IF
 		END_WHILE
 		nSeqJoiningTrack := 20;
@@ -1629,11 +1903,10 @@ END_VAR
     </Property>
     <Method Name="Update" Id="{0b75e97f-4147-4977-8fcf-8d66ccd43106}">
       <Declaration><![CDATA[METHOD Update : HRESULT
-VAR_INPUT
-END_VAR
 VAR
 	hr : HRESULT;
-END_VAR]]></Declaration>
+END_VAR
+]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Force to do an init at beginn
 IF NOT THIS^.Initialized THEN
@@ -1689,11 +1962,7 @@ IF fbFeedback.Done OR THIS^.fbFeedback.Error THEN
 	eActiveCommand 				:= E_NcAxisCommands.None;
 END_IF
 
-
-
-
-
-
+CheckForErrors();
 
 hr := GetMostSignificant(hr, THIS^.fbMovers.Update());
 hr := GetMostSignificant(hr, THIS^.fbTracks.Update());
@@ -1709,33 +1978,6 @@ Update:= hr;
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="ValidLUID" Id="{d1c3faf6-fe00-47fc-a876-c44e4c77b66e}" FolderPath="Interface PLC\">
-      <Declaration><![CDATA[//Return TRUE if unique station id is valid. if false, interfacepointer is zero -> fatal error
-METHOD ValidLUID : BOOL
-VAR_INPUT
-	sLUID : STRING;
-END_VAR
-VAR
-	ipStation : I_XP_Station_PLC;
-END_VAR]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[ipStation := THIS^.Station(sLUID);
-ValidLUID := (ipStation <> 0);]]></ST>
-      </Implementation>
-    </Method>
-    <Property Name="XPlanarTaskAdsPort" Id="{89ae55d7-58b0-488a-b2b5-f6d0b5ffd761}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY XPlanarTaskAdsPort : UINT
-]]></Declaration>
-      <Get Name="Get" Id="{ce0da1c5-21cc-40f8-ba98-2194b3870dfa}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[XPlanarTaskAdsPort := nXPlanarTaskAdsPort;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
     <Property Name="Zones" Id="{796ef09e-3844-42a2-af82-f422cc25cd4f}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Zones : CHALET_BaseComponents.I_CH_LIST

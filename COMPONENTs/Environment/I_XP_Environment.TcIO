@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Environment" Id="{82d4e6a8-d939-49b0-818e-86b258207442}">
-    <Declaration><![CDATA[INTERFACE I_XP_Environment  EXTENDS __SYSTEM.IQueryInterface, I_CH_Object]]></Declaration>
+    <Declaration><![CDATA[INTERFACE I_XP_Environment EXTENDS I_CH_Object]]></Declaration>
     <Method Name="AddToGroup" Id="{f4493e59-ad90-4dac-89cb-3c35b7abff5c}">
       <Declaration><![CDATA[METHOD AddToGroup : HRESULT
 VAR_INPUT
@@ -51,6 +51,22 @@ PROPERTY OID : OTCID ]]></Declaration>
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PlanarEnvironment : REFERENCE TO MC_PlanarEnvironment]]></Declaration>
       <Get Name="Get" Id="{23f8d9b1-51ed-469b-8515-26a29f4d1b5e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ProcessingUnitMoverDetectionStatus" Id="{ccef5b04-1847-45fd-8ca4-31dc6994ed21}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Enumeration MoverDetectionStatus
+PROPERTY ProcessingUnitMoverDetectionStatus : MoverDetectionStatus]]></Declaration>
+      <Get Name="Get" Id="{f3dd5a8d-25ab-4621-9ac8-8bb35c0bb445}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ProcessingUnitOID" Id="{dc16d70f-fd25-454e-891d-d6e30bd7c8cb}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Object ID of the IoXPlanar processing unit
+PROPERTY ProcessingUnitOID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{5b57d5d2-f67f-4b11-8879-439e9a26a843}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

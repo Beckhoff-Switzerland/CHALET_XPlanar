@@ -6,12 +6,16 @@ VAR_GLOBAL CONSTANT
 	(*Minimum gap center to center on track [mm] *)
 	F_MOVER_MINIMUM_GAP_ON_TRACK : LREAL := 100.0;
 	
+	(*Minimum gap center to center on track. Each station can override this gap[mm] *)
+	F_GAP_DEFAULT: LREAL := 120.0;
+	
 	(*During enabling the Movers use this gap [mm] *)
-	F_GAP_STARTUP : LREAL := 150.0;
+	F_GAP_STARTUP : LREAL := 200.0;
 	
 	(*Add envirement to groupe during enabling *)
 	B_ADD_ENVIROMENT_TO_GROUP: BOOL := TRUE;	
-		
+	
+				
 	(*Pathfinder max recursion search depth in stations*)
 	N_MAX_SEARCH_DEPTH: UINT := 50;
 	
@@ -27,6 +31,12 @@ VAR_GLOBAL CONSTANT
 	
 	//Acc-/Deceleration during enabling move on track. 0=Default
 	F_ENABLING_ON_TRACK_ACC_DEC		: LREAL := 0;
+	
+	//TRUE = Use inside PLC the track name from the TcCom Track Object. If FALSE overwride TcCom Track object with instance name
+	B_TRACK_NAME_TACKOVER_FROM_TRACK_OBJECT : BOOL := TRUE;
+	
+	//If a route with a switch is divided into several tracks, then there must be a station on each of these tracks. This is required as an intermediate destination
+	B_AUTOMATICALLY_CREEATE_MISSING_HELPER_STATIONS : BOOL := TRUE;
 		
 END_VAR]]></Declaration>
   </GVL>

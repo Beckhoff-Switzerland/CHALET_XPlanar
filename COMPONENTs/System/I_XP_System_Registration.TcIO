@@ -107,14 +107,6 @@ PROPERTY Triggers : CHALET_BaseComponents.I_CH_LIST
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="XPlanarTaskAdsPort" Id="{29a6299a-64d8-49eb-99ee-e67d8a6b817a}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY XPlanarTaskAdsPort : UINT
-]]></Declaration>
-      <Get Name="Get" Id="{4bb21b68-48be-41a7-9632-ea8defc2cf7c}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Property Name="Zones" Id="{8f062f35-7d30-4e7e-859f-73d2a6604f93}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Zones : CHALET_BaseComponents.I_CH_LIST

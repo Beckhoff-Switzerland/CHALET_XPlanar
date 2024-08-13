@@ -44,6 +44,10 @@ PROPERTY Enviroment : I_XP_Environment]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Method Name="FastStop" Id="{5efeb2fe-2854-41a9-9b07-0532a75e22e1}">
+      <Declaration><![CDATA[METHOD FastStop : I_CH_Feedback
+]]></Declaration>
+    </Method>
     <Property Name="Feedback" Id="{170543fd-4784-4c2f-86da-1f2e4449e206}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Feedback : CHALET_BaseComponents.I_CH_Feedback]]></Declaration>
@@ -102,14 +106,6 @@ PROPERTY Triggers : CHALET_BaseComponents.I_CH_LIST
     <Method Name="Update" Id="{09407e8b-d7ce-4a68-a4f9-b085d0bf0c23}">
       <Declaration><![CDATA[METHOD Update : HRESULT
 VAR_INPUT
-END_VAR
-]]></Declaration>
-    </Method>
-    <Method Name="ValidLUID" Id="{175dfe5d-22be-4bfd-961a-4b5a744f93c8}">
-      <Declaration><![CDATA[//Return TRUE if unique station id is valid. if false, interfacepointer is zero -> fatal error
-METHOD ValidLUID : BOOL
-VAR_INPUT
-	sLUID : STRING;
 END_VAR
 ]]></Declaration>
     </Method>

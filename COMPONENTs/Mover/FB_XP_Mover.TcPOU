@@ -19,13 +19,13 @@ VAR
 	{attribute 'hide'}  
 	bInitDone :BOOL := FALSE;
 	{attribute 'hide'}               	
-	fbFeedback 			: FB_XP_Feedback;
+	fbFeedback 			: FB_XP_Feedback(ipSourceInfo := fbSourceInfo);	
 	{attribute 'hide'}                   	
 	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
 	{attribute 'hide'} 
 	fbUtilityMover : FB_McPlanarMover;
 	{attribute 'hide'}
-	iXpSystem : I_XP_System_Registration;
+	ipXpSystem : I_XP_System_Registration;
 	{attribute 'hide'} 
 	sTargedStation : STRING;
 	{attribute 'hide'} 
@@ -42,6 +42,8 @@ VAR
 	ipLastCmdTrack : I_XP_Track;
 	{attribute 'hide'}
 	ipProductData : I_XP_ProductData; //later the required interface of the tool or product can be queried via query interface
+	{attribute 'hide'}
+	stLastValidePosition :  MoverVector;
 END_VAR
 
 //External Setpoint Generator
@@ -234,8 +236,8 @@ PROPERTY CurrentTrack : I_XP_Track]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[IF iXpSystem <> 0 THEN
-	ipTrackObj := iXpSystem.Tracks.FindOID(THIS^.PlanarMover.MCTOPLC.SETONTRACK.TrackOID);
+          <ST><![CDATA[IF ipXpSystem <> 0 THEN
+	ipTrackObj := ipXpSystem.Tracks.FindOID(THIS^.PlanarMover.MCTOPLC.SETONTRACK.TrackOID);
 	ToXpTrack(ipTrackObj,ipTrack);
 END_IF
 
@@ -269,21 +271,43 @@ PROPERTY DistToParentStation : LREAL
         <Declaration><![CDATA[VAR
 	fDistToParentStationTemp : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
 	ipPath : I_XP_Path;
+	
+	fbPosXY: PositionXY;
 END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[//Get distance to targed station
-//check each path behind the parentstation if the mover is on it
-THIS^.ParentStation.PathsBehinde.ResetIterator();
-WHILE THIS^.ParentStation.PathsBehinde.HasNextObject() DO
-	IF __QUERYINTERFACE(THIS^.ParentStation.PathsBehinde.GetNextObject(), ipPath) THEN
-		//get shortest distance
-		fDistToParentStationTemp:= MIN(ipPath.DistanceToDestiantion(ipTrack:= THIS^.CurrentTrack, fPosOnTrack := THIS^.PositionOnTrack), fDistToParentStationTemp);
-	END_IF
-END_WHILE
-THIS^.ParentStation.PathsBehinde.RestoreIterator();
+          <ST><![CDATA[IF THIS^.ParentStation = 0 THEN
+	DistToParentStation := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	RETURN;
+END_IF
 
 
-DistToParentStation := fDistToParentStationTemp;
+//On track, follow track to parent
+IF THIS^.CurrentTrack <> 0 THEN
+
+	//Get distance to targed station
+	//check each path behind the parentstation if the mover is on it
+	THIS^.ParentStation.PathsBehinde.ResetIterator();
+	WHILE THIS^.ParentStation.PathsBehinde.HasNextObject() DO
+		IF __QUERYINTERFACE(THIS^.ParentStation.PathsBehinde.GetNextObject(), ipPath) THEN
+			//get shortest distance
+			fDistToParentStationTemp:= MIN(ipPath.DistanceToDestiantion(ipTrack:= THIS^.CurrentTrack, fPosOnTrack := THIS^.PositionOnTrack), fDistToParentStationTemp);
+		END_IF
+	END_WHILE
+	THIS^.ParentStation.PathsBehinde.RestoreIterator();	
+	DistToParentStation := fDistToParentStationTemp;	
+	RETURN;
+END_IF
+
+
+//Not on track, line 
+IF THIS^.CurrentTrack = 0 THEN
+	fbPosXY.x := THIS^.ParentStation.PositionOnTrackXY.x - THIS^.PositionAct.x;
+	fbPosXY.y := THIS^.ParentStation.PositionOnTrackXY.y - THIS^.PositionAct.y;
+	DistToParentStation := fbPosXY.GetRadius();
+	RETURN;	
+END_IF
+
+
 ]]></ST>
         </Implementation>
       </Get>
@@ -368,8 +392,8 @@ IF NOT bFBInitCalledOnce THEN
 	   1. Test if the interface exists
 	   2. Test if the object implements a "System for Mover" interface 
 	*)
-	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.iXpSystem) THEN
-		THIS^.iXpSystem.RegisterMover(THIS^);
+	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.ipXpSystem) THEN
+		THIS^.ipXpSystem.RegisterMover(THIS^);
 	END_IF
 
 END_IF
@@ -427,7 +451,7 @@ END_VAR
 IF NOT THIS^.Mapped THEN
 	IF NOT fbInitError.bRaised THEN 
 		//This error cannot be reset. Requires a reset cold
-		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
 		stVarInfo := __VARINFO(fbMover);
 		fbInitError.ipArguments.AddString(stVarInfo.Symbol);
 		fbInitError.Raise(0);
@@ -488,7 +512,7 @@ END_VAR]]></Declaration>
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
-	joinTrackOptions.useOrientation := TRUE;	
+	joinTrackOptions.useOrientation 	:= TRUE;	
 	THIS^.fbMover.JoinTrack(commandFeedback	:= THIS^.fbFeedbackJoinTrack, 
 								targetTrack	:= iTrack.PlanarTrack, 
 								constraint	:= THIS^.fbDynConstraintContainer,
@@ -779,6 +803,91 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="MoverHeight" Id="{4e60d99b-2818-4281-9e05-0f1610591b64}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Height that is used for internal collision checks.[mm] *)
+PROPERTY MoverHeight : LREAL]]></Declaration>
+      <Get Name="Get" Id="{2069dff8-b44f-4871-8302-36d11a5bde6a}">
+        <Declaration><![CDATA[VAR
+	ipTrackComObject : ITComObject;
+	nParaSize : UDINT;
+	pParaData : PVOID;
+	hr : HRESULT;
+	fData : LREAL;
+END_VAR
+VAR CONSTANT
+	N_IDX_OFFSET 	: UDINT := 16#050300B3; // Parameter(init) Mover
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FW_ObjMgr_GetObjectInstance(oid:= THIS^.OID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipTrackComObject));
+
+IF ipTrackComObject = 0 THEN
+	// Error
+	RETURN;
+END_IF
+
+
+nParaSize := SIZEOF(fData);	pParaData := ADR(fData);
+
+hr := ipTrackComObject.TcGetObjPara(pid:=N_IDX_OFFSET , nData:= nParaSize, pData:= pParaData, pgp:=0 );
+ipTrackComObject.TcRelease();	
+
+
+MoverHeight := fData;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="MoverIsNotPresent" Id="{436b50f4-7ab9-4b1a-975f-656b96205857}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Mover could not be detected or was removed from the system
+PROPERTY MoverIsNotPresent : BOOL]]></Declaration>
+      <Get Name="Get" Id="{e8e9327d-3d37-4e0b-a510-e8c07bff6a5d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[MoverIsNotPresent:=  PlanarMover.MCTOPLC.ACT.ActPos.x = 0 AND
+						PlanarMover.MCTOPLC.ACT.ActPos.y = 0 AND 
+						PlanarMover.MCTOPLC.ACT.ActPos.z = 0 AND 
+						PlanarMover.MCTOPLC.ACT.ActPos.a = 0 AND
+						PlanarMover.MCTOPLC.ACT.ActPos.b = 0 AND 
+						PlanarMover.MCTOPLC.ACT.ActPos.c = 0 AND 
+						PlanarMover.MCTOPLC.ACT.PhysicalAreaID = 0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="MoverWidth" Id="{2583efb8-5d9a-4053-952c-b913e0289c35}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Width that is used for internal collision checks.[mm] *)
+PROPERTY MoverWidth : LREAL]]></Declaration>
+      <Get Name="Get" Id="{7c7c28f5-6bff-4b33-8d6f-0224fc2e0d31}">
+        <Declaration><![CDATA[VAR
+	ipTrackComObject : ITComObject;
+	nParaSize : UDINT;
+	pParaData : PVOID;
+	hr : HRESULT;
+	fData : LREAL;
+END_VAR
+VAR CONSTANT
+	N_IDX_OFFSET 	: UDINT := 16#050300B2; // Parameter(init) Mover
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FW_ObjMgr_GetObjectInstance(oid:= THIS^.OID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipTrackComObject));
+
+IF ipTrackComObject = 0 THEN
+	// Error
+	RETURN;
+END_IF
+
+
+nParaSize := SIZEOF(fData);	pParaData := ADR(fData);
+hr := ipTrackComObject.TcGetObjPara(pid:=N_IDX_OFFSET , nData:= nParaSize, pData:= pParaData, pgp:=0 );
+ipTrackComObject.TcRelease();	
+
+MoverWidth := fData;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="MoveXY" Id="{b4ad76d6-6055-4cdd-b12e-43b97b8b8ec6}" FolderPath="Movement\">
       <Declaration><![CDATA[METHOD MoveXY : HRESULT
 VAR_INPUT
@@ -895,6 +1004,20 @@ PositionAct REF= copyOfActPosition;]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Property Name="PositionAtDisable" Id="{8a90fc36-48ce-41fc-a975-9837b9ce6e53}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the last valide planar mover setpoint XYZABC [mm] *)
+PROPERTY PositionAtDisable : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{6bb82480-d451-4e15-b7e6-635ceb4efaf7}">
+        <Declaration><![CDATA[VAR_INST
+
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PositionAtDisable REF= THIS^.stLastValidePosition;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="PositionOnTrack" Id="{4a0153f5-97b4-4376-baf2-04d64afb83b5}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PositionOnTrack : LREAL]]></Declaration>
@@ -938,9 +1061,11 @@ END_VAR]]></Declaration>
 IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount THEN
 	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
 
-	
+	//Stor last valide position im system is enabled
+	IF ipXpSystem.Enabled THEN
+		THIS^.stLastValidePosition := THIS^.PositionSet;
+	END_IF
 
-		
 END_IF
 ]]></ST>
       </Implementation>
@@ -1208,6 +1333,25 @@ fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
 	]]></ST>
       </Implementation>
     </Method>
+    <Property Name="Standstill" Id="{0a4cd6a8-cc63-454a-b536-6c0ade3fd0bc}" FolderPath="Movement\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Velocity is zero *)
+PROPERTY Standstill : BOOL]]></Declaration>
+      <Get Name="Get" Id="{413d770e-3271-4399-b340-f1d8dfe909ac}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Standstill := TRUE;
+Standstill := Standstill AND THIS^.PlanarMover.MCTOPLC.SET.SetVelo.x = 0;
+Standstill := Standstill AND THIS^.PlanarMover.MCTOPLC.SET.SetVelo.y = 0;
+Standstill := Standstill AND THIS^.PlanarMover.MCTOPLC.SET.SetVelo.z = 0;
+Standstill := Standstill AND THIS^.PlanarMover.MCTOPLC.SET.SetVelo.a = 0;
+Standstill := Standstill AND THIS^.PlanarMover.MCTOPLC.SET.SetVelo.b = 0;
+Standstill := Standstill AND THIS^.PlanarMover.MCTOPLC.SET.SetVelo.c = 0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="StartExternalSetpoint" Id="{4f4a938c-622d-47f0-8bbe-7f1aa75cb8f5}" FolderPath="ExternalSetpoint\">
       <Declaration><![CDATA[METHOD StartExternalSetpoint : HRESULT
 VAR
@@ -1307,9 +1451,9 @@ END_VAR
 ]]></Declaration>
         <Implementation>
           <ST><![CDATA[FOR nLoopIndex := 1 TO UDINT_TO_UINT(Param_TcIoXPlanarEnvironment.MaxXPlanarMoversPerXpu) DO
-	ipPlanarMover := iXpSystem.Enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
+	ipPlanarMover := ipXpSystem.Enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
 	IF ipPlanarMover <> 0 AND_THEN ipPlanarMover.GetNcMoverOid() = OID THEN
-		TcIoXPlanarMover := iXpSystem.enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
+		TcIoXPlanarMover := ipXpSystem.enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
 		RETURN;
 	END_IF
 END_FOR]]></ST>
@@ -1318,7 +1462,20 @@ END_FOR]]></ST>
     </Property>
     <Method Name="Update" Id="{392ff8f6-dff3-42fc-aff2-06120a04576e}">
       <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
-]]></Declaration>
+VAR
+	ipObject : I_CH_Object;
+END_VAR
+
+VAR_INST
+	{attribute 'hide'}
+	fbCmdNotPossibleCollision : FB_TcAlarm;
+	{attribute 'hide'}
+	nFeedbackOidOld : UDINT;
+	{attribute 'hide'}	
+	nOldNcErrorCode 		: UDINT;
+	{attribute 'hide'}	
+	fbAlarmNcErrorCode		: FB_TcAlarm;
+END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[
 // ********************** Set feedback depending on active command *******************************
@@ -1458,6 +1615,67 @@ END_CASE
 IF fbFeedback.Done OR THIS^.fbFeedback.Error THEN
 	eActiveCommand 				:= E_NcAxisCommands.None;
 END_IF
+
+
+// **********************  Get interface to Feedback.ObjectInfo ***************************
+IF Feedback.ObjectInfoEx.Id <> 0 AND Feedback.ObjectInfoEx.Id <> nFeedbackOidOld THEN
+	CASE Feedback.ObjectInfo.ObjectType OF
+		EPlanarObjectType.Mover:
+			Feedback.ObjectInfoEx.ipObject := THIS^.ipXPSystem.Movers.FindOID(Feedback.ObjectInfo.Id);
+			
+		EPlanarObjectType.Track:
+				Feedback.ObjectInfoEx.ipObject := THIS^.ipXPSystem.Tracks.FindOID(Feedback.ObjectInfo.Id);
+		
+		EPlanarObjectType.Environment:
+				Feedback.ObjectInfoEx.ipObject := THIS^.ipXPSystem.Enviroment;
+				
+		ELSE 
+			Feedback.ObjectInfoEx.ipObject := 0;
+	END_CASE
+END_IF
+nFeedbackOidOld := Feedback.ObjectInfo.Id;
+
+
+
+// **********************  Write NC-Error(Mover.MCTOPLC.ErrorCode) in TC3 Eventlogger ***************************
+IF (THIS^.fbMover.MCTOPLC.STD.ErrorCode = 0 AND fbAlarmNcErrorCode.bRaised) THEN
+	//No error - Reset	
+	fbAlarmNcErrorCode.Clear(0,0);
+	
+ELSIF (THIS^.fbMover.MCTOPLC.STD.ErrorCode = 0) THEN
+	; //Nothing
+	
+ELSIF (nOldNcErrorCode <> THIS^.fbMover.MCTOPLC.STD.ErrorCode) THEN
+	//New Error - Reset, Create and Raise
+	fbAlarmNcErrorCode.Clear(0,0);
+	fbAlarmNcErrorCode.Create(	eventClass		:= TC_EVENT_CLASSES.Tc3_NcErrorCodes, 
+								nEventId		:= (THIS^.fbMover.MCTOPLC.STD.ErrorCode AND 16#FFFF), //Cut HRESULT to 4 digit error code
+								eSeverity		:= TcEventSeverity.Error, 
+								ipSourceInfo 	:= THIS^.fbSourceInfo, 
+								bWithConfirmation := FALSE);
+	fbAlarmNcErrorCode.ipArguments.Clear();
+	fbAlarmNcErrorCode.Raise(0);
+ELSE
+	//Alarm is already active
+	;
+END_IF
+nOldNcErrorCode := THIS^.fbMover.MCTOPLC.STD.ErrorCode;
+
+
+
+// **********************  Raise alarm on collision error ***************************
+ipObject := THIS^.fbFeedback.ObjectInfoEx.ipObject;
+IF THIS^.fbFeedback.Error AND (ipObject <> 0) AND NOT fbCmdNotPossibleCollision.bRaised THEN
+	fbCmdNotPossibleCollision.CreateEx(stEventEntry := TC_EVENTS.CHALET_XPlanar_Events.CommandNotPossibleCollision, bWithConfirmation := FALSE, ipSourceInfo := THIS^.fbSourceInfo);
+	//Command "{1}" not possible. Possible collision with "{2}"
+	fbCmdNotPossibleCollision.ipArguments.AddStringByValue(THIS^.fbFeedback.ActiveCommand).AddStringByValue(ipObject.LUID);
+	fbCmdNotPossibleCollision.Raise(0);
+ELSIF NOT THIS^.fbFeedback.Error OR ipObject = 0 THEN
+	fbCmdNotPossibleCollision.Clear(0,0);	
+END_IF
+
+
+
 
 //Update xplanar object
 THIS^.fbMover.Update();

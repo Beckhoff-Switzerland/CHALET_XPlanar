@@ -30,7 +30,7 @@ END_VAR]]></Declaration>
 	RETURN;
 END_IF
 
-IF NOT fbTracksUsed.FindObject(ipTrack) OR fPosOnTrack < 0 OR  fPosOnTrack > ipTrack.Length THEN
+IF (fbTracksUsed.OIDInList(ipTrack.OID) = 0) OR fPosOnTrack < 0 OR  fPosOnTrack > ipTrack.Length THEN
 	//Error -  position not on track
 	DistanceToDestiantion := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
 	RETURN;

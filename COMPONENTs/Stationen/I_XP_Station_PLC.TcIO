@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XP_Station_PLC" Id="{3b987664-67f6-4cb7-a8f7-0d8b2fa4f315}">
-    <Declaration><![CDATA[INTERFACE I_XP_Station_PLC EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XP_Station_PLC EXTENDS I_CH_Object
 ]]></Declaration>
     <Folder Name="Interaction with process" Id="{3fe7964a-64b4-44ff-b62e-f45c0b7bdb90}" />
     <Folder Name="Simulation" Id="{01c439b8-7664-4918-9dab-6a825793f5ac}" />
@@ -34,7 +34,7 @@ PROPERTY Feedback : I_CH_Feedback]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="Filter" Id="{5b5be999-8d93-4df0-9410-0a0a51b18987}">
+    <Property Name="Filter" Id="{5b5be999-8d93-4df0-9410-0a0a51b18987}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //Filter content, movers with one of these targets may not approach or drive over the station
 PROPERTY Filter : STRING]]></Declaration>
@@ -138,13 +138,26 @@ VAR_INPUT
 	sTargetStation: STRING;//unique station name or group of stations
 END_VAR]]></Declaration>
     </Method>
-    <Method Name="SimulationMode" Id="{e1ab33af-73d3-48a1-a683-cb1f02beb4b7}" FolderPath="Simulation\">
+    <Method Name="SimulationStart" Id="{e1ab33af-73d3-48a1-a683-cb1f02beb4b7}" FolderPath="Simulation\">
       <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
-METHOD SimulationMode : HRESULT
+METHOD SimulationStart : HRESULT
 VAR_INPUT
 	fProcessDuration 		: LREAL; //[s]
 	sTargedStation	: STRING; //Group of the targed station to automatic send after the duration
 END_VAR]]></Declaration>
+    </Method>
+    <Method Name="SimulationStartEx" Id="{96f143e8-fb6f-420c-b0c8-ed94be7b1804}" FolderPath="Simulation\">
+      <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
+METHOD SimulationStartEx : HRESULT
+VAR_INPUT
+	fProcessDuration 		: LREAL; //[s]
+	ipStation				: I_XP_Station_PLC; //unique station to automatic send after the duration
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SimulationStop" Id="{a9625ef0-4271-4f9e-b678-656a2f6ccd15}" FolderPath="Simulation\">
+      <Declaration><![CDATA[METHOD SimulationStop : HRESULT
+]]></Declaration>
     </Method>
     <Property Name="StationsAhead" Id="{a15a8190-632c-447b-bb8d-df59fa6aeeb2}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
