@@ -155,7 +155,6 @@ WHILE fbListOfMoverToCheck.HasNextObject() DO
 	IF ipMover1.MoverIsNotPresent THEN 		
 		//remove from list
 		fbListOfMoverToCheck.RemoveObject(ipMover1);
-		
 	END_IF
 END_WHILE
 
@@ -689,7 +688,6 @@ VAR
 	bDisableDuringMoverDetection : BOOL;
 	ipMoverCollision : I_XP_Mover;
 	ipSystemPlc : I_XP_System_PLC;
-	nX, nY : DINT;
 END_VAR
 VAR_INST
 	{attribute 'hide'}	
@@ -713,12 +711,10 @@ IF THIS^.bCollisionCheckEnabled AND NOT bDisableDuringMoverDetection THEN
 	//get mover or 0 for no collision
 	ipMoverCollision := CollisionDetectionAlgorithm(fOffsetMoverSize := THIS^.fMoverOffsetWarning, ipListOfMovers := THIS^.ipXpSystem.Movers);
 	
-	IF ipMoverCollision <> 0 AND_THEN ipMoverCollision <> ipMoverCollisionOldWarning AND_THEN NOT ipMoverCollision.MoverIsNotPresent THEN
+	IF ipMoverCollision <> 0 AND ipMoverCollision <> ipMoverCollisionOldWarning THEN
 		fbAlarmCollisionMoverWarning.CreateEx(tc_Events.CHALET_XPlanar_Events.MoverCollisionWarning, 0, THIS^.fbSourceInfo);
 		//Mover "{0}" has a collision with another mover at position X:{1} Y:{2}
-		nX := LREAL_TO_DINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.x);
-		nY := LREAL_TO_DINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.y);
-		fbAlarmCollisionMoverWarning.ipArguments.Clear().AddStringByValue(ipMoverCollision.LUID).AddDInt(nX).AddDint(nY);
+		fbAlarmCollisionMoverWarning.ipArguments.AddStringByValue(ipMoverCollision.LUID).AddUDInt(LREAL_TO_UDINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.x)).AddUDInt(LREAL_TO_UDINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.y));
 		fbAlarmCollisionMoverWarning.Raise(0);
 	ELSIF ipMoverCollision = 0 THEN
 		//No collision found

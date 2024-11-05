@@ -27,7 +27,7 @@
     </DeploymentEvents>
     <Released>false</Released>
     <Company>Beckhoff CH</Company>
-    <ProjectVersion>5.1.2</ProjectVersion>
+    <ProjectVersion>4.4.9</ProjectVersion>
     <Title>CHALET_XPlanar</Title>
   </PropertyGroup>
   <ItemGroup>
@@ -67,6 +67,18 @@
     <Compile Include="COMPONENTs\Optional\Casting\ToXpTrack.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="COMPONENTs\Optional\FB_XP_Path.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\F_GetDistToPosModulo.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\F_InLimitTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\I_XP_Path.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="COMPONENTs\Optional\Trigger\FB_XP_Trigger.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -77,18 +89,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Optional\Zone\I_XP_Zone.TcIO">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Path\FB_XP_Path.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Path\I_XP_Path.TcIO">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Stationen\A-Star-Node\FB_AStarNode.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="COMPONENTs\Stationen\A-Star-Node\I_PathAStarNode.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPONENTs\Stationen\FB_XP_Station.TcPOU">
@@ -112,6 +112,10 @@
     <Compile Include="COMPONENTs\Group\I_XP_Group.TcIO">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="COMPONENTs\Stationen\ST_PathFinder_1.TcDUT">
+      <SubType>Code</SubType>
+      <ExcludeFromBuild>false</ExcludeFromBuild>
+    </Compile>
     <Compile Include="COMPONENTs\System\FB_XP_System.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -133,22 +137,7 @@
     <Compile Include="FUNCTIONs\F_DistXYVectors.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="FUNCTIONs\F_Vector_Multiplication.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="FUNCTIONs\F_Vector_Subtraction.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="FUNCTIONs\F_GetDistToPosModulo.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="FUNCTIONs\F_InLimitTest.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="FUNCTIONs\F_RotatePositionXY.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="FUNCTIONs\F_Vector_Addition.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="XPlanarParameterlist.TcGVL">
@@ -215,13 +204,11 @@
     <Folder Include="COMPONENTs" />
     <Folder Include="COMPONENTs\Mover\ProductData" />
     <Folder Include="COMPONENTs\Feedback" />
-    <Folder Include="COMPONENTs\Path" />
     <Folder Include="COMPONENTs\Optional" />
     <Folder Include="COMPONENTs\Optional\Casting" />
     <Folder Include="COMPONENTs\Optional\Trigger" />
     <Folder Include="COMPONENTs\Optional\Zone" />
     <Folder Include="COMPONENTs\Stationen" />
-    <Folder Include="COMPONENTs\Stationen\A-Star-Node" />
     <Folder Include="COMPONENTs\Track" />
     <Folder Include="COMPONENTs\Environment" />
     <Folder Include="COMPONENTs\Group" />
@@ -252,125 +239,8 @@
     </SubObject>
   </ItemGroup>
   <ItemGroup>
-    <PlaceholderResolution Include="CAA Callback">
-      <Resolution>CAA Callback Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CAA MemBlockMan">
-      <Resolution>CAA Memory Block Manager Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CAA ResMan">
-      <Resolution>CAA Ressource Manager Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CAA Types">
-      <Resolution>CAA Types Extern, * (CAA Technical Workgroup)</Resolution>
-    </PlaceholderResolution>
     <PlaceholderResolution Include="CHALET_BaseComponents">
-      <Resolution>CHALET_BaseComponents, 3.6.2 (Beckhoff CH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CHALET_Nc">
-      <Resolution>CHALET_Nc, 3.2.7 (Beckhoff CH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpApp">
-      <Resolution>CmpApp, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpBitmapPool">
-      <Resolution>CmpBitmapPool, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpDynamicText">
-      <Resolution>CmpDynamicText, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpEventMgr">
-      <Resolution>CmpEventMgr, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpLog">
-      <Resolution>CmpLog, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpSchedule">
-      <Resolution>CmpSchedule, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpTargetVisu">
-      <Resolution>CmpTargetVisu, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="CmpVisuHandler">
-      <Resolution>CmpVisuHandler, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Collections">
-      <Resolution>Collections, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Component Manager">
-      <Resolution>Component Manager, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="FloatingPointUtils">
-      <Resolution>FloatingPointUtils, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Standard">
-      <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Standard64">
-      <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="StringUtils">
-      <Resolution>StringUtils, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysCpuHandling">
-      <Resolution>SysCpuHandling, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysDir">
-      <Resolution>SysDir, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysFile">
-      <Resolution>SysFile, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysMem">
-      <Resolution>SysMem, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysProcess">
-      <Resolution>SysProcess, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysShm">
-      <Resolution>SysShm, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTarget">
-      <Resolution>SysTarget, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemBase">
-      <Resolution>VisuElemBase, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemMeter">
-      <Resolution>VisuElemMeter, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElems">
-      <Resolution>VisuElems, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemsSpecialControls">
-      <Resolution>VisuElemsSpecialControls, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemsWinControls">
-      <Resolution>VisuElemsWinControls, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuElemTextEditor">
-      <Resolution>VisuElemTextEditor, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="system_visuinputs">
-      <Resolution>VisuInputs, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuInputs">
-      <Resolution>VisuInputs, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="System_VisuNativeControl">
-      <Resolution>VisuNativeControl, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTime">
-      <Resolution>SysTime, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTimeCore">
-      <Resolution>SysTimeCore, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="SysTimeRtc">
-      <Resolution>SysTimeRtc, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Tc2_Drive">
-      <Resolution>Tc2_Drive, * (Beckhoff Automation GmbH)</Resolution>
+      <Resolution>CHALET_BaseComponents, * (Beckhoff CH)</Resolution>
     </PlaceholderResolution>
     <PlaceholderResolution Include="Tc2_EtherCAT">
       <Resolution>Tc2_EtherCAT, * (Beckhoff Automation GmbH)</Resolution>
@@ -380,12 +250,6 @@
     </PlaceholderResolution>
     <PlaceholderResolution Include="Tc2_Math">
       <Resolution>Tc2_Math, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Tc2_MC2">
-      <Resolution>Tc2_MC2, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Tc2_MC2_Drive">
-      <Resolution>Tc2_MC2_Drive, * (Beckhoff Automation GmbH)</Resolution>
     </PlaceholderResolution>
     <PlaceholderResolution Include="Tc2_Standard">
       <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
@@ -399,9 +263,6 @@
     <PlaceholderResolution Include="Tc3_EventLogger">
       <Resolution>Tc3_EventLogger, * (Beckhoff Automation GmbH)</Resolution>
     </PlaceholderResolution>
-    <PlaceholderResolution Include="Tc3_Mc3Definitions">
-      <Resolution>Tc3_Mc3Definitions, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
     <PlaceholderResolution Include="Tc3_Mc3PlanarMotion">
       <Resolution>Tc3_Mc3PlanarMotion, * (Beckhoff Automation GmbH)</Resolution>
     </PlaceholderResolution>
@@ -411,15 +272,6 @@
     <PlaceholderResolution Include="Tc3_Physics">
       <Resolution>Tc3_Physics, * (Beckhoff Automation GmbH)</Resolution>
     </PlaceholderResolution>
-    <PlaceholderResolution Include="Tc3_XPlanarUtility">
-      <Resolution>Tc3_XPlanarUtility, * (Beckhoff Automation GmbH)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="Util">
-      <Resolution>Util, * (System)</Resolution>
-    </PlaceholderResolution>
-    <PlaceholderResolution Include="VisuDialogs">
-      <Resolution>VisuDialogs, * (System)</Resolution>
-    </PlaceholderResolution>
   </ItemGroup>
   <ItemGroup>
     <Content Include="LICENSE.md">
@@ -427,6 +279,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <PinnedGlobalDataType Include="MoverDetectionStatus" />
     <PinnedGlobalDataType Include="ST_CHALET_Base_Events" />
     <PinnedGlobalDataType Include="ST_CHALET_XPlanar_Events" />
     <PinnedGlobalDataType Include="ST_Tc3_NcErrorCodes" />
@@ -491,7 +344,7 @@
                   <d n="SubKeys" t="Hashtable" />
                   <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
                     <v>bActive</v>
-                    <v>True</v>
+                    <v>False</v>
                   </d>
                 </o>
                 <v>6</v>

@@ -48,25 +48,12 @@ WHILE fbTracksUsed.HasNextObject() DO
 	END_IF
 END_WHILE	
 
-//Startpos
 DistanceToDestiantion := DistanceToDestiantion - fPosOnTrack;
-
-//EndPos
-DistanceToDestiantion := DistanceToDestiantion - (THIS^.StationDestination.AccocietedTrack.Length - THIS^.StationDestination.PositionOnTrack);
-
-//Closed Track Modulo
-//use -1 insted of 0 because thera are LREAL rounding problems if position is exact on destination
-IF (DistanceToDestiantion <= -1.0) AND THIS^.StationDestination.AccocietedTrack.ClosedLoop THEN
-	DistanceToDestiantion := DistanceToDestiantion + THIS^.StationDestination.AccocietedTrack.Length;
-END_IF
-
-
-]]></ST>
+DistanceToDestiantion := DistanceToDestiantion - THIS^.StationDestination.AccocietedTrack.Length + THIS^.StationDestination.PositionOnTrack;]]></ST>
       </Implementation>
     </Method>
     <Property Name="Length" Id="{9957ab4a-c60a-4dda-8b93-f3628e87faf2}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//[mm]
 PROPERTY Length : LREAL]]></Declaration>
       <Get Name="Get" Id="{200d8c22-a772-4dfe-ac22-68adb8102b4c}">
         <Declaration><![CDATA[VAR
@@ -172,7 +159,6 @@ END_VAR
     </Property>
     <Property Name="TracksUsed" Id="{5170e2b5-479c-4450-80bf-4959ba6b1bca}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//List of tracks
 PROPERTY TracksUsed : REFERENCE TO FB_CH_List]]></Declaration>
       <Get Name="Get" Id="{cf560e5a-4d4f-4c60-a8c0-e624ca89ff50}">
         <Declaration><![CDATA[VAR

@@ -9,14 +9,6 @@
     <Folder Name="Status" Id="{64055996-adf0-46f9-a5d5-ca6a31ec7749}" />
     <Folder Name="Track" Id="{ee4af8b6-4f54-45e5-b23b-3d9271cc66dc}" />
     <Folder Name="XPlanarUtility" Id="{6478c364-b6b4-480e-8022-2f105afad6fe}" />
-    <Property Name="AccelerationSet" Id="{d16e9c85-0ddf-42c6-888d-c0eabff9589a}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-(* Provides the current planar mover setpoint XYZABC [mm/s²] *)
-PROPERTY AccelerationSet : REFERENCE TO MoverVector]]></Declaration>
-      <Get Name="Get" Id="{2232bf06-3062-411e-a214-e121b8d61740}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Property Name="AxisExtSetpointA" Id="{5ae13940-6160-40c8-894c-b3f7e1f826f0}" FolderPath="ExternalSetpoint\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY  AxisExtSetpointA : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
@@ -59,14 +51,6 @@ PROPERTY AxisExtSetpointZ : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="CAxisModulo" Id="{ce3f4106-138d-44f5-951b-3fa1a6a55c36}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-(* C coordinate modulus set in MC3-Planar Mover[°] *)
-PROPERTY CAxisModulo : LREAL]]></Declaration>
-      <Get Name="Get" Id="{ac0c2ff0-4fda-477a-a3b6-1213635227c9}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Property Name="CommandMode" Id="{6b8f4b07-4b3d-4bab-9e3d-244460c7d1b5}" FolderPath="Status\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 (* Indicates the command mode of an enabled PlanarMover, i.e. how setpoints are currently produced. *)
@@ -93,15 +77,6 @@ PROPERTY DistToParentStation : LREAL //Distance to the responsible parent statio
     <Property Name="DynConstraint" Id="{c966e1a8-1da6-47c7-81c5-b00755d2c520}" FolderPath="DynamicConstraint\">
       <Declaration><![CDATA[PROPERTY DynConstraint : REFERENCE TO DynamicConstraint_Container]]></Declaration>
       <Get Name="Get" Id="{15c85705-8eb2-489b-b2bb-18d3faaf3da6}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
-    <Property Name="Enabled" Id="{10c53112-9a2f-425e-9bdb-ac45af88eb5a}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//operational and position control active(hovering)
-PROPERTY Enabled : BOOL
-]]></Declaration>
-      <Get Name="Get" Id="{b4f47ec2-164c-4d3a-b434-febe95a6231e}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -188,15 +163,6 @@ VAR_INPUT
 	
 	(* Direction in which the target is approached. *)
 	direction : Tc3_Mc3Definitions.MC_DIRECTION := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionNonModulo;
-END_VAR
-]]></Declaration>
-    </Method>
-    <Method Name="MoveOnTrack" Id="{f5f2470e-6f13-4bb3-bb30-8cecf63f4c61}" FolderPath="Track\">
-      <Declaration><![CDATA[METHOD MoveOnTrack : HRESULT
-VAR_INPUT
-	ipTrack : I_XP_Track;
-	fPosition : LREAL;
-	fGap : LREAL;
 END_VAR
 ]]></Declaration>
     </Method>
@@ -407,14 +373,6 @@ PROPERTY TcIoXPlanarMover : Tc3_XPlanarUtility.I_TcIoXPlanarMover]]></Declaratio
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY UtilityMover : Tc3_XPlanarUtility.I_McPlanarMover]]></Declaration>
       <Get Name="Get" Id="{90e40154-2355-447b-8e6b-dec8afc05b97}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
-    <Property Name="VelocitySet" Id="{e94fd615-5167-476e-9132-4c11ea5e5551}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-(* Provides the current planar mover setpoint XYZABC [mm/s] *)
-PROPERTY VelocitySet : REFERENCE TO MoverVector]]></Declaration>
-      <Get Name="Get" Id="{c8c427ec-d078-42f7-a9f1-66de0248e3c6}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

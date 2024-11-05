@@ -31,14 +31,15 @@ VAR
 	{attribute 'hide'}
 	bReadyToRecvMovers 		: BOOL := TRUE;
 	{attribute 'hide'}
-	nCtsMoversMustLeaveThisStation : UDINT;
-	{attribute 'hide'}
 	sTargetGroup 				: STRING;
 	
 	{attribute 'hide'}
 	bSuppressDynamicsChange		: BOOL; // Suppress to change the dynamic(Gap+velocity) of passing movers. This is usefull in startup
 	{attribute 'hide'}
 	fMoverGapAtExit 			: LREAL := XPlanarParameterlist.F_GAP_DEFAULT; // Every mover that leaves or passes the station gets this new gap as a target.
+	{attribute 'hide'}
+	fMoverVelocityAtExit		: LREAL; // Every mover that leaves or passes the station gets this new velo as a target.
+	
 	{attribute 'hide'}	
 	fbPositionPlanned : PositionXY; //this is the configured/planned position of the station. set via FB_init. If it is not on the track, the PosOnTrackXY is different
 	{attribute 'hide'}	
@@ -90,24 +91,11 @@ VAR
 															ipListOfMoversToCheck := fbAssignedMovers );
 	{attribute 'hide'}
 	fDecisionDistance: LREAL;//[mm]
+	
 	{attribute 'hide'}
-	bNetworkHasTrackBranches : BOOL;//True if atleas on branche is existing in network
-	{attribute 'hide'}
-	sFilter : STRING :=  XPlanarParameterlist.S_ANY_STATION_NAME;
-	{attribute 'hide'}	
-	fbAlarmStationIsBlocked : FB_TcAlarm;
+	sFilter : STRING;
 END_VAR
-
-// Dynamic to use if an Mvoer passes the station
-// Every mover that leaves or passes the station gets this new velo as a target.
-VAR
-	{attribute 'hide'}	
-	fMoverVeloAtExit : MC_LREAL := MC_DEFAULT; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
-	{attribute 'hide'}	
-    fMoverAccAtExit : MC_LREAL := MC_DEFAULT; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
-	{attribute 'hide'}	
-    fMoverDecAtExit : MC_LREAL := MC_DEFAULT; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
-END_VAR]]></Declaration>
+]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
@@ -174,10 +162,6 @@ VAR
  	ipStation : I_XP_Station;
 	fbListOfStationsToCheck : FB_CH_List;
 END_VAR
-VAR_INST
-	{attribute 'hide'}	
-	fbAlarm : FB_TcAlarm;
-END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Get a list of all station whitout this station
@@ -193,11 +177,6 @@ WHILE fbListOfStationsToCheck.HasNextObject() DO
 		IF (ipStation.PositionOnTrack = THIS^.PositionOnTrack) AND (ipStation.AccocietedTrack = THIS^.AccocietedTrack)  THEN
 			//Error two stations have same position on track
 			CheckInvalideParameter := E_FAIL;
-			IF NOT fbAlarm.bRaised THEN
-				fbAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.DuplicateStationPositions, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
-				fbAlarm.ipArguments.AddStringByValue(THIS^.LUID).AddStringByValue(ipStation.LUID);
-				fbAlarm.Raise(0);			
-			END_IF
 			RETURN;
 		END_IF
 		
@@ -205,11 +184,6 @@ WHILE fbListOfStationsToCheck.HasNextObject() DO
 		IF (ipStation.LUID = THIS^.LUID) THEN
 			//Error two stations have same unique id
 			CheckInvalideParameter := E_FAIL;
-			IF NOT fbAlarm.bRaised THEN
-				fbAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XPlanar_Events.DuplicateStationName, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
-				fbAlarm.ipArguments.AddStringByValue(THIS^.LUID);
-				fbAlarm.Raise(0);			
-			END_IF
 			RETURN;
 		END_IF
 		
@@ -233,7 +207,6 @@ END_VAR
 VAR
 	bOptionalTrackUsedInLiveViewIsMapped : BOOL;
 	fbPositionXYC : PositionXYC;
-	ipEachTrack : I_XP_Track;
 END_VAR
 
 ]]></Declaration>
@@ -318,16 +291,6 @@ CASE nSeq OF
 		END_IF
 //----------------------------------------------------------------
 
-	90: //Create some internal used Variable
-		THIS^.bNetworkHasTrackBranches := FALSE;
-		THIS^.ipXpSystem.Tracks.ResetIterator();
-		WHILE THIS^.ipxpsystem.Tracks.HasNextObject() DO
-			IF __QUERYINTERFACE(THIS^.ipXpSystem.Tracks.GetNextObject(), ipEachTrack) AND_THEN (ipEachTrack.TracksAhead.Size > 1) THEN
-				THIS^.bNetworkHasTrackBranches := TRUE;
-				EXIT;
-			END_IF
-		END_WHILE
-		THIS^.ipXpSystem.Tracks.RestoreIterator();
 		
 		
 
@@ -440,8 +403,7 @@ VAR_INPUT
 	sUniqueName			: STRING;		//expl.:'Loading' unique identification for this station
 	sTargetGroup		: STRING;	//to which group of stations does this station belong? e.g. several stations can belong to one 'Infeed' if this is implemented redundantly.
 	nMoverQueueSize 	: UINT;
-	xPos				: LREAL; 	
-	yPos				: LREAL; 	
+	xPos, yPos			: LREAL; 	
 END_VAR
 
 VAR_INST
@@ -622,10 +584,8 @@ END_WHILE
 THIS^.PathsBehinde.RestoreIterator();
 
 THIS^.fDecisionDistance := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
-THIS^.fDecisionDistance := MIN(THIS^.fDecisionDistance, (fDistToStartOfTrack - 1.0));
-THIS^.fDecisionDistance := MIN(THIS^.fDecisionDistance, (fDistStationBehind - 1.0));
-THIS^.fDecisionDistance := MIN(THIS^.fDecisionDistance, XPlanarParameterlist.F_DIST_SET_NEW_MOVE_CMD_BEFORE_REACHING_PARENT_STATION);
-
+THIS^.fDecisionDistance := MIN(THIS^.fDecisionDistance, fDistToStartOfTrack);
+THIS^.fDecisionDistance := MIN(THIS^.fDecisionDistance, fDistStationBehind);
 
 IF THIS^.fDecisionDistance < 1.0 THEN 
 	THIS^.fDecisionDistance := 1.0;
@@ -755,12 +715,6 @@ WHILE NOT fbPathElementsToCheck.IsEmpty DO
 		ipPathCurrentLoop.Length := ipPathCurrentLoop.Length - ipPathCurrentLoop.StationStart.PositionOnTrack;
 		ipPathCurrentLoop.Length := ipPathCurrentLoop.Length - ipPathCurrentLoop.StationDestination.AccocietedTrack.Length + ipPathCurrentLoop.StationDestination.PositionOnTrack;
 		
-		//Modulo on cloosed track add 1 track length 
-		IF ipPathCurrentLoop.StationStart.AccocietedTrack = ipPathCurrentLoop.StationDestination.AccocietedTrack AND 
-			ipPathCurrentLoop.StationStart.PositionOnTrack > ipPathCurrentLoop.StationDestination.PositionOnTrack THEN
-				ipPathCurrentLoop.Length := ipPathCurrentLoop.Length + ipPathCurrentLoop.StationDestination.AccocietedTrack.Length;
-		END_IF
-		
 		fbListPathAhead.AddObject(ipPathCurrentLoop);
 		fbPathElementsToCheck.RemoveObject(ipPathCurrentLoop);
 	ELSE
@@ -815,174 +769,6 @@ WHILE THIS^.fbStationsBehinde.HasNextObject() DO
 		END_WHILE	
 	END_IF
 END_WHILE	
-]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="GetPathToTarged" Id="{5524e2c1-484a-4a80-ae13-bdd8e56e7684}">
-      <Declaration><![CDATA[(*THIS METHOD uses the A* algorithm TO find the shortest route TO the destination in the network. Returns an INTERFACE with information about the destination found, such as station, path TO destination, path length.
-If an interface=0 is returned, then no path can be found at the current time.*)
-METHOD GetPathToTarged : I_PathAStarNode
-VAR_INPUT
-	sTargedStation : REFERENCE TO STRING; //unique station name or group of stations. EmptyString=Any
-END_VAR
-VAR	
-	nDifZero : INT;	///zzz remove
-
-	nIdx : UDINT;
-	bCorrectLUID: BOOL;
-	bCorrectGroupe : BOOL;
-	bFilterBlockThisMover : BOOL;
-	bStationIsBlocked : BOOL;
-	bDummyStation : BOOL; //Station without movers only to change the dynamics of passing movers;
-	bTargedFound : BOOL;
-	bImTheAsker : BOOL; // Do not return this station as a targed
-
-	ipActiveStationAStar : I_PathAStarNode;
-	ipEmptyPathObj : I_PathAStarNode;
-	ipEachPathAhead : I_XP_Path;
-	ipPathFoundInOpenList : I_PathAStarNode;
-	ipEachAStarNode : I_PathAStarNode;
-	ipBesStationAStar : I_PathAStarNode;	
-	ipThisStation : I_XP_Station := THIS^;
-	
-	fPathLength : LREAL;
-END_VAR
-VAR_INST
-	fbLastFoundResult : FB_AStarNode;
-END_VAR
-VAR_STAT
-	fbListNotUsedNodes : FB_CH_List; // Use GetNext() to allways get a not used one
-	afbPathAStarNodes : ARRAY[0..(CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1)] OF FB_AStarNode;	
-	fbListOpen : FB_CH_List; //To check
-	fbListClosed : FB_CH_List; //Allready checked	
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[//only on first call, add nodes to list of not used objects
-IF fbListNotUsedNodes.IsEmpty THEN
-	FOR nIdx := 0 TO (CHALET_BaseComponents.BaseParameterlist.MAX_OBJECTS-1) DO
-		fbListNotUsedNodes.AddObject(afbPathAStarNodes[nIdx]);
-	END_FOR
-END_IF
-
-//Clear list
-fbListOpen.Clear();
-fbListClosed.Clear();
-
-//Init objects in list
-fbListNotUsedNodes.ResetIterator();
-WHILE fbListNotUsedNodes.HasNextObject() DO
-	IF __QUERYINTERFACE(fbListNotUsedNodes.GetNextObject(), ipEachAStarNode) THEN
-		IF 	ipEachAStarNode.Station = 0 THEN
-			EXIT;//Last used element found, abort
-		END_IF
-	
-		ipEachAStarNode.Station := 0;
-		ipEachAStarNode.RouteUsedToNode.Clear();
-	END_IF
-END_WHILE
-
-//Reset last found result
-fbLastFoundResult.Station := 0;
-fbLastFoundResult.RouteUsedToNode.Clear();
-
-// Reset once - Use GetNext() to allways get a not used one
-fbListNotUsedNodes.ResetIterator();
-
-//This is the start of the search operation. Add this station
-__QUERYINTERFACE(fbListNotUsedNodes.GetNextObject(), ipEmptyPathObj);
-ipEmptyPathObj.Station := (THIS^);
-fbListOpen.AddObject(ipEmptyPathObj);
-
-WHILE NOT fbListOpen.IsEmpty DO
-	//Get objet from list with smallest distanse to start-station
-
-	__QUERYINTERFACE(fbListOpen.GetObjectWithLowestNumber(), ipActiveStationAStar);
-	//Move objet from open to closed list
-	fbListOpen.RemoveObject(ipActiveStationAStar);
-	fbListClosed.AddObject(ipActiveStationAStar);
-	
-	IF ipActiveStationAStar = 0 THEN
-		//zzz todo error, this should never happen
-		nDifZero := nDifZero / nDifZero;
-		CONTINUE;
-	END_IF
-	
-	IF ipBesStationAStar <> 0 AND_THEN ipActiveStationAStar.PathLength > ipBesStationAStar.PathLength THEN
-		// if a valid station is allreadyx known, skip all station who allready have a larger distance
-		CONTINUE;
-	END_IF
-	
-	bImTheAsker := ipActiveStationAStar.Station = ipThisStation;
-	bCorrectLUID := (ipActiveStationAStar.Station.LUID = sTargedStation);
- 	bCorrectGroupe := (ipActiveStationAStar.Station.TargetGroupe = sTargedStation) OR (sTargedStation =  XPlanarParameterlist.S_ANY_STATION_NAME);
-	bDummyStation := (ipActiveStationAStar.Station.MoverQueueSize = 0);//Station without movers only to change the dynamics of passing movers;
-	bFilterBlockThisMover := (ipActiveStationAStar.Station.Filter <>  XPlanarParameterlist.S_ANY_STATION_NAME) AND (ipActiveStationAStar.Station.Filter <> sTargedStation) AND NOT bCorrectLUID; // Correct LUID is stronger than filter
-	bStationIsBlocked := (ipActiveStationAStar.Station.CtsEmptySpaceInQueue <= 0 AND NOT bDummyStation) OR NOT ipActiveStationAStar.Station.ReadyToRecvMovers;
-
-	IF (bFilterBlockThisMover OR bStationIsBlocked) AND NOT bImTheAsker THEN
-		//Skip
-		CONTINUE;
-	END_IF
-	
-	
-	IF (bCorrectLUID OR bCorrectGroupe) AND NOT bImTheAsker AND NOT bDummyStation THEN
-		//FOUND! - check if way is shorter
-		IF ipBesStationAStar=0 OR_ELSE  ipActiveStationAStar.PathLength <= ipBesStationAStar.PathLength THEN
-			//shorter - store
-			ipBesStationAStar := ipActiveStationAStar;
-		END_IF
-		
-	ELSE		
-		// If the destination has not yet been found, set the successor nodes of the current node to the open list
-		ipActiveStationAStar.Station.PathsAhead.ResetIterator();
-		WHILE ipActiveStationAStar.Station.PathsAhead.HasNextObject() DO
-			__QUERYINTERFACE(ipActiveStationAStar.Station.PathsAhead.GetNextObject(), ipEachPathAhead); 
-			
-			IF fbListClosed.LUIDInList(ipEachPathAhead.StationDestination.LUID) THEN
-				// if the successor node is already on the closed list - do nothing, repeate WHILE loop
-				CONTINUE;
-			END_IF
-			
-			//Calculate distance to start oh the new found station
-			fPathLength := ipActiveStationAStar.PathLength + ipEachPathAhead.Length;
-		
-			//Check if this station is allready existin in open list - compare if this one is shorter
-			IF __QUERYINTERFACE( fbListOpen.FindLUID(ipEachPathAhead.StationDestination.LUID), ipPathFoundInOpenList)  THEN
-				IF ipPathFoundInOpenList.PathLength <= fPathLength  THEN
-					//object in open list is shorter - do nothing, repeate WHILE loop
-					CONTINUE;
-				ELSE
-					//new object is shorter - remove old object in open lsit
-					fbListOpen.RemoveObject(ipPathFoundInOpenList);
-				END_IF
-			END_IF			
-			
-			
-			//Add this path ahead to open list - set new length
-			__QUERYINTERFACE(fbListNotUsedNodes.GetNextObject(), ipEmptyPathObj);
-			ipEmptyPathObj.Station := ipEachPathAhead.StationDestination;
-			ipEmptyPathObj.RouteUsedToNode.Duplicate(ipActiveStationAStar.RouteUsedToNode);
-			ipEmptyPathObj.RouteUsedToNode.AddObject(ipEachPathAhead);
-			fbListOpen.AddObject(ipEmptyPathObj);
-
-		END_WHILE
-		ipActiveStationAStar.Station.PathsAhead.RestoreIterator();
-
-	END_IF
-
-END_WHILE
-
-
-//Return station or nothing
-IF ipBesStationAStar = 0 THEN
-	GetPathToTarged := 0;
-ELSE
-	//store list in an instance
-	fbLastFoundResult.Station := ipBesStationAStar.Station;
-	fbLastFoundResult.RouteUsedToNode.Duplicate(ipBesStationAStar.RouteUsedToNode);
-	GetPathToTarged := fbLastFoundResult;
-END_IF
 ]]></ST>
       </Implementation>
     </Method>
@@ -1067,7 +853,6 @@ THIS^.ipXpSystem.Stations.RestoreIterator();]]></ST>
       <Declaration><![CDATA[METHOD Initialize : HRESULT
 VAR
 	ipEachStationAhead : I_XP_Station;
-	nIdx : UDINT;
 END_VAR
 VAR_INST
 	//This error cannot be reset. Requires a reset cold
@@ -1125,48 +910,6 @@ THIS^.fbFeedback.HR := Initialize;
 ]]></ST>
       </Implementation>
     </Method>
-    <Property Name="MoverAccAtExit" Id="{c16ee648-7fa9-4435-ac3b-b84897b2ba33}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY MoverAccAtExit : MC_LREAL //[mm/s² on Track] Every mover that leaves or passes the station gets this new acceleration as a target.
-]]></Declaration>
-      <Get Name="Get" Id="{b420f4e8-1db2-4f97-9264-aaef5e1656ab}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[MoverAccAtExit := THIS^.fMoverAccAtExit;]]></ST>
-        </Implementation>
-      </Get>
-      <Set Name="Set" Id="{4b55ecda-42e2-488c-b3af-41157f2b0283}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[THIS^.fMoverAccAtExit := MoverAccAtExit;]]></ST>
-        </Implementation>
-      </Set>
-    </Property>
-    <Property Name="MoverDecAtExit" Id="{9908ef98-3c17-4898-8051-d1bd7b8795e9}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY MoverDecAtExit : MC_LREAL //[mm/s² on Track] Every mover that leaves or passes the station gets this new deceleration as a target.
-]]></Declaration>
-      <Get Name="Get" Id="{312b7f0a-70df-4fc0-91ee-293b6b441f49}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[MoverDecAtExit := THIS^.fMoverDecAtExit;]]></ST>
-        </Implementation>
-      </Get>
-      <Set Name="Set" Id="{a5de3868-dfc1-408c-b6c4-79c648b56175}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[THIS^.fMoverdecAtExit := MoverDecAtExit;]]></ST>
-        </Implementation>
-      </Set>
-    </Property>
     <Property Name="MoverGapAtExit" Id="{5c8f472e-0335-40f5-b967-0e7d9f13b1c2}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //[mm] Every mover that leaves or passes the station gets this new gap as a target.
@@ -1240,31 +983,8 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
-    <Property Name="MoverVelocityAtExit" Id="{c8aa4fd1-11f0-49a5-a667-a67ce14d3e0c}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY MoverVelocityAtExit : MC_LREAL //[mm/s on Track] Every mover that leaves or passes the station gets this new velocity as a target.
-]]></Declaration>
-      <Get Name="Get" Id="{8cd0e523-f40f-4dab-90bf-58b874e34883}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[MoverVelocityAtExit := THIS^.fMoverVeloAtExit;]]></ST>
-        </Implementation>
-      </Get>
-      <Set Name="Set" Id="{a78c18cd-7c3f-4140-8c95-f2b95ae7fe00}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[THIS^.fMoverVeloAtExit := MoverVelocityAtExit;]]></ST>
-        </Implementation>
-      </Set>
-    </Property>
     <Property Name="OID" Id="{9ecd905e-af6f-4db9-9e5c-387d6e5972a3}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//Unique object ID
-PROPERTY OID : OTCID ]]></Declaration>
+      <Declaration><![CDATA[PROPERTY OID : OTCID]]></Declaration>
       <Get Name="Get" Id="{9a1ede3f-bea3-4e00-a0f4-c6014c87fb82}">
         <Declaration><![CDATA[VAR
 END_VAR
@@ -1275,45 +995,22 @@ END_VAR
       </Get>
     </Property>
     <Method Name="OnMoverPasses" Id="{cb5602a2-e0d9-4669-9e70-10b112a4672b}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[METHOD PROTECTED OnMoverPasses : BOOL //This methode is called automaticly from the station and detect mover who is passing the station whitout be in queue.
+      <Declaration><![CDATA[METHOD PROTECTED OnMoverPasses : BOOL //This methode is called automaticly from the station
 VAR_INPUT
 	ipMoverPasses : I_XP_Mover;
 END_VAR
 VAR
 	ipThisStation : I_XP_Station := THIS^;
-	
-	//this raises an error 33155 "Target position is not reachable. There is no path available to the target position or target position is unreachable in general."
-	bPreventMoveCmdToMoversCurrentPos : BOOL;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF ipMoverPasses = 0 THEN
-	RETURN;
-END_IF
-
-//Detect mover who is passing the station whitout be in queue. 
-//Adjust to new Dynamics on Track
-IF NOT THIS^.bSuppressDynamicsChange AND XPlanarParameterlist.B_STATIONS_OVERRIDE_MOVER_DYN_CONSTRAINT THEN
-	//Only if not in this queue
-	IF ipMoverPasses.ParentStation <> ipThisStation  THEN
-		ipMoverPasses.SetDynConstraint_Path(	V:= THIS^.fMoverVeloAtExit, 
-												A:= THIS^.fMoverAccAtExit,
-												D:= THIS^.fMoverDecAtExit,
-												J:= MC_DEFAULT);
-	END_IF
-END_IF	
-
-
-
-//Detect mover who is passing the station whitout be in queue. 
-//Adjust to new Gap
+        <ST><![CDATA[//Detect mover who is passing the station whitout be in queue. Adjust to new Gap
 IF NOT THIS^.bSuppressDynamicsChange THEN
-	bPreventMoveCmdToMoversCurrentPos := (ipMoverPasses.PositionOnTrack = ipMoverPasses.LastCmdTargedPosition) AND (ipMoverPasses.CurrentTrack = ipMoverPasses.LastCmdTargedTrack);
 	//Only if not in this queue
-	IF ipMoverPasses.ParentStation <> ipThisStation AND NOT bPreventMoveCmdToMoversCurrentPos THEN
-		ipMoverPasses.MoveOnTrack(ipTrack	:= ipMoverPasses.LastCmdTargedTrack,
-								fPosition	:= ipMoverPasses.LastCmdTargedPosition, 
-								fGap		:= THIS^.fMoverGapAtExit);
+	IF ipMoverPasses.ParentStation <> ipThisStation THEN
+		ipMoverPasses.MoveOnTrack(ipTrack	:= 	fbTrigger.MoverAtTrigger.LastCmdTargedTrack,
+												fPosition	:= fbTrigger.MoverAtTrigger.LastCmdTargedPosition, 
+												fGap		:= THIS^.fMoverGapAtExit);
 	END_IF
 END_IF	]]></ST>
       </Implementation>
@@ -1371,7 +1068,7 @@ PROPERTY PositionOnTrackXY : REFERENCE TO PositionXY]]></Declaration>
     </Property>
     <Property Name="PositionXY" Id="{57f88c6d-1edb-40be-8335-2d1328019a7b}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//Planned position, not necessarily on the track. Only changeable when the system is disabled
+//Planned position, not necessarily on the track
 PROPERTY PositionXY : REFERENCE TO  PositionXY]]></Declaration>
       <Get Name="Get" Id="{12d63715-cd00-476e-950a-43f4ef95dde9}">
         <Declaration><![CDATA[VAR
@@ -1470,17 +1167,6 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
-    <Method Name="PushMoversOutOfStation" Id="{6b5a93dd-6a6b-48ce-8b4b-f715a8b410fb}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[//The movers currently in this station must leave the station. 
-//The movers actively search for a destination, but only leave if a new destination is available.
-METHOD PushMoversOutOfStation : HRESULT
-VAR_INPUT
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[THIS^.nCtsMoversMustLeaveThisStation := THIS^.CtsMoversInQueue;]]></ST>
-      </Implementation>
-    </Method>
     <Property Name="ReadyToRecvMovers" Id="{5b0be8af-1765-4389-aaea-ff98637ecb4f}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //prevent further movers from entering the station, 
@@ -1533,6 +1219,262 @@ bReadyToRecvMovers := ReadyToRecvMovers;
         </Implementation>
       </Set>
     </Property>
+    <Method Name="SearchNextBestStationByName" Id="{dd4c4852-91d9-48ef-b499-2f6bed30efb6}">
+      <Declaration><![CDATA[METHOD SearchNextBestStationByName : ST_PathFinder_1
+VAR_INPUT
+	sTargedStation : STRING; //unique station name or group of stations
+	nPermittedSearchDepth : UINT;
+	bCallFromExternal: BOOL; //set to true for an external call. set to false for a recursive call
+END_VAR
+
+VAR_STAT	
+	ipWhoIsAsking	: I_XP_Station;
+	fbListOfEvaluatedStations : CHALET_BaseComponents.FB_CH_List;
+END_VAR
+
+VAR
+	nRemainingSearchDepth 			: UINT;
+	ipPath							: I_XP_Path;
+	ipThisStation 					: I_XP_Station;
+	ipDestiantionStation			: I_XP_Station;
+	ipStation 						: I_XP_Station;
+	stPathTemp, stPathShortest		: ST_PathFinder_1;
+	bIamTheAsker					: BOOL;
+	bTargetFoundOnThisPath			: BOOL;
+	bStationIsOnlyForDynamicChanges : BOOL;
+	bStationIsFull					: BOOL;
+	bStationIsEmpty					: BOOL;
+	bStationHanMoreMoverThanAllowed : BOOL;
+	bStationHasAFreePlaceInQueue 	: BOOL;
+	bStationIsNotReadyToRecvMovers	: BOOL;
+	bAnyFreeStationOfThisTarged		: BOOL;
+	//bFilterOfStationDoesNotAllowThisMover : BOOL;
+	//fShortestPath 					: LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	fDistShortestMaybeNotReady		: LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	bRequestedStation : BOOL;
+	bDirectAndShorter : BOOL;
+	bDirect : BOOL; //the current path can access the targed on a direct way an has the higher priority
+	bPathIsShorter : BOOL;
+END_VAR
+VAR_INST
+	//Store the last value if this station gets multiple request from same asking station
+	stLastReturnValue : ST_PathFinder_1;
+	fbRouteToParent : FB_CH_List;
+	bLastResultValide : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ipThisStation := (THIS^);
+
+//Invalide input
+IF sTargedStation = '' THEN
+	//Error
+	searchNextBestStationByName.bTargetFound := FALSE;
+	searchNextBestStationByName.ipBestStation := 0;
+	searchNextBestStationByName.fDistToTarged := 0.0;
+	fbRouteToParent.Clear();
+	stPathShortest.ipRouteToParent	:= fbRouteToParent;
+	RETURN;
+END_IF
+
+//Filter of this station does not allow the current station - this is not a valide path. Only if this station is not the asker
+IF ((THIS^.Filter <> '') AND (THIS^.Filter <> sTargedStation) AND NOT bCallFromExternal) THEN
+	searchNextBestStationByName.bTargetFound := FALSE;
+	searchNextBestStationByName.ipBestStation := 0;
+	searchNextBestStationByName.fDistToTarged := 0.0;
+	fbRouteToParent.Clear();
+	stPathShortest.ipRouteToParent	:= fbRouteToParent;
+	RETURN;
+END_IF
+
+// New search command - Reset list of evaluated stations in first search routine
+IF bCallFromExternal THEN
+	ipWhoIsAsking := ipThisStation;
+	fbListOfEvaluatedStations.Clear();
+	
+	//Have any of the stations I'm looking a free space in queue somewhere on the track?
+	//Otherwise, verify whether my new station is really closer than my current location. -> Prevent the mover from being sent via an alternative track in the loop
+	THIS^.ipXpSystem.Stations.ResetIterator();
+	WHILE THIS^.ipXpSystem.Stations.HasNextObject() DO
+		IF __QUERYINTERFACE(THIS^.ipXpSystem.Stations.GetNextObject(), ipStation) THEN
+			bRequestedStation := (ipStation.LUID = sTargedStation)OR(ipStation.TargetGroupe = sTargedStation);
+			bAnyFreeStationOfThisTarged := bAnyFreeStationOfThisTarged OR(bRequestedStation AND ipStation.CtsEmptySpaceInQueue > 0 AND ipStation.ReadyToRecvMovers);
+		END_IF
+	END_WHILE
+	THIS^.ipXpSystem.Stations.RestoreIterator();
+END_IF
+
+//Has the maximum search depth been reached?
+nRemainingSearchDepth := nPermittedSearchDepth - 1;
+IF nRemainingSearchDepth = 0 THEN
+	searchNextBestStationByName.bTargetFound := FALSE;
+	searchNextBestStationByName.ipBestStation := 0;
+	searchNextBestStationByName.fDistToTarged := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	stPathShortest.ipRouteToParent	:= fbRouteToParent;
+	stLastReturnValue := searchNextBestStationByName;
+	RETURN;
+END_IF
+
+//Check whether the station has already been scanned
+IF fbListOfEvaluatedStations.ObjectInList(THIS^) THEN
+	IF bLastResultValide THEN
+		searchNextBestStationByName := stLastReturnValue;
+	ELSE
+		SearchNextBestStationByName.bTargetFound := FALSE;
+	END_IF
+	RETURN;
+END_IF
+
+//Create a list with every station that has already been checked. 
+//Otherwise it can happen with loops and switches that a route is checked several times.
+fbListOfEvaluatedStations.AddObject(THIS^);
+
+//Start a new list
+fbRouteToParent.Clear();
+
+//Reset last stored path information this is a new request
+stLastReturnValue := SearchNextBestStationByName;
+bLastResultValide := FALSE;
+
+//Is the station not aware of any other stations in front of it?
+IF THIS^.fbStationsAhead.Size = 0 THEN
+	searchNextBestStationByName.bTargetFound := FALSE;
+	searchNextBestStationByName.ipBestStation := 0;
+	searchNextBestStationByName.fDistToTarged := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	stPathShortest.ipRouteToParent	:= fbRouteToParent;
+	stLastReturnValue := searchNextBestStationByName;
+	bLastResultValide := TRUE;
+	RETURN;
+END_IF
+
+//Check if the requested station is this one. And not the station who is searching
+IF ((THIS^.TargetGroupe = sTargedStation OR THIS^.LUID = sTargedStation) AND (ipWhoIsAsking <> ipThisStation)) THEN
+	//FOUND
+	stPathShortest.bTargetFound 	:= TRUE;
+	stPathShortest.ipBestStation 	:= THIS^;
+	stPathShortest.fDistToTarged 	:= 0.0;
+	stPathShortest.ipRouteToParent	:= fbRouteToParent;
+	stPathShortest.bDirectAccessible := TRUE;
+	fDistShortestMaybeNotReady 		:= 0.0;
+ELSE
+	//Check the stations ahead if a movement to targed station is posible. Multiple stations incase of an switch.
+	THIS^.fbListPathAhead.ResetIterator();
+	WHILE THIS^.fbListPathAhead.HasNextObject() DO
+		IF __QUERYINTERFACE(THIS^.fbListPathAhead.GetNextObject(),ipPath) AND_THEN ipPath.StationDestination <> 0 THEN
+			ipDestiantionStation := ipPath.StationDestination;
+			stPathTemp := ipDestiantionStation.searchNextBestStationByName(sTargedStation := sTargedStation, nPermittedSearchDepth := nRemainingSearchDepth, bCallFromExternal := FALSE);	
+			stPathTemp.fDistToTarged := stPathTemp.fDistToTarged + ipPath.Length;
+			
+			//Only continue with the evaluation of the ipPath if the target position has been found somewhere along this path
+			IF stPathTemp.bTargetFound THEN
+				//The information that we are on a valid path is set if a path to destination was detected
+				bTargetFoundOnThisPath := TRUE;
+				
+				// Get the shortest way to targed, ignore that maybe not ready
+				IF stPathTemp.fDistToTarged < fDistShortestMaybeNotReady THEN
+					fDistShortestMaybeNotReady := stPathTemp.fDistToTarged;				
+				END_IF
+				
+				(*	1. priority: direct and shorter
+					2nd priority: direct
+					3rd priority: shorter (both non-direct)*)
+				bDirectAndShorter := (stPathTemp.fDistToTarged < stPathShortest.fDistToTarged) AND stPathTemp.bDirectAccessible AND stPathShortest.bDirectAccessible;
+				bDirect := stPathTemp.bDirectAccessible OR NOT stPathShortest.bDirectAccessible;
+				bPathIsShorter := (stPathTemp.fDistToTarged < stPathShortest.fDistToTarged) AND NOT stPathTemp.bDirectAccessible AND NOT stPathShortest.bDirectAccessible;
+				IF stPathTemp.ipBestStation <> 0 AND (bDirectAndShorter OR bDirect OR bPathIsShorter)  THEN
+						fbRouteToParent.Duplicate(stPathTemp.ipRouteToParent);
+						fbRouteToParent.AddObject(ipPath);
+						stPathShortest := stPathTemp;
+				END_IF
+			END_IF
+	
+		END_IF
+	END_WHILE
+	THIS^.fbListPathAhead.RestoreIterator();
+	stPathShortest.bTargetFound := bTargetFoundOnThisPath;
+	
+END_IF
+
+//Abort - not a valide path
+IF NOT stPathShortest.bTargetFound THEN
+	searchNextBestStationByName.bTargetFound := FALSE;
+	searchNextBestStationByName.ipBestStation := 0;
+	searchNextBestStationByName.fDistToTarged := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	stLastReturnValue := searchNextBestStationByName;
+	bLastResultValide := TRUE;
+	RETURN;
+END_IF
+
+//evaluate whether the current best station should be overwritten by this one
+bIamTheAsker					:= bCallFromExternal;
+bStationHanMoreMoverThanAllowed := (THIS^.CtsMoversInQueue > THIS^.nMoverQueueSize); //Maybe during statup if all movers are forced to station x.	
+bStationIsFull					:= (THIS^.CtsEmptySpaceInQueue = 0) AND NOT (THIS^.nMoverQueueSize = 0);
+bStationHasAFreePlaceInQueue 	:= (THIS^.CtsEmptySpaceInQueue > 0);
+bStationIsOnlyForDynamicChanges := (THIS^.nMoverQueueSize = 0);
+bStationIsNotReadyToRecvMovers	:= (NOT THIS^.bReadyToRecvMovers); 
+bStationIsEmpty					:= (THIS^.CtsEmptySpaceInQueue > 0) AND (THIS^.CtsMoversInQueue = 0);
+
+//End of search. Return found station
+IF bIamTheAsker THEN
+	
+	//Special situation no target station in the entire system not ready
+	//Have any of the stations I'm looking a free space in queue somewhere on the track?
+	//Otherwise, verify whether my new station is really closer than my current location. -> Prevent the mover from being sent via an alternative track in the loop
+	IF (NOT bAnyFreeStationOfThisTarged) AND (fDistShortestMaybeNotReady < stPathShortest.fDistToTarged) THEN
+		//Stay on this station
+		searchNextBestStationByName.bTargetFound := TRUE;
+		searchNextBestStationByName.ipBestStation := 0;
+		searchNextBestStationByName.fDistToTarged := 0.0;
+		searchNextBestStationByName.ipRouteToParent := 0;
+		searchNextBestStationByName.bDirectAccessible := FALSE;
+	ELSE
+		//Return found station
+		searchNextBestStationByName.bTargetFound := TRUE;
+		searchNextBestStationByName.ipBestStation := stPathShortest.ipBestStation;
+		searchNextBestStationByName.fDistToTarged := stPathShortest.fDistToTarged;
+		searchNextBestStationByName.ipRouteToParent := fbRouteToParent;
+		searchNextBestStationByName.bDirectAccessible := stPathShortest.bDirectAccessible;
+	END_IF
+
+
+//Is THIS Station a "Dynamic change station" (Queuesize = 0) and has only the purpose tho change the gap of passing movers or organize the network
+//in this case, the current path should be left as it is. the station is ignored,
+ELSIF bStationIsOnlyForDynamicChanges THEN
+	//If a valide station on path, hand over all informations, 
+	//If not handover fDistShortestMaybeNotReady
+	IF stPathShortest.ipBestStation <> 0 THEN
+		searchNextBestStationByName.fDistToTarged :=  stPathShortest.fDistToTarged;
+	ELSE
+		searchNextBestStationByName.fDistToTarged :=  fDistShortestMaybeNotReady;   
+	END_IF
+	searchNextBestStationByName.bTargetFound := TRUE;
+	searchNextBestStationByName.ipBestStation := stPathShortest.ipBestStation;
+	searchNextBestStationByName.ipRouteToParent := fbRouteToParent;
+	searchNextBestStationByName.bDirectAccessible := stPathShortest.bDirectAccessible;
+		
+//This station is full, no movement posible. Do not evaluate if this station is the asker.(Dont care if my own station is full atm.)
+ELSIF bStationIsFull OR bStationHanMoreMoverThanAllowed OR bStationIsNotReadyToRecvMovers THEN
+	searchNextBestStationByName.bTargetFound := TRUE;
+	searchNextBestStationByName.ipBestStation := 0;
+	searchNextBestStationByName.fDistToTarged := fDistShortestMaybeNotReady;
+	searchNextBestStationByName.ipRouteToParent := 0;
+	searchNextBestStationByName.bDirectAccessible := FALSE;
+	
+//This station in an valide an good targed for the mover. return this station
+	ELSE
+	searchNextBestStationByName.bTargetFound := TRUE;
+	searchNextBestStationByName.ipBestStation := (THIS^);
+	searchNextBestStationByName.fDistToTarged := fDistShortestMaybeNotReady;
+	searchNextBestStationByName.ipRouteToParent := 0;
+	searchNextBestStationByName.bDirectAccessible := (stPathShortest.bDirectAccessible AND bStationIsEmpty);
+END_IF
+
+//Store the last value 
+//if this station gets multiple request from same asking station return this
+stLastReturnValue := SearchNextBestStationByName;
+bLastResultValide := TRUE;
+]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="SendMoversToStation" Id="{3d52ae16-90f7-4a04-b8a1-23e478482484}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[METHOD SendMoversToStation : I_CH_Feedback //All movers in the station are sent to this destination
 VAR_INPUT
@@ -1569,9 +1511,6 @@ END_WHILE
 THIS^.fbAssignedMovers.RestoreIterator();
 
 
-//Mover must leave this station
-THIS^.PushMoversOutOfStation();
-
 
 SendMoversToStation := THIS^.fbFeedback;]]></ST>
       </Implementation>
@@ -1590,6 +1529,23 @@ IF pObject <> 0 THEN
 	pObject.TcSetObjectName(ADR(sName));
 	pObject.TcRelease();
 END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Simulation" Id="{9b61bf38-36d5-430e-91ab-b4865bd228a2}" FolderPath="Simulation\">
+      <Declaration><![CDATA[METHOD PROTECTED Simulation : HRESULT
+VAR_INST
+	tonSimulationDelay : TON;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Automatic send mover to next station in Simulation
+//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
+tonSimulationDelay.IN 	:= THIS^.ipXpSystem.Enabled AND THIS^.MoversInPlace AND THIS^.ProcessSimulationActive;
+tonSimulationDelay.PT	:= LREAL_TO_TIME(THIS^.fSimulationProcessDuration*1000.0);
+tonSimulationDelay();
+IF tonSimulationDelay.Q THEN
+	THIS^.SendMoversToStation(sTargetStation := THIS^.sSimulationTargedStation);
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="SimulationStart" Id="{c69c3859-03ad-4f62-84e9-c59ea9728e3f}" FolderPath="Simulation\">
@@ -1706,23 +1662,6 @@ END_VAR
         </Implementation>
       </Set>
     </Property>
-    <Property Name="System" Id="{6d4af91b-dd28-40a0-8d18-ba2af963556f}" FolderPath="Interaction with process\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//Interface to CHALET-XPlanar-System
-PROPERTY System : I_XP_System_PLC]]></Declaration>
-      <Get Name="Get" Id="{9fae192b-3098-4185-bcb3-b73b32d916aa}">
-        <Declaration><![CDATA[VAR
-	ipSystem : I_XP_System_PLC;
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[//get I_XP_System_PLC interface from I_XP_System_Registration
-__QUERYINTERFACE(THIS^.ipXpSystem, ipSystem);
-
-System := ipSystem;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
     <Property Name="TargetGroupe" Id="{504571bb-2590-4789-88eb-76db30ca3136}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY TargetGroupe : STRING]]></Declaration>
@@ -1781,17 +1720,28 @@ END_VAR
     <Method Name="Update" Id="{f53abec2-b7cc-4008-a277-f406ad2079ea}">
       <Declaration><![CDATA[METHOD Update : HRESULT
 VAR
+	ipFirstMoverInQueue: I_XP_Mover;
+	ipFirstMoverInQueueObj : I_CH_Object;
 	iStation: I_XP_Station;
+	stPath: ST_PathFinder_1;
 	bValideStationToStartMove : BOOL;
+	bThisStationAsTarged : BOOL;
 	ipThisStation : I_XP_Station := THIS^;
+	bMoverValideToSendAway : BOOL;
+	bInReachForNewCmd : BOOL;
+	bThisStationAsParent : BOOL;
+	sTargedStation : STRING;
 	ipPath : I_XP_Path;
 	ipRoute : I_CH_List;
 	ipMover : I_XP_Mover;
 	bValideInterface, bMoverOnSameTrack, bInDecisionDistance : BOOL;
 	nIdx : UDINT;
 	bStationIsBlocked : BOOL;
+	bStationInBlockedTryToSolve : BOOL; //Send 1. Mover away ignore that already in correct station
 END_VAR
-
+VAR_INST
+	fbAlarmStationIsBlocked : FB_TcAlarm;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Force to do init befor call update
@@ -1827,30 +1777,59 @@ IF fbFeedback.Done OR THIS^.fbFeedback.Error THEN
 END_IF
 
 
-
-// **********************  OnMoverPasses ***************************
-// Detect mover who is passing the station and call method for easier overwriting
-IF fbTrigger.MoverDetected AND (fbTrigger.MoverAtTrigger <> 0) THEN
-	THIS^.OnMoverPasses(fbTrigger.MoverAtTrigger);
-END_IF
-
-
 // **********************  If enabled start station logic ***************************
 IF THIS^.ipXpSystem.Enabled THEN
 	
-	// Process Simulation. 	
-	// All functionality packed into one method for easier overwriting
-	THIS^.UpdateSimulation();
+	// Process Simulation. All functionality packed into one method for easier overwriting
+	THIS^.Simulation();
 	
+
+	
+	//Detect mover who is passing the station and call method for easier overwriting
+	IF fbTrigger.MoverDetected AND (fbTrigger.MoverAtTrigger <> 0) THEN
+		THIS^.OnMoverPasses(fbTrigger.MoverAtTrigger);
+	END_IF
+
+	
+	
+	//Test if the first mover is in station and send him away, if the destination is not this station	
+	IF __QUERYINTERFACE(THIS^.MoversInQueue[0],ipFirstMoverInQueue) THEN
+		bThisStationAsTarged := (ipFirstMoverInQueue.TargetStation = THIS^.TargetGroupe) OR (ipFirstMoverInQueue.TargetStation = THIS^.LUID); 
+		bThisStationAsParent := ipFirstMoverInQueue.ParentStation.LUID = THIS^.LUID;
+		bInReachForNewCmd	:= ipFirstMoverInQueue.DistToParentStation <=  MIN(THIS^.fDecisionDistance, XPlanarParameterlist.F_DIST_SET_NEW_MOVE_CMD_BEFORE_REACHING_PARENT_STATION);	
+		bStationInBlockedTryToSolve  := fbAlarmStationIsBlocked.bRaised;
+	END_IF
+	
+	IF ipFirstMoverInQueue = 0 THEN
+		; //Do Nothing, no mover
+	
+	ELSIF NOT bInReachForNewCmd THEN
+		; //Do Nothing, mover is to fare away
+
+	ELSIF bThisStationAsTarged AND NOT bStationInBlockedTryToSolve THEN
+		;//Do Nothing, wait for proccess
 		
-	// Interaction with the movers. Sending on to the next station. 
-	// All functionality packed into one method for easier overwriting
-	THIS^.UpdateMoverInteraction();
+	ELSIF bThisStationAsParent OR bStationInBlockedTryToSolve THEN
+		
+		//Get a path to a new parent or targed
+		sTargedStation := ipFirstMoverInQueue.TargetStation;
+		stPath := THIS^.searchNextBestStationByName(sTargedStation := sTargedStation, nPermittedSearchDepth := XPlanarParameterlist.N_MAX_SEARCH_DEPTH, bCallFromExternal:=TRUE);
+		bValideStationToStartMove := stPath.bTargetFound AND (stPath.ipBestStation <> 0);
+		
+		//Write new paths and parent-station to mover
+		IF bValideStationToStartMove THEN 
+			//Handover list of paths to mover
+			ipFirstMoverInQueue.Route.Duplicate(stPath.ipRouteToParent);
+		
+			//Unregister from this station and register with a new parrent station
+			ipFirstMoverInQueueObj := THIS^.fbAssignedMovers.FindOID(ipFirstMoverInQueue.OID);
+			THIS^.fbAssignedMovers.RemoveObject(ipFirstMoverInQueueObj);
+			stPath.ipBestStation.AddMoverToQueue(ipFirstMoverInQueue);	
+ 		END_IF     
+	END_IF
 	
 	
-	//The movers have a list of waypoints that they have to travel to on the way to the destination station. 
-	//It is checked whether this station is one of these waypoints
-	// - if yes, send the mover to the next waypoint and remove this stop from the list
+	//Check all movers in system if this station is a start of an path	
 	//Do not wait until mover is at station possition, use fDecisionDistance
 	ipXpSystem.Movers.ResetIterator();
 	WHILE ipXpSystem.Movers.HasNextObject() DO
@@ -1869,18 +1848,10 @@ IF THIS^.ipXpSystem.Enabled THEN
 				IF __QUERYINTERFACE(ipRoute.GetNextObject(), ipPath) AND_THEN ipPath.StationStart = ipThisStation THEN
 					//Remove this path from route and send to path desination
 					ipMover.Route.RemoveObject(ipPath);
-					
-					//Set new dynamic. Be careful when reducing the deceleration so that the mover can still stop in real time
-					IF XPlanarParameterlist.B_STATIONS_OVERRIDE_MOVER_DYN_CONSTRAINT THEN
-						ipMover.SetDynConstraint_Path(	V:= THIS^.fMoverVeloAtExit, 
-								A:= THIS^.fMoverAccAtExit,
-								D:= THIS^.fMoverDecAtExit,
-								J:= MC_DEFAULT);
-					END_IF
-
+						
 					
 					//If mover is standstill in current station, send him away whit the exit gap, else use the in mover stored gap
-					IF (ABS(ipMover.PositionOnTrack - THIS^.PositionOnTrack) <= 1.0) THEN
+					IF LREAL_TO_DINT(ipMover.PositionOnTrack) = LREAL_TO_DINT(THIS^.PositionOnTrack) THEN
 						ipMover.MoveOnTrackToStation(ipStation := ipPath.StationDestination,
 													fGap:= THIS^.fMoverGapAtExit);					
 					ELSE
@@ -1893,6 +1864,8 @@ IF THIS^.ipXpSystem.Enabled THEN
 		END_IF		
 	END_WHILE
 	ipXpSystem.Movers.RestoreIterator();
+	
+	
 	
 	
 	//Check for errors
@@ -1931,133 +1904,6 @@ IF NOT THIS^.ipXpSystem.Enabled THEN
 END_IF
 
 Update := S_OK;
-]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="UpdateMoverInteraction" Id="{3609cd0d-599d-4b82-a6ba-7ce0d098b779}">
-      <Declaration><![CDATA[METHOD PROTECTED UpdateMoverInteraction : HRESULT
-VAR
-	ipFirstMoverInQueue: I_XP_Mover;
-	sTargedStation : STRING;
-	bMoverValideToSendAway : BOOL;
-	bInReachForNewCmd : BOOL;
-	bThisStationAsParent : BOOL;
-	bFilterDoesNotAllowThisMover : BOOL;
-	bThisStationAsTarged : BOOL;
-	bMoverIsNotOnAWaitingStation : BOOL;
-	bStationInBlockedTryToSolve : BOOL; //Send 1. Mover away ignore that already in correct station
-	bMoverMustLeaveTheStation : BOOL; //Set from external
-	bSearchNewDestination : BOOL;
-	bStationCanBeReachedWhitoutBranch : BOOL;
-	bStationIsOverfilled : BOOL;
-
-	ipStationAhead : I_XP_Station;
-	ipPathFoundAStarValide : I_PathAStarNode;
-	ipPathFoundAStarAnyStation : I_PathAStarNode;
-	ipRouteUsed : I_XP_Path;
-	
-	fbListOf : FB_AStarNode;
-END_VAR
-
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[//Get first mover in this station
-IF NOT __QUERYINTERFACE(THIS^.MoversInQueue[0],ipFirstMoverInQueue) THEN
-	//No valide interface. (Mover not present)
-	RETURN;
-END_IF
-
-
-//Get a few helpful variables
-sTargedStation := ipFirstMoverInQueue.TargetStation;
-bThisStationAsTarged := (sTargedStation = THIS^.TargetGroupe) OR (sTargedStation = THIS^.LUID); 
-bThisStationAsParent := ipFirstMoverInQueue.ParentStation.LUID = THIS^.LUID;
-bMoverIsNotOnAWaitingStation := NOT(bThisStationAsParent AND NOT bThisStationAsTarged AND (THIS^.MoverQueueSize > 0));
-bInReachForNewCmd	:= (ipFirstMoverInQueue.DistToParentStation <= THIS^.fDecisionDistance);	
-bStationInBlockedTryToSolve  := THIS^.fbAlarmStationIsBlocked.bRaised;//Send 1. Mover away ignore that already in correct station
-bFilterDoesNotAllowThisMover := (THIS^.Filter <> XPlanarParameterlist.S_ANY_STATION_NAME) AND (THIS^.Filter <> sTargedStation);
-bMoverMustLeaveTheStation := THIS^.nCtsMoversMustLeaveThisStation > 0;
-bStationIsOverfilled  := THIS^.CtsMoversInQueue > THIS^.nMoverQueueSize;
-
-
-//Decide what happens to the mover
-bSearchNewDestination := bInReachForNewCmd AND bThisStationAsParent AND (NOT bThisStationAsTarged OR bMoverMustLeaveTheStation OR bStationInBlockedTryToSolve OR bStationIsOverfilled);
-IF bSearchNewDestination THEN
-	
-	//1. Prio - Get a direct path to targed - Only if specific
-	IF sTargedStation <> XPlanarParameterlist.S_ANY_STATION_NAME THEN
-		ipPathFoundAStarValide := GetPathToTarged(sTargedStation := sTargedStation);
-	END_IF
-
-	
-	
-	//If path to targed is not valide, calculate once a path to any station
-	IF ipPathFoundAStarValide = 0 THEN
-		ipPathFoundAStarAnyStation := THIS^.GetPathToTarged(sTargedStation := XPlanarParameterlist.S_ANY_STATION_NAME);
-	END_IF
-	
-	
-	//2. Prio If the next possible station is on this track, without having to pass a switch, then go to this new station
-	// The mover should be pushed as far forward as possible to avoid blocking the track
-	IF  ipPathFoundAStarValide = 0 AND ipPathFoundAStarAnyStation <> 0  AND (THIS^.PathsAhead.Size = 1) AND THIS^.bNetworkHasTrackBranches THEN
-		//
-		ipPathFoundAStarAnyStation.RouteUsedToNode.ResetIterator();
-		bStationCanBeReachedWhitoutBranch := TRUE;
-		WHILE (ipPathFoundAStarAnyStation.RouteUsedToNode.HasNextObject() AND bStationCanBeReachedWhitoutBranch) DO
-			IF __QUERYINTERFACE(ipPathFoundAStarAnyStation.RouteUsedToNode.GetNextObject(), ipRouteUsed) THEN
-				bStationCanBeReachedWhitoutBranch := (ipRouteUsed.StationDestination.PathsAhead.Size = 1) OR (ipRouteUsed.StationDestination = ipPathFoundAStarAnyStation.Station); //Ignore if destination station have more than 1 paths ahead
-			END_IF
-		END_WHILE	
-		ipPathFoundAStarAnyStation.RouteUsedToNode.RestoreIterator();
-		IF bStationCanBeReachedWhitoutBranch THEN
-			ipPathFoundAStarValide := ipPathFoundAStarAnyStation;
-		END_IF
-	END_IF
-
-	
-	//3. Prio - Send the mover to any station. (most time waitingstation)
-	// - closest waitingstation to this station, if not allready on a waiting station
-	// - if filter was maybe changed or the mover is not allowed in this station
-	IF  ipPathFoundAStarValide = 0 AND ipPathFoundAStarAnyStation <> 0 AND (bMoverIsNotOnAWaitingStation OR bFilterDoesNotAllowThisMover OR bMoverMustLeaveTheStation OR bStationIsOverfilled) THEN
-		ipPathFoundAStarValide := ipPathFoundAStarAnyStation;
-	END_IF
-END_IF
-
-
-//Write new paths and parent-station to mover
-IF ipPathFoundAStarValide <> 0 THEN 
-	//Handover list of paths to mover
-	ipFirstMoverInQueue.Route.Duplicate(ipPathFoundAStarValide.RouteUsedToNode);
-
-	//Unregister from this station and register with a new parrent station
-	THIS^.fbAssignedMovers.RemoveObject(ipFirstMoverInQueue);
-	ipPathFoundAStarValide.Station.AddMoverToQueue(ipFirstMoverInQueue);	
-	
-	//Mover is now leaving the station
-	IF THIS^.nCtsMoversMustLeaveThisStation > 0 THEN
-		THIS^.nCtsMoversMustLeaveThisStation := THIS^.nCtsMoversMustLeaveThisStation - 1;
-	END_IF
-	
-END_IF     
-
-
-]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="UpdateSimulation" Id="{9b61bf38-36d5-430e-91ab-b4865bd228a2}" FolderPath="Simulation\">
-      <Declaration><![CDATA[METHOD PROTECTED UpdateSimulation : HRESULT
-VAR_INST
-	tonSimulationDelay : TON;
-END_VAR]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[//Automatic send mover to next station in Simulation
-//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
-tonSimulationDelay.IN 	:= THIS^.ipXpSystem.Enabled AND THIS^.MoversInPlace AND THIS^.ProcessSimulationActive;
-tonSimulationDelay.PT	:= LREAL_TO_TIME(THIS^.fSimulationProcessDuration*1000.0);
-tonSimulationDelay();
-IF tonSimulationDelay.Q THEN
-	THIS^.SendMoversToStation(sTargetStation := THIS^.sSimulationTargedStation);
-END_IF
 ]]></ST>
       </Implementation>
     </Method>

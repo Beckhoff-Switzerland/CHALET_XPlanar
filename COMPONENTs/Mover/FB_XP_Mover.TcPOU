@@ -27,34 +27,24 @@ VAR
 	{attribute 'hide'}
 	ipXpSystem : I_XP_System_Registration;
 	{attribute 'hide'} 
-	sTargedStation : STRING := XPlanarParameterlist.S_MOVER_TARGED_INIT;
+	sTargedStation : STRING;
 	{attribute 'hide'} 
 	sCurrentStation : STRING;
 	{attribute 'hide'}
 	ipParentStation : I_XP_Station; //This is the station in which the Mover is currently standing or moving.	
 	{attribute 'hide'}
-	ipProductData : I_XP_ProductData; //later the required interface of the tool or product can be queried via query interface
-END_VAR
-
-//Recovery
-VAR
-	{attribute 'hide'}
-	//This was the last valid (system enabled) actual  position of the mover
-	stLastValidPositionXYZABC :  MoverVector;
-	{attribute 'hide'}
-	//This was the last valid (system enabled) actual  position of the mover
-	fLastValidPositionOnTrack :  LREAL;
-	{attribute 'hide'}
-	//This was the last valid (system enabled) actual  position of the mover
-	ipLastValidTrack : I_XP_Track;
-	{attribute 'hide'}
 	fLastCmdTargedPosition : LREAL; //the last commanded target position [mm]
 	{attribute 'hide'}	
 	fLastCmdTargedGap 	: LREAL; //the last commanded target gap
 	{attribute 'hide'}		
-	ipLastCmdTrack : I_XP_Track;	
+//	fDistToParentStation : LREAL; //Distance to the responsible parent station [mm]
+	{attribute 'hide'}		
+	ipLastCmdTrack : I_XP_Track;
+	{attribute 'hide'}
+	ipProductData : I_XP_ProductData; //later the required interface of the tool or product can be queried via query interface
+	{attribute 'hide'}
+	stLastValidePosition :  MoverVector;
 END_VAR
-
 
 //External Setpoint Generator
 VAR
@@ -64,26 +54,6 @@ VAR
 	AxisSetpointA : FB_NcAxis;
 	AxisSetpointB : FB_NcAxis;
 	AxisSetpointC : FB_NcAxis;
-//	{attribute 'hide'} 
-	nSeqStartExternalSetpoint : UINT;
-//	{attribute 'hide'} 	
-	//As long as the bit is still false, the MC_PlanarFeedback should not be evaluated as it may still indicate an old error
-	bEvaluateFeedback: BOOL; 
-//	{attribute 'hide'} 
-	bFeedExternalSetpointActive : BOOL; 
-//	{attribute 'hide'} 
-	fbFeedbackExternalSetpointStartSeq : FB_CH_Feedback(0);
-//	{attribute 'hide'} 
-	ipMasterMover : I_XP_Mover;
-
-	
-//	{attribute 'hide'} 
-	stMasterMovementScaling : MoverVector; // if 0, Mover is not folowing this mover axis
-//	{attribute 'hide'} 
-	stMasterPositionAtStart : MoverVector;
-	
-	
-	
 END_VAR
 
 
@@ -140,66 +110,9 @@ END_VAR
     <Folder Name="Group" Id="{15b18c0c-c114-42c6-81c4-6f4fec930060}" />
     <Folder Name="Movement" Id="{71fc6c5f-a715-4757-9cea-ae0964b87573}" />
     <Folder Name="Power" Id="{118cfbc8-9c5c-4824-939f-4f4d77b16207}" />
-    <Folder Name="Recovery" Id="{376c217d-78e5-45c7-a391-0a945415567e}" />
     <Folder Name="Status" Id="{7c319981-3d18-43ce-a6fc-e8a539b271cb}" />
     <Folder Name="Track" Id="{b9c51507-74e6-496d-bd54-4011234c577f}" />
     <Folder Name="XPlanarUtility" Id="{6265d6cf-bf94-4db5-a67a-38e99f167093}" />
-    <Property Name="AccelerationSet" Id="{848c4a5f-e19a-462b-8575-2f5721a8fa88}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-(* Provides the current planar mover setpoint XYZABC [mm/s²] *)
-PROPERTY AccelerationSet : REFERENCE TO MoverVector]]></Declaration>
-      <Get Name="Get" Id="{fcb66551-ae3e-4b26-a75a-775333b549f1}">
-        <Declaration><![CDATA[VAR_INST
-	{attribute 'hide'}
-	copyOfData :  MoverVector;
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
-copyOfData := THIS^.fbMover.MCTOPLC.SET.SetAcc;
-AccelerationSet REF= copyOfData;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
-    <Method Name="AddMoverExtSetpoint" Id="{c1212229-683f-4d57-84f7-d8318460bb0f}" FolderPath="ExternalSetpoint\">
-      <Declaration><![CDATA[//Save the master mover and apply the distance traveled as a relative offset to this slave mover. Requires .StartExternalSetpoint()
-METHOD AddMoverExtSetpoint : HRESULT
-VAR_INPUT
-	ipMasterMover : I_XP_Mover;
-	fScalingX, fScalingY, fScalingZ, fScalingA, fScalingB, fScalingC : LREAL;// If >0, follow this axis to master-mover
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[//Invalide input
-IF ipMasterMover = 0 THEN
-	AddMoverExtSetpoint := E_FAIL;
-	RETURN;
-END_IF
-
-//Allready stored a master
-IF THIS^.ipMasterMover <> 0 THEN
-	AddMoverExtSetpoint := E_FAIL;
-	RETURN;
-END_IF
-
-//Only possible if ExternalSetpoint is not running
-IF THIS^.nSeqStartExternalSetpoint <> 0 THEN
-	AddMoverExtSetpoint := E_FAIL;
-	RETURN;
-END_IF
-
-
-
-THIS^.ipMasterMover := ipMasterMover;
-THIS^.stMasterMovementScaling.x := fScalingX;
-THIS^.stMasterMovementScaling.y := fScalingy;
-THIS^.stMasterMovementScaling.z := fScalingz;
-THIS^.stMasterMovementScaling.a := fScalinga;
-THIS^.stMasterMovementScaling.b := fScalingb;
-THIS^.stMasterMovementScaling.c := fScalingc;
-]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="AddToGroup" Id="{b7083e45-de51-423f-af15-898bfcfa4c12}" FolderPath="Group\">
       <Declaration><![CDATA[METHOD AddToGroup : HRESULT
 VAR_INPUT
@@ -210,7 +123,6 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
-	THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -301,40 +213,6 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
-    <Property Name="CAxisModulo" Id="{b809ddda-1b0d-4b66-844c-939b67337e5d}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-(* C coordinate modulus set in MC3-Planar Mover[°] *)
-PROPERTY CAxisModulo : LREAL]]></Declaration>
-      <Get Name="Get" Id="{aa4602ce-0e13-47b5-9093-0d98f7009ea4}">
-        <Declaration><![CDATA[VAR
-	ipTrackComObject : ITComObject;
-	nParaSize : UDINT;
-	pParaData : PVOID;
-	hr : HRESULT;
-	fData : LREAL;
-END_VAR
-VAR CONSTANT
-	N_IDX_OFFSET 	: UDINT := 16#05030107; // Parameter(init) Mover
-END_VAR]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[FW_ObjMgr_GetObjectInstance(oid:= THIS^.OID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipTrackComObject));
-
-IF ipTrackComObject = 0 THEN
-	// Error
-	RETURN;
-END_IF
-
-
-nParaSize := SIZEOF(fData);	pParaData := ADR(fData);
-
-hr := ipTrackComObject.TcGetObjPara(pid:=N_IDX_OFFSET , nData:= nParaSize, pData:= pParaData, pgp:=0 );
-ipTrackComObject.TcRelease();	
-
-
-CAxisModulo := TO_LREAL(TO_DINT(fData));]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
     <Property Name="CommandMode" Id="{f7143276-b906-4e49-bda1-4004ee4ca8cc}" FolderPath="Status\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 (* Indicates the command mode of an enabled PlanarMover, i.e. how setpoints are currently produced. *)
@@ -374,11 +252,9 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Disable;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
-//Disable Axis
 THIS^.fbMover.Disable(THIS^.fbFeedbackDisable);
 Disable := S_OK;
 
@@ -386,7 +262,7 @@ Disable := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
-    <Property Name="DistToParentStation" Id="{7318bf17-d807-4416-9e99-18f45b6519ca}" FolderPath="Status\">
+    <Property Name="DistToParentStation" Id="{7318bf17-d807-4416-9e99-18f45b6519ca}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //Distance to the responsible parent station [mm]
 PROPERTY DistToParentStation : LREAL
@@ -480,7 +356,6 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Enable;
-	THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -495,26 +370,6 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Property Name="Enabled" Id="{9dcc755c-22d8-4ebb-9deb-d00a82946100}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//operational and position control active(hovering)
-PROPERTY Enabled : BOOL
-]]></Declaration>
-      <Get Name="Get" Id="{f4b6578f-34bc-45c9-a076-841689c10d04}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[(* StateDWord bit 20 - operational and position control active *)
-Enabled :=  (THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.Enabled) OR
-			(THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.Enabling) OR
-			(THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.Resetting AND PositionSet.z > 0.0) OR
-			(THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.Error AND PositionSet.z > 0.0) OR
-			(THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.ErrorPending AND PositionSet.z > 0.0) OR
-			(THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.Invalid AND PositionSet.z > 0.0);]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
     <Method Name="FB_init" Id="{21a8add4-c8d4-4076-ab40-e5faffdc25ae}">
       <Declaration><![CDATA[METHOD FB_init : BOOL
 VAR_INPUT
@@ -565,7 +420,6 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Halt;
-THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -638,7 +492,6 @@ END_IF
 
 THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
 THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
-THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
 //Set done or keep in busy state	
 THIS^.fbFeedback.HR := Initialize;
@@ -656,21 +509,10 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF iTrack <> 0 THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.JoinTrack;
-	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
-	
-	(* ADS Error 33164 or 33154: Position out of modulo range or Software position limit violation. Position must be larger or equal to zero and less or equal to the modulus when using modulo positioning. 
-		When using modulo positioning, the target position is interpreted in consideration of the AdditionalTurns variable at the Options input.
-
-		If the above error occurs, then the mover wants to rotate on the track when joining because ‘useOrientation = TRUE’ is set. 
-		Better do not to set this to false, because CA then requires a much greater distance to the neighbouring mover.
-		It is better to check the set C-axis modules in the MC3 PlanarMover if 90, 180 or 360°.
-	*)
-	joinTrackOptions.useOrientation 	:= TRUE;
-
-	
+	joinTrackOptions.useOrientation 	:= TRUE;	
 	THIS^.fbMover.JoinTrack(commandFeedback	:= THIS^.fbFeedbackJoinTrack, 
 								targetTrack	:= iTrack.PlanarTrack, 
 								constraint	:= THIS^.fbDynConstraintContainer,
@@ -704,7 +546,7 @@ LagDistanceXY := SQRT(EXPT(fErrorX,2) + EXPT(fErrorY,2));
         </Implementation>
       </Get>
     </Property>
-    <Property Name="LastCmdTargedGap" Id="{ca47efdf-1e96-4e64-b8e6-43f733c3da42}" FolderPath="Recovery\">
+    <Property Name="LastCmdTargedGap" Id="{ca47efdf-1e96-4e64-b8e6-43f733c3da42}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
       <Get Name="Get" Id="{fbbf4cb3-58d2-4862-af4b-6981a711799e}">
@@ -716,7 +558,7 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
-    <Property Name="LastCmdTargedPosition" Id="{6482a76a-6491-4c21-89ec-7fa30453a7d3}" FolderPath="Recovery\">
+    <Property Name="LastCmdTargedPosition" Id="{6482a76a-6491-4c21-89ec-7fa30453a7d3}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY LastCmdTargedPosition : LREAL]]></Declaration>
       <Get Name="Get" Id="{8ec5f96b-7922-4cd0-b523-21fd282e52d5}">
@@ -728,7 +570,7 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
-    <Property Name="LastCmdTargedTrack" Id="{4a89196f-6c6d-425e-991b-80e0f510161a}" FolderPath="Recovery\">
+    <Property Name="LastCmdTargedTrack" Id="{4a89196f-6c6d-425e-991b-80e0f510161a}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY LastCmdTargedTrack: I_XP_Track]]></Declaration>
       <Get Name="Get" Id="{474e9fbb-3f66-4e12-bb99-199d288e7964}">
@@ -740,49 +582,7 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
-    <Property Name="LastValidPositionOnTrack" Id="{09f3cf5a-bd46-45b1-8866-6c162c445038}" FolderPath="Recovery\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//This was the last valid (system enabled) actual  position of the mover
-PROPERTY LastValidPositionOnTrack : LREAL]]></Declaration>
-      <Get Name="Get" Id="{6c8cd6d1-76b6-4eb9-80cb-3768d873a586}">
-        <Declaration><![CDATA[VAR_INST
-
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[LastValidPositionOnTrack := THIS^.fLastValidPositionOnTrack;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
-    <Property Name="LastValidPositionXYZABC" Id="{8a90fc36-48ce-41fc-a975-9837b9ce6e53}" FolderPath="Recovery\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//This was the last valid (system enabled) actual  position of the mover
-PROPERTY LastValidPositionXYZABC : REFERENCE TO MoverVector]]></Declaration>
-      <Get Name="Get" Id="{6bb82480-d451-4e15-b7e6-635ceb4efaf7}">
-        <Declaration><![CDATA[VAR_INST
-
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[LastValidPositionXYZABC REF= THIS^.stLastValidPositionXYZABC;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
-    <Property Name="LastValidTrack" Id="{89eabedd-60aa-41d0-b809-07cf486e0552}" FolderPath="Recovery\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//This was the last valid (system enabled) actual  position of the mover
-PROPERTY LastValidTrack : I_XP_Track;]]></Declaration>
-      <Get Name="Get" Id="{5f3d9641-254e-45f4-9163-ed1b6bc8a7f7}">
-        <Declaration><![CDATA[VAR_INST
-
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[LastValidTrack := THIS^.ipLastValidTrack;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
-    <Property Name="Mapped" Id="{dcb60397-9711-4709-befc-4d0421e5330c}" FolderPath="Status\">
+    <Property Name="Mapped" Id="{dcb60397-9711-4709-befc-4d0421e5330c}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
 ]]></Declaration>
@@ -802,7 +602,7 @@ Mapped := THIS^.fbMover.MCTOPLC.STD.MoverOID <> 0;]]></ST>
         </Implementation>
       </Get>
     </Property>
-    <Property Name="Mode" Id="{caa3da53-3a25-4b03-9028-732dc39426fa}" FolderPath="Status\">
+    <Property Name="Mode" Id="{caa3da53-3a25-4b03-9028-732dc39426fa}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Mode : MC_PLANAR_MOVER_COMMAND_MODE]]></Declaration>
       <Get Name="Get" Id="{bf2d901a-fe14-42df-b4ab-181d74468c10}">
@@ -822,7 +622,6 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveA;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -843,7 +642,6 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveB;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -873,7 +671,6 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveC;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -914,7 +711,6 @@ moveOptions.gap := MAX(fGap, XPlanarParameterlist.F_MOVER_MINIMUM_GAP_ON_TRACK);
 
 IF ipTrack <> 0 THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveOnTrack;
-	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -963,8 +759,7 @@ moveOptions.gap := MAX(fGap, XPlanarParameterlist.F_MOVER_MINIMUM_GAP_ON_TRACK);
 
 
 IF ipTrack <> 0 THEN
-	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveOnTrack;		
-	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveOnTrack;
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -1042,43 +837,22 @@ MoverHeight := fData;]]></ST>
         </Implementation>
       </Get>
     </Property>
-    <Property Name="MoverIsNotPresent" Id="{436b50f4-7ab9-4b1a-975f-656b96205857}" FolderPath="Status\">
+    <Property Name="MoverIsNotPresent" Id="{436b50f4-7ab9-4b1a-975f-656b96205857}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //Mover could not be detected or was removed from the system
 PROPERTY MoverIsNotPresent : BOOL]]></Declaration>
       <Get Name="Get" Id="{e8e9327d-3d37-4e0b-a510-e8c07bff6a5d}">
         <Declaration><![CDATA[VAR
-	bMoverAtZeroPos, bMoverPositionInvalid, bMoverVeloInvalid : BOOL;
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[bMoverAtZeroPos		:=  PlanarMover.MCTOPLC.ACT.ActPos.x = 0 AND
+          <ST><![CDATA[MoverIsNotPresent:=  PlanarMover.MCTOPLC.ACT.ActPos.x = 0 AND
 						PlanarMover.MCTOPLC.ACT.ActPos.y = 0 AND 
 						PlanarMover.MCTOPLC.ACT.ActPos.z = 0 AND 
 						PlanarMover.MCTOPLC.ACT.ActPos.a = 0 AND
 						PlanarMover.MCTOPLC.ACT.ActPos.b = 0 AND 
 						PlanarMover.MCTOPLC.ACT.ActPos.c = 0 AND 
-						PlanarMover.MCTOPLC.ACT.PhysicalAreaID = 0;
-						
-						
-bMoverPositionInvalid:=  PlanarMover.MCTOPLC.ACT.ActPos.x >= 1E+302 AND
-						PlanarMover.MCTOPLC.ACT.ActPos.y >= 1E+302 AND 
-						PlanarMover.MCTOPLC.ACT.ActPos.z >= 1E+302 AND 
-						PlanarMover.MCTOPLC.ACT.ActPos.a >= 1E+302 AND
-						PlanarMover.MCTOPLC.ACT.ActPos.b >= 1E+302 AND 
-						PlanarMover.MCTOPLC.ACT.ActPos.c >= 1E+302;
-						
-						
-bMoverVeloInvalid	:=  PlanarMover.MCTOPLC.ACT.ActVelo.x >= 1E+302 AND
-						PlanarMover.MCTOPLC.ACT.ActVelo.y >= 1E+302 AND 
-						PlanarMover.MCTOPLC.ACT.ActVelo.z >= 1E+302 AND 
-						PlanarMover.MCTOPLC.ACT.ActVelo.a >= 1E+302 AND
-						PlanarMover.MCTOPLC.ACT.ActVelo.b >= 1E+302 AND 
-						PlanarMover.MCTOPLC.ACT.ActVelo.c >= 1E+302;
-						
-MoverIsNotPresent := bMoverAtZeroPos OR bMoverPositionInvalid OR bMoverVeloInvalid;						
-						
-			]]></ST>
+						PlanarMover.MCTOPLC.ACT.PhysicalAreaID = 0;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -1127,7 +901,6 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveXY;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -1135,7 +908,7 @@ THIS^.fbFeedback.Busy 				:= TRUE;
 
 fbTargetPosition.SetValuesXY(x := fPosition_X, y := fPosition_Y);
 
-stMoveOptions.useOrientation := TRUE;
+stMoveOptions.useOrientation := FALSE;
 
 THIS^.fbMover.MoveToPosition(	commandFeedback	:= THIS^.fbFeedbackMoveXY, 
 								targetPosition	:= fbTargetPosition,
@@ -1155,7 +928,6 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveZ;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -1232,6 +1004,20 @@ PositionAct REF= copyOfActPosition;]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Property Name="PositionAtDisable" Id="{8a90fc36-48ce-41fc-a975-9837b9ce6e53}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the last valide planar mover setpoint XYZABC [mm] *)
+PROPERTY PositionAtDisable : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{6bb82480-d451-4e15-b7e6-635ceb4efaf7}">
+        <Declaration><![CDATA[VAR_INST
+
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PositionAtDisable REF= THIS^.stLastValidePosition;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="PositionOnTrack" Id="{4a0153f5-97b4-4376-baf2-04d64afb83b5}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PositionOnTrack : LREAL]]></Declaration>
@@ -1277,16 +1063,14 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 
 	//Stor last valide position im system is enabled
 	IF ipXpSystem.Enabled THEN
-		THIS^.stLastValidPositionXYZABC := THIS^.PositionSet;
-		THIS^.fLastValidPositionOnTrack := THIS^.PositionOnTrack;
-		THIS^.ipLastValidTrack := THIS^.CurrentTrack;
+		THIS^.stLastValidePosition := THIS^.PositionSet;
 	END_IF
 
 END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Property Name="ProductData" Id="{fca2bcf7-b4de-439b-aac0-63af2ca5a335}" FolderPath="Status\">
+    <Property Name="ProductData" Id="{fca2bcf7-b4de-439b-aac0-63af2ca5a335}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PUBLIC ProductData : I_XP_ProductData]]></Declaration>
       <Get Name="Get" Id="{f1a5a648-1e72-439f-867d-1fe8abbd1615}">
@@ -1333,7 +1117,6 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.RemoveFromGroupe;
-	THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -1360,7 +1143,6 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Reset;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -1372,7 +1154,7 @@ Reset := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
-    <Property Name="Route" Id="{225c188a-e791-4700-b379-0e23d03c467b}" FolderPath="Status\">
+    <Property Name="Route" Id="{225c188a-e791-4700-b379-0e23d03c467b}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Route : REFERENCE TO FB_CH_List]]></Declaration>
       <Get Name="Get" Id="{6fce2f11-b3c5-45b0-b007-152ec2b18eb4}">
@@ -1572,33 +1354,47 @@ Standstill := Standstill AND THIS^.PlanarMover.MCTOPLC.SET.SetVelo.c = 0;]]></ST
     </Property>
     <Method Name="StartExternalSetpoint" Id="{4f4a938c-622d-47f0-8bbe-7f1aa75cb8f5}" FolderPath="ExternalSetpoint\">
       <Declaration><![CDATA[METHOD StartExternalSetpoint : HRESULT
+VAR
+	startOptions : ST_ExternalSetpointGenerationOptions;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.StartExternalSetpoint;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);		
-THIS^.fbFeedback.Busy 				:= TRUE;
+        <ST><![CDATA[IF THIS^.fbMover.Error THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Error active/not ready
 
-
-IF THIS^.fbMover.MCTOPLC.STD.State <> MC_PLANAR_STATE.Enabled THEN
-	//Error wrong state
+// Check, that all axis standing on 0.0
+ELSIF (AxisSetpointX.SetPosition <> 0.0 OR AxisSetpointY.SetPosition <> 0.0  OR AxisSetpointZ.SetPosition <> 0.0  OR AxisSetpointA.SetPosition <> 0.0  OR AxisSetpointB.SetPosition <> 0.0  OR AxisSetpointC.SetPosition <> 0.0) THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Error, to prevent the mover from making a jump in relative mode, each axis should be set to position 0 		
 	
-	;//zzz Todo Error message
-
-ELSIF THIS^.bFeedExternalSetpointActive AND THIS^.nSeqStartExternalSetpoint = 999 THEN
-	//Do nothing, setpoint is already active	
-	THIS^.fbFeedbackExternalSetpointStartSeq.Done		:= TRUE;
+ELSIF (AxisSetpointX.Mapped AND AxisSetpointX.Feedback.Error) OR
+		(AxisSetpointY.Mapped AND AxisSetpointY.Feedback.Error) OR
+		(AxisSetpointZ.Mapped AND AxisSetpointZ.Feedback.Error) OR
+		(AxisSetpointA.Mapped AND AxisSetpointA.Feedback.Error) OR
+		(AxisSetpointB.Mapped AND AxisSetpointB.Feedback.Error) OR
+		(AxisSetpointC.Mapped AND AxisSetpointC.Feedback.Error) THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Axis Error active
 	
 ELSE
+
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.StartExternalSetpoint;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
 	
-	//Start of internal sequence
-	THIS^.fbFeedbackExternalSetpointStartSeq.Busy		:= TRUE;
-	THIS^.nSeqStartExternalSetpoint := 1;
+	AxisSetpointX.PowerOn();
+	AxisSetpointY.PowerOn();
+	AxisSetpointZ.PowerOn();
+	AxisSetpointA.PowerOn();
+	AxisSetpointB.PowerOn();
+	AxisSetpointC.PowerOn();
+
+	startOptions.mode := MC_EXTERNAL_SET_POSITION_MODE.Relative;
+	THIS^.fbMover.StartExternalSetpointGeneration(THIS^.fbFeedbackExtStart,startOptions);
+	
+	StartExternalSetpoint := S_OK;	
 END_IF
-
-
-
-StartExternalSetpoint := S_OK;	
-
 	]]></ST>
       </Implementation>
     </Method>
@@ -1617,24 +1413,10 @@ AxisSetpointC.PowerOff();
 
 
 THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.StopExternalSetpoint;
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
 
-
-//Reset some flags
-THIS^.nSeqStartExternalSetpoint := 0;
-THIS^.bEvaluateFeedback := FALSE;
-THIS^.ipMasterMover := 0;
-
-IF THIS^.bFeedExternalSetpointActive THEN
-	THIS^.fbMover.StopExternalSetpointGeneration(THIS^.fbFeedbackExtStop);	
-	THIS^.bFeedExternalSetpointActive 	:= FALSE;
-	THIS^.fbFeedback.Busy 				:= TRUE;
-ELSE
-	THIS^.fbFeedback.Done 				:= TRUE;
-END_IF
-
-
+THIS^.fbMover.StopExternalSetpointGeneration(THIS^.fbFeedbackExtStop);
 StopExternalSetpoint := S_OK;]]></ST>
       </Implementation>
     </Method>
@@ -1695,10 +1477,7 @@ VAR_INST
 	fbAlarmNcErrorCode		: FB_TcAlarm;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[THIS^.Prepare();//Prepare time-critical information, if not already done
-
-THIS^.UpdateExternalSetpoint();
-
+        <ST><![CDATA[
 // ********************** Set feedback depending on active command *******************************
 IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
 	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
@@ -1799,12 +1578,33 @@ CASE THIS^.eActiveCommand OF
 		fbFeedback.ErrorId 			:= fbFeedbackMoveOnTrack.ErrorID;
         fbFeedback.ObjectInfo		:= fbFeedbackMoveOnTrack.objectInfo;
 		
-			
-	E_NcAxisCommands.StartExternalSetpoint:
-		;// in Subroutine "UpdateExternalSetpoint"
 	
+	//Add the 6 axis to the feedback			
+	E_NcAxisCommands.StartExternalSetpoint:
+ 		fbFeedback.Busy 		:= fbFeedbackExtStart.Busy;
+		fbFeedback.Done 		:= fbFeedbackExtStart.Done;
+		fbFeedback.ErrorId 		:= fbFeedbackExtStart.ErrorID;
+		fbFeedback.ClearObjectInfo();
+		IF AxisSetpointX.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointX.Feedback.HR);END_IF
+		IF AxisSetpointY.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointY.Feedback.HR);END_IF
+		IF AxisSetpointZ.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointZ.Feedback.HR);END_IF
+		IF AxisSetpointA.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointA.Feedback.HR);END_IF
+		IF AxisSetpointB.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointB.Feedback.HR);END_IF
+		IF AxisSetpointC.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointC.Feedback.HR);END_IF
+		
+	//Add the 6 axis to the feedback	
 	E_NcAxisCommands.StopExternalSetpoint:
-		;// in Subroutine "UpdateExternalSetpoint"
+		fbFeedback.Busy 		:= fbFeedbackExtStop.Busy;
+		fbFeedback.Done 		:= fbFeedbackExtStop.Done;
+		fbFeedback.ErrorId 		:= fbFeedbackExtStop.ErrorID;
+		fbFeedback.ClearObjectInfo(); 
+		IF AxisSetpointX.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointX.Feedback.HR);END_IF
+		IF AxisSetpointY.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointY.Feedback.HR);END_IF
+		IF AxisSetpointZ.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointZ.Feedback.HR);END_IF
+		IF AxisSetpointA.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointA.Feedback.HR);END_IF
+		IF AxisSetpointB.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointB.Feedback.HR);END_IF
+		IF AxisSetpointC.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointC.Feedback.HR);END_IF
+		
 		
 	ELSE//External command in subclass
 		;
@@ -1879,10 +1679,12 @@ END_IF
 
 //Update xplanar object
 THIS^.fbMover.Update();
-
+THIS^.UpdateExternalSetpoint();
 
 
 //Update feedback object
+fbFeedbackExtStart.Update(); 
+fbFeedbackExtStop.Update(); 
 fbFeedbackMoveA.Update(); 
 fbFeedbackMoveB.Update(); 
 fbFeedbackMoveC.Update(); 
@@ -1901,245 +1703,40 @@ fbFeedbackMoveOnTrack.Update();
     </Method>
     <Method Name="UpdateExternalSetpoint" Id="{d324887b-a4fd-42e1-ab24-f67baaf90acf}" FolderPath="ExternalSetpoint\">
       <Declaration><![CDATA[METHOD PROTECTED UpdateExternalSetpoint : HRESULT
+VAR_INPUT
+END_VAR
 VAR
 	SetPos, SetVelo, SetAcc : MoverVector;
-	hr : HRESULT;
-	stStartOptions : ST_ExternalSetpointGenerationOptions;
-	stPosDifferenceToMasterMover : MoverVector;
-	stPosOffsetMasterMover : MoverVector;
-	stVeloOffsetMasterMover : MoverVector;
-	stAccOffsetMasterMover : MoverVector;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF NOT THIS^.Enabled THEN
-	THIS^.nSeqStartExternalSetpoint := 0;
-	THIS^.bFeedExternalSetpointActive := FALSE;
-	THIS^.bEvaluateFeedback := FALSE;
-END_IF
+        <ST><![CDATA[SetPos.X := AxisSetpointX.SetPosition;
+SetPos.Y := AxisSetpointY.SetPosition;
+SetPos.Z := AxisSetpointZ.SetPosition;
+SetPos.A := AxisSetpointA.SetPosition;
+SetPos.B := AxisSetpointB.SetPosition;
+SetPos.C := AxisSetpointC.SetPosition;
 
+SetVelo.X := AxisSetpointX.SetVelocity;
+SetVelo.Y := AxisSetpointY.SetVelocity;
+SetVelo.Z := AxisSetpointZ.SetVelocity;
+SetVelo.A := AxisSetpointA.SetVelocity;
+SetVelo.B := AxisSetpointB.SetVelocity;
+SetVelo.C := AxisSetpointC.SetVelocity;
 
-CASE nSeqStartExternalSetpoint OF
-	0: //Wait for start
-		;
-		
-	1: 	//store position of Master-Mover
-		IF (THIS^.ipMasterMover <> 0) THEN
-			THIS^.stMasterPositionAtStart := THIS^.ipMasterMover.PositionSet;
-		END_IF
+SetAcc.X := AxisSetpointX.Setacceleration;
+SetAcc.Y := AxisSetpointY.Setacceleration;
+SetAcc.Z := AxisSetpointZ.Setacceleration;
+SetAcc.A := AxisSetpointA.Setacceleration;
+SetAcc.B := AxisSetpointB.Setacceleration;
+SetAcc.C := AxisSetpointC.Setacceleration;
 
-		//Reset all axis
-		IF AxisSetpointX.Mapped THEN
-			AxisSetpointX.Reset();
-		END_IF
-		IF AxisSetpointY.Mapped THEN
-			AxisSetpointY.Reset();
-		END_IF
-		IF AxisSetpointZ.Mapped THEN
-			AxisSetpointZ.Reset();
-		END_IF
-		IF AxisSetpointA.Mapped THEN
-			AxisSetpointA.Reset();
-		END_IF
-		IF AxisSetpointB.Mapped THEN
-			AxisSetpointB.Reset();
-		END_IF
-		IF AxisSetpointC.Mapped THEN
-			AxisSetpointC.Reset();
-		END_IF
-		nSeqStartExternalSetpoint := nSeqStartExternalSetpoint + 1;		
-		
-		
-	2: //Wait for feedback
-		IF AxisSetpointX.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointX.Feedback.HR); END_IF
-		IF AxisSetpointY.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointY.Feedback.HR); END_IF
-		IF AxisSetpointZ.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointZ.Feedback.HR); END_IF
-		IF AxisSetpointA.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointA.Feedback.HR); END_IF
-		IF AxisSetpointB.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointB.Feedback.HR); END_IF
-		IF AxisSetpointC.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointC.Feedback.HR); END_IF	
-		IF hr = S_OK THEN
-		 	nSeqStartExternalSetpoint := nSeqStartExternalSetpoint + 1;	
-		END_IF
-		
-	3: 	//Reset all axis
-		IF AxisSetpointX.Mapped THEN
-			AxisSetpointX.PowerOn();
-		END_IF
-		IF AxisSetpointY.Mapped THEN
-			AxisSetpointY.PowerOn();
-		END_IF
-		IF AxisSetpointZ.Mapped THEN
-			AxisSetpointZ.PowerOn();
-		END_IF
-		IF AxisSetpointA.Mapped THEN
-			AxisSetpointA.PowerOn();
-		END_IF
-		IF AxisSetpointB.Mapped THEN
-			AxisSetpointB.PowerOn();
-		END_IF
-		IF AxisSetpointC.Mapped THEN
-			AxisSetpointC.PowerOn();
-		END_IF
-		nSeqStartExternalSetpoint := nSeqStartExternalSetpoint + 1;		
-		
-	4: //Wait for feedback
-		IF AxisSetpointX.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointX.Feedback.HR); END_IF
-		IF AxisSetpointY.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointY.Feedback.HR); END_IF
-		IF AxisSetpointZ.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointZ.Feedback.HR); END_IF
-		IF AxisSetpointA.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointA.Feedback.HR); END_IF
-		IF AxisSetpointB.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointB.Feedback.HR); END_IF
-		IF AxisSetpointC.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointC.Feedback.HR); END_IF	
-		IF hr = S_OK THEN
-		 	nSeqStartExternalSetpoint := nSeqStartExternalSetpoint + 1;	
-		END_IF
-
-	5: 	//Enable all axis
-		IF AxisSetpointX.Mapped THEN
-			AxisSetpointX.SetActPosition(0.0);
-		END_IF
-		IF AxisSetpointY.Mapped THEN
-			AxisSetpointY.SetActPosition(0.0);
-		END_IF
-		IF AxisSetpointZ.Mapped THEN
-			AxisSetpointZ.SetActPosition(0.0);
-		END_IF
-		IF AxisSetpointA.Mapped THEN
-			AxisSetpointA.SetActPosition(0.0);
-		END_IF
-		IF AxisSetpointB.Mapped THEN
-			AxisSetpointB.SetActPosition(0.0);
-		END_IF
-		IF AxisSetpointC.Mapped THEN
-			AxisSetpointC.SetActPosition(0.0);
-		END_IF
-		nSeqStartExternalSetpoint := nSeqStartExternalSetpoint + 1;		
-		
-	6: //Wait for feedback
-		IF AxisSetpointX.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointX.Feedback.HR); END_IF
-		IF AxisSetpointY.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointY.Feedback.HR); END_IF
-		IF AxisSetpointZ.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointZ.Feedback.HR); END_IF
-		IF AxisSetpointA.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointA.Feedback.HR); END_IF
-		IF AxisSetpointB.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointB.Feedback.HR); END_IF
-		IF AxisSetpointC.Mapped THEN hr := GetMostSignificant(hr, AxisSetpointC.Feedback.HR); END_IF	
-		IF hr = S_OK THEN
-		 	nSeqStartExternalSetpoint := nSeqStartExternalSetpoint + 1;	
-		END_IF
-
-		
-	7: // Activate external setpoint mode on mover
-		stStartOptions.Mode := MC_EXTERNAL_SET_POSITION_MODE.Relative;
-		THIS^.fbMover.StartExternalSetpointGeneration(	commandFeedback	:= THIS^.fbFeedbackExtStart,
-														options 		:= stStartOptions);
-		THIS^.bFeedExternalSetpointActive := TRUE;												
-		nSeqStartExternalSetpoint := nSeqStartExternalSetpoint + 1;
-	
-		
-	8: 
-		THIS^.bEvaluateFeedback := TRUE;
-		IF THIS^.fbFeedbackExtStart.Done THEN
-			//Finish Sequence
-			fbFeedbackExternalSetpointStartSeq.Done := TRUE;
-			nSeqStartExternalSetpoint := 999;
-		END_IF
-		
-	999: // finish seqence feedback
-		
-		
-	1000..1999:
-		//Error
-		fbFeedbackExternalSetpointStartSeq.HR := E_FAIL;
-END_CASE
-
-
-
-IF THIS^.bFeedExternalSetpointActive THEN
-	SetPos.X := AxisSetpointX.SetPosition;
-	SetPos.Y := AxisSetpointY.SetPosition;
-	SetPos.Z := AxisSetpointZ.SetPosition;
-	SetPos.A := AxisSetpointA.SetPosition;
-	SetPos.B := AxisSetpointB.SetPosition;
-	SetPos.C := AxisSetpointC.SetPosition;
-	
-	SetVelo.X := AxisSetpointX.SetVelocity;
-	SetVelo.Y := AxisSetpointY.SetVelocity;
-	SetVelo.Z := AxisSetpointZ.SetVelocity;
-	SetVelo.A := AxisSetpointA.SetVelocity;
-	SetVelo.B := AxisSetpointB.SetVelocity;
-	SetVelo.C := AxisSetpointC.SetVelocity;
-	
-	SetAcc.X := AxisSetpointX.SetAcceleration;
-	SetAcc.Y := AxisSetpointY.SetAcceleration;
-	SetAcc.Z := AxisSetpointZ.SetAcceleration;
-	SetAcc.A := AxisSetpointA.SetAcceleration;
-	SetAcc.B := AxisSetpointB.SetAcceleration;
-	SetAcc.C := AxisSetpointC.SetAcceleration;
-	
-	IF THIS^.ipMasterMover <> 0 THEN
-		//Difference to gearIn position
-		stPosDifferenceToMasterMover := F_Vector_Subtraction(	minuend := THIS^.ipMasterMover.PositionSet, 
-																subtrahend := stMasterPositionAtStart);
-		//Add scaling factor	
-		stPosOffsetMasterMover := F_Vector_Multiplication(	factor1 := stPosDifferenceToMasterMover,
-															factor2 := THIS^.stMasterMovementScaling);							
-		stVeloOffsetMasterMover := F_Vector_Multiplication(	factor1 := THIS^.ipMasterMover.VelocitySet,
-															factor2 := THIS^.stMasterMovementScaling);							
-		stAccOffsetMasterMover := F_Vector_Multiplication(	factor1 := THIS^.ipMasterMover.AccelerationSet,
-															factor2 := THIS^.stMasterMovementScaling);						
-		
-		
-		//Add Mastermover-Offest to 6-Axis-Offset
-		SetPos := F_Vector_Addition( 	summand1 := stPosOffsetMasterMover,
-									 	summand2 := SetPos);
-		SetVelo := F_Vector_Addition( 	summand1 := stVeloOffsetMasterMover,
-									 	summand2 := SetVelo);
-		SetAcc := F_Vector_Addition( 	summand1 := stAccOffsetMasterMover,
-									 	summand2 := SetAcc);
-														
-	END_IF
-	
-	//Send data to mover
+IF THIS^.fbMover.MCTOPLC.STD.State = MC_PLANAR_STATE.Enabled THEN
 	THIS^.fbMover.SetExternalSetpoint(	setPosition 		:= SetPos, 
 										setVelocity 		:= SetVelo,
 										setAcceleration 	:= SetAcc);
 END_IF
 
-
-
-CASE THIS^.eActiveCommand OF
-	//Add the 6 axis to the feedback			
-	E_NcAxisCommands.StartExternalSetpoint:
-		//Only check MC_PlanarFeedback if cmd is active. Ignore old feedback
-		IF THIS^.bEvaluateFeedback THEN
-			fbFeedback.Busy 		:= fbFeedbackExtStart.Busy;
-			fbFeedback.Done 		:= fbFeedbackExtStart.Done;
-			fbFeedback.ErrorId 		:= fbFeedbackExtStart.ErrorID;
-			fbFeedback.ClearObjectInfo();
-		END_IF
-		fbFeedback.HR := GetMostSignificant(fbFeedback.HR, fbFeedbackExternalSetpointStartSeq.HR);
-		IF AxisSetpointX.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointX.Feedback.HR);END_IF
-		IF AxisSetpointY.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointY.Feedback.HR);END_IF
-		IF AxisSetpointZ.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointZ.Feedback.HR);END_IF
-		IF AxisSetpointA.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointA.Feedback.HR);END_IF
-		IF AxisSetpointB.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointB.Feedback.HR);END_IF
-		IF AxisSetpointC.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointC.Feedback.HR);END_IF
-		
-	//Add the 6 axis to the feedback	
-	E_NcAxisCommands.StopExternalSetpoint:
-		fbFeedback.Busy 		:= fbFeedbackExtStop.Busy;
-		fbFeedback.Done 		:= fbFeedbackExtStop.Done;
-		fbFeedback.ErrorId 		:= fbFeedbackExtStop.ErrorID;
-		fbFeedback.ClearObjectInfo(); 
-		IF AxisSetpointX.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointX.Feedback.HR);END_IF
-		IF AxisSetpointY.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointY.Feedback.HR);END_IF
-		IF AxisSetpointZ.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointZ.Feedback.HR);END_IF
-		IF AxisSetpointA.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointA.Feedback.HR);END_IF
-		IF AxisSetpointB.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointB.Feedback.HR);END_IF
-		IF AxisSetpointC.Mapped THEN fbFeedback.HR := GetMostSignificant(fbFeedback.HR, AxisSetpointC.Feedback.HR);END_IF
-END_CASE		
-
-
-fbFeedbackExtStart.Update(); 
-fbFeedbackExtStop.Update(); 
 
 
 IF AxisSetpointX.Mapped THEN AxisSetpointX.Update() ;END_IF
@@ -2159,23 +1756,6 @@ END_VAR
 ]]></Declaration>
         <Implementation>
           <ST><![CDATA[UtilityMover := THIS^.fbUtilityMover;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
-    <Property Name="VelocitySet" Id="{8ad10d00-a316-4798-b468-ed581c984c24}" FolderPath="Status\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-(* Provides the current planar mover setpoint XYZABC [mm/s] *)
-PROPERTY VelocitySet : REFERENCE TO MoverVector]]></Declaration>
-      <Get Name="Get" Id="{ef55facb-367e-465e-8abb-3e765ba606db}">
-        <Declaration><![CDATA[VAR_INST
-	{attribute 'hide'}
-	copyOfData :  MoverVector;
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
-copyOfData := THIS^.fbMover.MCTOPLC.SET.SetVelo;
-VelocitySet REF= copyOfData;]]></ST>
         </Implementation>
       </Get>
     </Property>

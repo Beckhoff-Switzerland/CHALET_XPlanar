@@ -1,39 +1,6 @@
 <?xml version="1.0"?>
 <TcModuleClass>
 	<Translations>
-		<Text TxtId="CHALET_Base_Events"/>
-		<Text TxtId="List is already full and another element has been added">
-			<Text LcId="2055"><![CDATA[Die Liste ist bereits voll und es wurde ein weiteres Element hinzugefügt]]></Text>
-		</Text>
-		<Text TxtId="Timeout on system enabling step {0}">
-			<Text LcId="2055"><![CDATA[Zeitüberschreitung bei Systemaktivierungsschritt {0}]]></Text>
-		</Text>
-		<Text TxtId="The following variable is not linked: {0}">
-			<Text LcId="2055"><![CDATA[Die folgende Variable ist nicht verknüpft: {0}]]></Text>
-		</Text>
-		<Text TxtId="Error on system enabling step {0}">
-			<Text LcId="2055"><![CDATA[Fehler beim Systemaktivierungsschritt {0}]]></Text>
-		</Text>
-		<Text TxtId="Fatal error in FB_Init. Invalid parameters">
-			<Text LcId="2055"><![CDATA[Schwerwiegender Fehler in FB_Init. Ungültige Parameter]]></Text>
-		</Text>
-		<Text TxtId="Error in feedback. Command {0} error id {1}">
-			<Text LcId="2055"><![CDATA[Fehler in der Rückmeldung. Befehl {0} Fehler-ID {1}]]></Text>
-		</Text>
-		<Text TxtId="EtherCAT device &quot;{0}&quot; is not in operational(OP) state">
-			<Text LcId="2055"><![CDATA[EtherCAT-Gerät „{0}“ ist nicht im Zustand Operational (OP)]]></Text>
-		</Text>
-		<Text TxtId="Operational (Op)&#13;&#10;Before the EtherCAT master switches the EtherCAT slave from Safe-Op to Op it must transfer valid output data.&#13;&#10;In the Op state the slave copies the output data of the masters to its outputs. Process data and mailbox communication is possible.">
-			<Text LcId="2055"><![CDATA[Betriebsbereit (OP)
-Bevor der EtherCAT-Master den EtherCAT-Slave von Safe-Op nach Op schaltet, muss er gültige Ausgangsdaten übertragen.
-Im Zustand Op kopiert der Slave die Ausgangsdaten des Masters an seine Ausgänge. Prozessdaten- und Mailbox-Kommunikation ist möglich.]]></Text>
-		</Text>
-		<Text TxtId="No EtherCAT communication with device &quot;{0}&quot;">
-			<Text LcId="2055"><![CDATA[Keine EtherCAT-Kommunikation mit Gerät „{0}“]]></Text>
-		</Text>
-		<Text TxtId="EtherCAT device &quot;{0}&quot; is missing connection on Port &quot;{1}&quot;">
-			<Text LcId="2055"><![CDATA[EtherCAT-Gerät „{0}“ hat keine Verbindung zu Port „{1}“]]></Text>
-		</Text>
 		<Text TxtId="NcError_4000">
 			<Text LcId="1031"><![CDATA[„Interner Fehler“ Interner Systemfehler der NC auf Ring 0, nicht näher spezifizierbar.]]></Text>
 			<Text LcId="1033"><![CDATA["Internal error" Internal system error in the NC on ring 0, no further details.]]></Text>
@@ -3461,7 +3428,7 @@ Im Zustand Op kopiert der Slave die Ausgangsdaten des Masters an seine Ausgänge
 	</Translations>
 	<DataTypes>
 		<DataType>
-			<Name GUID="{A481BBF9-FF43-4E82-92F8-7EC51918A109}">CHALET_XPlanar_Events</Name>
+			<Name GUID="{A82FF89B-E730-4C72-86C7-A606D1BD0A88}">CHALET_XPlanar_Events</Name>
 			<DisplayName TxtId=""><![CDATA[CHALET_XPlanar_Events]]></DisplayName>
 			<EventId>
 				<Name Id="1">TrackLength0</Name>
@@ -3496,26 +3463,6 @@ However, it cannot overtake. The station never gives the process a ready signal]
 				<DisplayName TxtId=""><![CDATA[Mover detection failed. Expected {0} found {1} of type {2}]]></DisplayName>
 				<Severity>Error</Severity>
 			</EventId>
-			<EventId>
-				<Name Id="7">MissingEnvironment</Name>
-				<DisplayName TxtId=""><![CDATA[The system requires an object of the type environment]]></DisplayName>
-				<Severity>Error</Severity>
-			</EventId>
-			<EventId>
-				<Name Id="8">MissingGroupe</Name>
-				<DisplayName TxtId=""><![CDATA[The system requires an object of the type CA-Groupe]]></DisplayName>
-				<Severity>Error</Severity>
-			</EventId>
-			<EventId>
-				<Name Id="9">DuplicateStationName</Name>
-				<DisplayName TxtId=""><![CDATA[Duplicate station name {0}]]></DisplayName>
-				<Severity>Error</Severity>
-			</EventId>
-			<EventId>
-				<Name Id="10">DuplicateStationPositions</Name>
-				<DisplayName TxtId=""><![CDATA[Duplicate station positions. Station {0} and {1}]]></DisplayName>
-				<Severity>Error</Severity>
-			</EventId>
 			<Hides>
 				<Hide GUID="{59AFD1D7-D3D6-4195-9D56-0F83FD35BAE3}"/>
 				<Hide GUID="{97CB753B-515F-49D3-A500-C78882F179D3}"/>
@@ -3523,14 +3470,10 @@ However, it cannot overtake. The station never gives the process a ready signal]
 				<Hide GUID="{B44C9FC3-E080-4C40-8795-CEF2A8266801}"/>
 				<Hide GUID="{7B661FD2-E4EA-41A8-BFAF-88E217F150CB}"/>
 				<Hide GUID="{8C894F99-2A80-4F3B-B830-3C16D5E2B7D1}"/>
-				<Hide GUID="{A82FF89B-E730-4C72-86C7-A606D1BD0A88}"/>
-				<Hide GUID="{FDAC4D9D-6E6F-4FC5-898D-F4FC7A66D1B4}"/>
-				<Hide GUID="{FA3633D7-F31A-43EF-BAFB-F7E9C17CED1C}"/>
-				<Hide GUID="{0BAA823D-7408-4881-9A10-B199AB69F60E}"/>
 			</Hides>
 		</DataType>
 		<DataType>
-			<Name GUID="{E50A8DC0-767B-43DD-AE31-A0A4985C325D}">CHALET_Base_Events</Name>
+			<Name GUID="{BBF42CD0-4BCA-40D0-9216-18FA736E7E29}">CHALET_Base_Events</Name>
 			<DisplayName TxtId=""><![CDATA[CHALET_Base_Events]]></DisplayName>
 			<EventId>
 				<Name Id="1">ListIsFull</Name>
@@ -3596,9 +3539,6 @@ In the Op state the slave copies the output data of the masters to its outputs. 
 				<Hide GUID="{BC9314FC-2D24-4FAA-AE66-82B1FFE93DE5}"/>
 				<Hide GUID="{B4DA1DE7-076E-42E1-9DCA-D155C726E917}"/>
 				<Hide GUID="{C300C300-1CF4-4BB8-9C77-F0A1318CB2E7}"/>
-				<Hide GUID="{BBF42CD0-4BCA-40D0-9216-18FA736E7E29}"/>
-				<Hide GUID="{A6A35033-8D1E-40D4-9519-4CB4D997550A}"/>
-				<Hide GUID="{6D9C64F9-CB26-46C2-997A-F18F1ACBEFD1}"/>
 			</Hides>
 		</DataType>
 		<DataType>

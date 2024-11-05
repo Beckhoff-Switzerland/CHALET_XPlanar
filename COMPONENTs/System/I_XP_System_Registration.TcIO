@@ -49,13 +49,6 @@ PROPERTY Movers : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="Paths" Id="{138d0f17-ac18-443f-9c92-f3e21c831c97}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY Paths : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
-      <Get Name="Get" Id="{6d572aed-5cb6-4f68-ba5b-fea912b7789c}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Method Name="RegisterMover" Id="{7ca63539-fe2d-4c1b-890c-2cd113934467}" FolderPath="Relations\">
       <Declaration><![CDATA[METHOD RegisterMover : HRESULT
 VAR_INPUT

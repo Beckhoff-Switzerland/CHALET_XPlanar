@@ -55,14 +55,6 @@ PROPERTY Feedback : CHALET_BaseComponents.I_CH_Feedback]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Method Name="GetStationClosestTo" Id="{1ca533d8-ce18-4b38-a71b-f34209c699cc}">
-      <Declaration><![CDATA[//Returns the station that is closest to the point according to Phytagoras
-METHOD GetStationClosestTo : I_XP_Station
-VAR_INPUT
-	pos : MoverVector;
-END_VAR
-]]></Declaration>
-    </Method>
     <Method Name="Initialize" Id="{b2268470-01d2-4e0d-a4ab-dae39eacd787}">
       <Declaration><![CDATA[METHOD Initialize : HRESULT
 VAR_INPUT
@@ -83,13 +75,6 @@ PROPERTY Movers : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="Paths" Id="{c1788581-a3e8-49b8-ae4e-cbc7efd0e53e}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY Paths : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
-      <Get Name="Get" Id="{65506ddd-d0a5-4acd-8325-ccc871ed5456}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Method Name="Station" Id="{4ab23b5f-6de5-43ad-bb89-4891f9681ff6}">
       <Declaration><![CDATA[METHOD Station : I_XP_Station_PLC
 VAR_INPUT
@@ -102,13 +87,6 @@ PROPERTY Stations : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
       <Get Name="Get" Id="{b0e6f6ff-8d89-4f2b-8235-1909b8f695e9}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
-    </Property>
-    <Property Name="SuppressAllDynamicsChanges" Id="{602b780c-d86c-4c2c-a729-3662e117acb8}">
-      <Declaration><![CDATA[//Suppress to change the dynamic(Gap) of passing movers in all stations. This is usefull in startup
-PROPERTY SuppressAllDynamicsChanges : BOOL]]></Declaration>
-      <Set Name="Set" Id="{648c1cfd-999b-41ad-bca4-560983d767b5}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Set>
     </Property>
     <Property Name="Tracks" Id="{7afd3d84-45ba-4e25-ac84-29da3d991836}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
