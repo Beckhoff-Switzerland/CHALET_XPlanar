@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Group" Id="{fabb6f0b-72a4-4daf-a291-c2351034b2a2}">
+    <Declaration><![CDATA[INTERFACE I_XP_Group  EXTENDS I_CH_Object
+]]></Declaration>
+    <Method Name="AddEnvironment" Id="{ccd48f0c-5eab-407f-ad34-a982d77e9dee}">
+      <Declaration><![CDATA[METHOD AddEnvironment : HRESULT
+VAR_INPUT
+	refEnvironment : REFERENCE TO MC_PlanarEnvironment;
+	refFeedback : REFERENCE TO MC_PlanarFeedback;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="AddMover" Id="{855c3340-111c-4821-9774-f97bcc3ef33a}">
+      <Declaration><![CDATA[METHOD AddMover : HRESULT
+VAR_INPUT
+	refMover : REFERENCE TO MC_PlanarMover;
+	refFeedback : REFERENCE TO MC_PlanarFeedback;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="AddTrack" Id="{b722c8d5-3092-4093-9dfe-adf675cf153c}">
+      <Declaration><![CDATA[METHOD AddTrack : HRESULT
+VAR_INPUT
+	refTrack : REFERENCE TO MC_PlanarTrack;
+	refFeedback : REFERENCE TO MC_PlanarFeedback;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Disable" Id="{f4e25b3b-59d8-4593-a95c-a77bb79b012c}">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Enable" Id="{3ba7c318-31e4-4427-8502-ea12514ee5a5}">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Feedback" Id="{c705973b-ed0a-46cc-baf7-c625ad8aab2e}">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{a9f46b08-3ec6-4a14-87c3-237f71cfe7c0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{ab22227e-06ba-4742-a537-e74a69c7eec3}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Mapped" Id="{5f3c23d5-3ba7-4bc4-b4e1-e3f52f4e7a1f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{7a960e92-4cdd-4bad-a53f-7d502531fbfb}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="OID" Id="{72c95022-4003-485e-9f52-dc34eb4cc7e2}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
+      <Get Name="Get" Id="{a2023d73-0214-4db9-87b5-e13a776ddc4b}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PlanarGroup" Id="{be950ac1-8a23-49c1-8f2e-02e1b1c743e0}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarGroup : REFERENCE TO MC_PlanarGroup]]></Declaration>
+      <Get Name="Get" Id="{12f3f687-b35d-4220-9b67-87179e686511}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Reset" Id="{f85a7a17-fca9-42ef-8ea7-3740d8f50c55}">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Update" Id="{ce892fb9-5840-4169-a8c4-fd261d6a86f7}">
+      <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="F_RotatePositionXY" Id="{d955eb06-90fc-423e-a240-9df928823a65}" SpecialFunc="None">
+    <Declaration><![CDATA[//Rotate a point (XY) around its 0-point. 
+//e.g. from (10/0)+90°-> (0/10) 
+FUNCTION F_RotatePositionXY : HRESULT
+VAR_INPUT
+	fbPosition : REFERENCE TO Tc3_Physics.PositionXY;
+	fRotate : LREAL; //[°]
+END_VAR
+VAR
+	fRadius : LREAL;
+	fPhi : LREAL;
+	fNewPhi : LREAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT __ISVALIDREF(fbPosition) THEN
+	F_RotatePositionXY := E_FAIL;
+	RETURN;
+END_IF
+
+fRadius := fbPosition.GetRadius();
+fPhi := fbPosition.GetPhi();
+
+fNewPhi := MODABS((fPhi + fRotate), 360.0);
+
+fbPosition.SetValuesRP(radius := fRadius, phi := fNewPhi);
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,782 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XP_Environment" Id="{6c9df844-5691-4d75-a14e-01fa98bb26e3}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+(* XPlanar Environment - 1 per associated XPlanar 
+	The Planar environment is a software object that represents the two-dimensional XPlanar stator surface. Together with Planar movers in a group, 
+	it prevents collisions of the movers with the edge of the surface. *)
+FUNCTION_BLOCK FB_XP_Environment EXTENDS FB_CH_Object IMPLEMENTS I_XP_Environment
+VAR
+	//Link to Planar-Environment object
+	fbEnvironment : MC_PlanarEnvironment;
+	fbUtilityEnvirement : FB_TcIoXPlanarEnvironment;
+	
+	{attribute 'hide'}  
+	bInitDone :BOOL := FALSE;
+	{attribute 'hide'}
+	ipXpSystem : I_XP_System_Registration;
+	{attribute 'hide'}               	
+	fbFeedback 			: FB_XP_Feedback(ipSourceInfo := fbSourceInfo);	
+	{attribute 'hide'}                   	
+	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
+	{attribute 'hide'}
+	bCollisionCheckEnabled : BOOL := TRUE;
+	{attribute 'hide'}
+	fMoverOffsetWarning : LREAL := 2.0; //[mm]
+	{attribute 'hide'}
+	fMoverOffsetError: LREAL := 0.0;//[mm]
+	{attribute 'hide'}
+	eMoverDetectionStatus : MoverDetectionStatus;
+	{attribute 'hide'}
+	eMoverDetectionStatusLastCycle : MoverDetectionStatus;
+END_VAR
+
+
+// Planar-Feedback objects
+VAR
+	{attribute 'hide'} 
+	fbFeedbackAddToGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackRmvFromGrp : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackConfigure : MC_PlanarFeedback;
+	{attribute 'hide'} 
+	fbFeedbackClear : MC_PlanarFeedback;
+END_VAR
+	
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="CollisionDetection" Id="{cc9e35ec-135a-40d8-8e41-0acd41982d0a}" />
+    <Folder Name="Group" Id="{1ec64b27-6c0b-4188-9c58-0a330b77e507}" />
+    <Method Name="AddToGroup" Id="{287f1c1d-9530-419a-a6a6-4458e419ac5b}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD AddToGroup : HRESULT
+VAR_INPUT
+	iGroup : I_XP_Group;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	iGroup.AddEnvironment(THIS^.fbEnvironment, THIS^.fbFeedbackAddToGrp);
+	AddToGroup := S_OK;
+ELSE
+	AddToGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Clear" Id="{e2df5771-2b46-447a-a790-27cc8fd54fd0}">
+      <Declaration><![CDATA[METHOD Clear : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Clear;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbEnvironment.Clear(commandFeedback:=THIS^.fbFeedbackClear);
+Clear := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="CollisionCheck" Id="{5d152728-5cec-4b17-9311-3f3e2bf04bf5}" FolderPath="CollisionDetection\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* If Enable, the movers are checked for collisions with each other.
+Warning and error can have their own size offsets.
+The error leads to a stop with higher dynamics.
+In simulation, an error does not lead to a stop *)
+PROPERTY CollisionCheck : BOOL ]]></Declaration>
+      <Get Name="Get" Id="{54935009-1b45-4fd3-9061-4a30085d2687}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CollisionCheck := THIS^.bCollisionCheckEnabled;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{00ab7b05-80a1-4d9a-912d-ef7d9e157a78}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.bCollisionCheckEnabled := CollisionCheck;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="CollisionDetectionAlgorithm" Id="{aeea7fd2-2f60-42db-8d11-f0607822de9c}" FolderPath="CollisionDetection\">
+      <Declaration><![CDATA[//Return an interface to the mover if a collision is active else return 0. The check stops after the first collision found
+METHOD PROTECTED CollisionDetectionAlgorithm : I_XP_Mover
+VAR_INPUT
+	ipListOfMovers : I_CH_LIST;
+	fOffsetMoverSize : LREAL := 1.0; //Offset on the mover dimension from the MC3 mover object [mm];
+END_VAR
+VAR
+	aPointsMover1 : ARRAY[0..3] OF  Tc3_Physics.PositionXY;
+	aPointsEachMover : ARRAY[0..3] OF  Tc3_Physics.PositionXY;
+	aPointsDelta : ARRAY[0..3] OF  Tc3_Physics.PositionXY;
+	
+	fMoverWidth, fMoverHight : LREAL;
+	fMoverXPos, fMoverYPos, fMoverCPos : LREAL;
+	
+	ipMover1, ipEachMover : I_XP_Mover;
+	fbListOfMoverToCheck : FB_CH_List;
+	
+	fAngle : LREAL;
+	a, b, c: LREAL;
+	Pa, Pb, Pc : REFERENCE TO Tc3_Physics.PositionXY;
+	fcos : LREAL;
+	
+	nIdx, nIdxMover1, nIdxPlus1 : UINT;
+	ipMover2CollisionFound : I_XP_Mover;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Get all mover in a list
+fbListOfMoverToCheck.Duplicate(ipListOfMovers);
+
+
+
+//Check list for invalide Act Pos - ex.: if mover is not found 
+fbListOfMoverToCheck.ResetIterator();
+WHILE fbListOfMoverToCheck.HasNextObject() DO
+	__QUERYINTERFACE(fbListOfMoverToCheck.GetNextObject(),ipMover1);
+	
+	IF ipMover1.MoverIsNotPresent THEN 		
+		//remove from list
+		fbListOfMoverToCheck.RemoveObject(ipMover1);
+		
+	END_IF
+END_WHILE
+
+
+
+fbListOfMoverToCheck.ResetIterator();
+WHILE fbListOfMoverToCheck.HasNextObject() DO
+	//get first mover in list,
+	__QUERYINTERFACE(fbListOfMoverToCheck.GetNextObject(),ipMover1);
+	
+	fMoverXPos := ipMover1.PlanarMover.MCTOPLC.ACT.ActPos.x;
+	fMoverYPos := ipMover1.PlanarMover.MCTOPLC.ACT.ActPos.y;
+	fMoverCPos := ipMover1.PlanarMover.MCTOPLC.ACT.ActPos.c;
+		
+	//Get corner points of the rectangle 
+	fMoverWidth := ipMover1.MoverWidth - fOffsetMoverSize;
+	fMoverHight := ipMover1.MoverHeight - fOffsetMoverSize;
+	aPointsMover1[0].SetValuesXY(x:= -fMoverWidth/2, y:= -fMoverHight/2);//Bottom Left
+	aPointsMover1[1].SetValuesXY(x:= -fMoverWidth/2, y:=  fMoverHight/2);//Top Left
+	aPointsMover1[2].SetValuesXY(x:=  fMoverWidth/2, y:=  fMoverHight/2);//Top Ritgh
+	aPointsMover1[3].SetValuesXY(x:=  fMoverWidth/2, y:= -fMoverHight/2);//Bottom Rigth
+	
+	//Rotation of the mover
+	F_RotatePositionXY(aPointsMover1[0], fMoverCPos);
+	F_RotatePositionXY(aPointsMover1[1], fMoverCPos);
+	F_RotatePositionXY(aPointsMover1[2], fMoverCPos);
+	F_RotatePositionXY(aPointsMover1[3], fMoverCPos);
+	
+	//shift to mover coordinates
+	aPointsMover1[0].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);
+	aPointsMover1[1].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);
+	aPointsMover1[2].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);
+	aPointsMover1[3].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);
+	
+	
+	//do an check for all mover
+	fbListOfMoverToCheck.ResetIterator();
+	WHILE fbListOfMoverToCheck.HasNextObject() DO
+		__QUERYINTERFACE(fbListOfMoverToCheck.GetNextObject(),ipEachMover);
+		
+		IF ipEachMover = ipMover1 THEN
+			//Skip if same
+			CONTINUE;
+		END_IF
+		
+		fMoverXPos := ipEachMover.PlanarMover.MCTOPLC.ACT.ActPos.x;
+		fMoverYPos := ipEachMover.PlanarMover.MCTOPLC.ACT.ActPos.y;
+		fMovercPos := ipEachMover.PlanarMover.MCTOPLC.ACT.ActPos.c;
+		
+		//Get corner points of the rectangle 
+		fMoverWidth := ipEachMover.MoverWidth - fOffsetMoverSize;
+		fMoverHight := ipEachMover.MoverHeight - fOffsetMoverSize;
+		aPointsEachMover[0].SetValuesXY(x:= -fMoverWidth/2, y:= -fMoverHight/2);//Bottom Left
+		aPointsEachMover[1].SetValuesXY(x:= -fMoverWidth/2, y:=  fMoverHight/2);//Top Left
+		aPointsEachMover[2].SetValuesXY(x:=  fMoverWidth/2, y:=  fMoverHight/2);//Top Ritgh
+		aPointsEachMover[3].SetValuesXY(x:=  fMoverWidth/2, y:= -fMoverHight/2);//Bottom Rigth
+
+		//Rotation of the mover
+		F_RotatePositionXY(aPointsEachMover[0], fMoverCPos);
+		F_RotatePositionXY(aPointsEachMover[1], fMoverCPos);
+		F_RotatePositionXY(aPointsEachMover[2], fMoverCPos);
+		F_RotatePositionXY(aPointsEachMover[3], fMoverCPos);
+		
+		//shift to mover coordinates
+		aPointsEachMover[0].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);
+		aPointsEachMover[1].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);
+		aPointsEachMover[2].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);
+		aPointsEachMover[3].ShiftByXY(dx:= fMoverXPos, dy:= fMoverYPos);		
+		
+		//check each corener if inside each mover
+		FOR nIdxMover1 := 0 TO 3 DO
+			
+			(* A triangle is created between a corner point of Mover1 (point a) and two corner points of Mover2 (points B and C). 
+			All corner points of Mover2 are now tested one after the other. If the sum of all angles "a" is 360 degrees, 
+			then point A is inside mover 2 and there is a collision *)
+			fAngle := 0;
+			FOR nIdx := 0 TO 3 DO
+				nIdxPlus1 := ((nIdx+1)MOD 4);
+			
+				Pa REF= aPointsMover1[nIdxMover1];
+				Pb REF= aPointsEachMover[nIdx];
+				Pc REF= aPointsEachMover[nIdxPlus1];					
+				
+
+				a := SQRT(EXPT((Pb.x - Pc.x),2)+EXPT((Pb.y - Pc.y),2));
+				b := SQRT(EXPT((Pa.x - Pc.x),2)+EXPT((Pa.y - Pc.y),2));
+				c := SQRT(EXPT((Pa.x - Pb.x),2)+EXPT((Pa.y - Pb.y),2));
+				
+				
+				IF b=0 OR c=0 THEN
+					//Error - Return the found mover
+					CollisionDetectionAlgorithm := ipMover1;
+					//with which mover is the collision
+					ipMover2CollisionFound := ipEachMover;
+					RETURN;
+				ELSE
+					(*  a/sin(α) = b/sin(β) = c/sin(γ) *)
+					fcos := (EXPT(b,2) + EXPT(c,2) - EXPT(a,2))/(2*b*c);
+					fcos := LIMIT(-1.0, fcos, 1.0);
+					fAngle :=  fAngle + ACOS(fcos);
+				END_IF
+			END_FOR
+			
+			//if the point is inside the mover, the sum of all angles is exactly 360°-> 2pi
+			IF ABS(fAngle - 2*Tc2_System.PI)<0.01 THEN
+				//Error - Return the found mover
+				CollisionDetectionAlgorithm := ipMover1;
+				//with which mover is the collision
+				ipMover2CollisionFound := ipEachMover;
+				RETURN;
+			END_IF
+			
+		END_FOR
+
+	END_WHILE
+	fbListOfMoverToCheck.RestoreIterator();
+	
+	
+	
+END_WHILE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Configure" Id="{94a277cb-a6e6-4475-a159-23a2d173207d}">
+      <Declaration><![CDATA[METHOD Configure : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Configure;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+THIS^.fbEnvironment.CreateBoundary(commandFeedback:=THIS^.fbFeedbackConfigure);
+Configure := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{3332ee11-a20c-443f-8062-eeaf7c0acaa7}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipSystem : I_CH_Object;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
+	
+	(* Register to the Xplanar System
+	   1. Test if the interface exists
+	   2. Test if the object implements a "System for Mover" interface 
+	*)
+	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.ipXpSystem) THEN
+		THIS^.ipXpSystem.LinkEnvironment(THIS^);
+	END_IF
+	
+	
+END_IF
+
+bFBInitCalledOnce := TRUE;
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Feedback" Id="{4d454920-2471-4339-ada8-e58505a82219}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{92adf6cc-8743-45e1-869d-653b09b7978d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Feedback := THIS^.fbFeedback;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{40324653-7238-423b-a8fd-05ed7a18c09e}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR
+	stVarInfo : __SYSTEM.VAR_INFO;
+END_VAR
+VAR_INST
+	//This error cannot be reset. Requires a reset cold
+	{attribute 'hide'}	
+	fbInitError : FB_TcAlarm;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Check if link to envirement is mapped
+IF NOT THIS^.Mapped THEN
+	IF NOT fbInitError.bRaised THEN 
+		//This error cannot be reset. Requires a reset cold
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		stVarInfo := __VARINFO(fbEnvironment);
+		fbInitError.ipArguments.AddString(stVarInfo.Symbol);
+		fbInitError.Raise(0);
+	END_IF
+	Initialize := E_FAIL;
+	RETURN;
+END_IF
+
+
+
+IF NOT bInitDone THEN
+	//Busy
+	Initialize := S_PENDING;
+	
+	IF fbUtilityEnvirement.Init(bExecute := TRUE) THEN
+		fbUtilityEnvirement.Init(bExecute := FALSE);
+		bInitDone := TRUE;
+	END_IF
+	
+	
+ELSE	
+	//Done
+	Initialize := S_OK;
+END_IF
+
+
+
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
+THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
+THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
+//Set done or keep in busy state	
+THIS^.fbFeedback.HR := Initialize;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Mapped" Id="{b8d25027-a67e-470b-9581-b959c6328df3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{bb7d8e37-da00-480b-964e-962762127f9f}">
+        <Declaration><![CDATA[VAR
+	bMcToPlcNotMapped 	: BOOL;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[bMcToPlcNotMapped := F_GetMappingStatus(ADR(THIS^.fbEnvironment.MCTOPLC_STD), SIZEOF(THIS^.fbEnvironment.MCTOPLC_STD)) <> EPlcMappingStatus.MS_Mapped;
+
+Mapped := NOT bMcToPlcNotMapped;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="MoverCollisionOffsetError" Id="{de9a372c-f660-48c5-b2b6-268474f6d44b}" FolderPath="CollisionDetection\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Offset on the mover dimension from the MC3 mover object [mm] ;
+// >0 menas the warning is earlier
+PROPERTY MoverCollisionOffsetError : LREAL]]></Declaration>
+      <Get Name="Get" Id="{ade65951-3360-4b37-9211-03998904bcf1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[MoverCollisionOffsetError := fMoverOffsetError;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{b2fc7742-cf8c-451a-97a8-ec1b9fa15b0d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[fMoverOffsetError := MoverCollisionOffsetError;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="MoverCollisionOffsetWarning" Id="{2640c673-abce-4176-be6e-b2167e877f28}" FolderPath="CollisionDetection\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Offset on the mover dimension from the MC3 mover object [mm] ;
+// >0 menas the warning is earlier
+PROPERTY MoverCollisionOffsetWarning : LREAL]]></Declaration>
+      <Get Name="Get" Id="{6b38c531-fcff-44b0-934f-a666556d7281}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[MoverCollisionOffsetWarning :=  fMoverOffsetWarning;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{88baf0ce-9d1b-476a-8a5f-ee5a5f8b4018}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[fMoverOffsetWarning := MoverCollisionOffsetWarning;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="OID" Id="{7ae2b0fe-be79-4b9e-9fc2-a7d176f204c5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
+      <Get Name="Get" Id="{88f94db8-1661-4f49-b868-d54d29985f73}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[OID := THIS^.fbEnvironment.MCTOPLC_STD.EnvironmentOID;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PlanarEnvironment" Id="{a6c655b1-a79b-420b-8a88-eca38ef9d746}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarEnvironment : REFERENCE TO MC_PlanarEnvironment]]></Declaration>
+      <Get Name="Get" Id="{26cfa0c3-4ea1-4baa-9ed5-8f88fba409a0}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PlanarEnvironment ref= THIS^.fbEnvironment;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Prepare" Id="{14ed7006-68ff-4b31-ab84-f5289abed286}">
+      <Declaration><![CDATA[(* Time-critical information is processed here, which can then be polled via the property every cycle. 
+The update method is usually at the end of the program and then it is already 'outdated'. *)
+METHOD PRIVATE Prepare : HRESULT
+VAR CONSTANT
+	N_IDX_OFFSET_MoverDetectionStatus 	: UDINT := 16#03171005; // Parameter(online) in Planar  Processing Unit object 
+END_VAR
+VAR
+	nParaSize : UDINT;
+	pParaData : PVOID;
+	hr : HRESULT;
+	ipComObject : ITComObject;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	nLastUpdatedCycleCount : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check if this Cycle the dates are allready prepared
+IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount THEN
+	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
+
+	
+	//************** Read MoverDetectionStatus **************
+	//Get interface to ComObject
+	FW_ObjMgr_GetObjectInstance(oid:= THIS^.ProcessingUnitOID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+	
+	//Get ADR and SIZE
+	nParaSize := SIZEOF(eMoverDetectionStatus);	pParaData := ADR(eMoverDetectionStatus);
+	
+	IF ipComObject <> 0 THEN
+		hr := ipComObject.TcGetObjPara(pid:=N_IDX_OFFSET_MoverDetectionStatus , nData:= nParaSize, pData:= pParaData, pgp:=0 );	
+		ipComObject.TcRelease();	
+	END_IF
+	
+	//force to have the in progress active FOR 1 cycle longer
+	IF eMoverDetectionStatus = MoverDetectionStatus.DetectionSuccessful AND eMoverDetectionStatusLastCycle = MoverDetectionStatus.DetectionInProcess THEN
+		//Store info from last cycle
+		eMoverDetectionStatusLastCycle := eMoverDetectionStatus;
+		eMoverDetectionStatus := MoverDetectionStatus.DetectionInProcess;
+	ELSE	
+		//Store info from last cycle
+		eMoverDetectionStatusLastCycle := eMoverDetectionStatus;
+	END_IF
+	
+
+
+		
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ProcessingUnitMoverDetectionStatus" Id="{e2cf85a4-d4a6-4c0e-84f4-a50580e7f0f4}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Enumeration MoverDetectionStatus
+PROPERTY ProcessingUnitMoverDetectionStatus : MoverDetectionStatus]]></Declaration>
+      <Get Name="Get" Id="{6fc52da6-863a-4af1-85a2-8b9ff7f7a3d3}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare time-critical information, if not already done
+
+
+ProcessingUnitMoverDetectionStatus := THIS^.eMoverDetectionStatus;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ProcessingUnitOID" Id="{755616fb-b190-4a32-9b97-8c58500630c9}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Object ID of the IoXPlanar processing unit
+PROPERTY ProcessingUnitOID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{da73534b-1724-4d81-8aca-f6998aa8fb37}">
+        <Declaration><![CDATA[VAR
+	nProcessingUnitOid : OTCID;
+END_VAR
+VAR CONSTANT
+	N_IDX_OFFSET_PU_Oid 	: UDINT := 16#050300C0; // Parameter(online) in Planar Environment object 
+END_VAR
+
+VAR
+	nParaSize : UDINT;
+	pParaData : PVOID;
+	hr : HRESULT;
+	ipComObject : ITComObject;
+	nOid : OTCID;
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//Get TcCom Object ID
+nOid := THIS^.OID;
+
+//Get interface to ComObject
+FW_ObjMgr_GetObjectInstance(oid:= nOid, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+
+//Get ADR and SIZE
+nParaSize := SIZEOF(nProcessingUnitOid);	pParaData := ADR(nProcessingUnitOid);
+
+IF ipComObject <> 0 THEN
+	hr := ipComObject.TcGetObjPara(pid:=N_IDX_OFFSET_PU_Oid , nData:= nParaSize, pData:= pParaData, pgp:=0 );	
+	ipComObject.TcRelease();	
+END_IF
+
+ProcessingUnitOID := nProcessingUnitOid;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="RemoveFromGroup" Id="{b08ba9a4-1133-4063-9835-12556583929a}" FolderPath="Group\">
+      <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
+	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.RemoveFromGroupe;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	THIS^.fbEnvironment.RemoveFromGroup(THIS^.fbFeedbackRmvFromGrp);
+	RemoveFromGroup := S_OK;
+ELSE
+	RemoveFromGroup := S_FALSE;
+	THIS^.fbFeedback.LastCommandAccepted:= FALSE;	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{476a95ad-3269-45e6-a01b-247748d45f7c}">
+      <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+
+
+// ********************** Set feedback depending on active command *******************************
+IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
+	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+END_IF
+
+CASE THIS^.eActiveCommand OF
+	E_NcAxisCommands.None: 
+		//Display if a Mover Error is active during no command is active
+		IF THIS^.fbEnvironment.Error AND NOT fbFeedback.Error THEN 
+			fbFeedback.ErrorId 			:= THIS^.fbEnvironment.ErrorID;
+			fbFeedback.ActiveCommand 	:= TO_STRING(E_NcAxisCommands.None);	
+			fbFeedback.ClearObjectInfo();
+		END_IF
+
+	E_NcAxisCommands.Initialize:
+		fbFeedback.Busy 			:= NOT THIS^.bInitDone;
+		fbFeedback.Done 			:= THIS^.bInitDone;
+		fbFeedback.ErrorId 			:= 0;
+		fbFeedback.ClearObjectInfo();
+		                                                       			                        	
+	E_NcAxisCommands.Clear:     	
+		fbFeedback.Busy 			:= fbFeedbackClear.Busy;
+		fbFeedback.Done 			:= fbFeedbackClear.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackClear.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackClear.objectInfo;
+           			                        	
+	E_NcAxisCommands.Configure:     	
+		fbFeedback.Busy 			:= fbFeedbackConfigure.Busy;
+		fbFeedback.Done 			:= fbFeedbackConfigure.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackConfigure.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackConfigure.objectInfo;
+                                      			                        	
+	E_NcAxisCommands.AddToGroupe:     	
+		fbFeedback.Busy 			:= fbFeedbackAddToGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackAddToGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackAddToGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackAddToGrp.objectInfo;
+                                      			                        	
+	E_NcAxisCommands.RemoveFromGroupe:     	
+		fbFeedback.Busy 			:= fbFeedbackRmvFromGrp.Busy;
+		fbFeedback.Done 			:= fbFeedbackRmvFromGrp.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackRmvFromGrp.ErrorID;
+        fbFeedback.ObjectInfo		:= fbFeedbackRmvFromGrp.objectInfo;
+                                		
+	ELSE//External command in subclass
+		;
+END_CASE
+
+
+// **********************  Stop to execute commands on .done or .error ***************************
+IF fbFeedback.Done OR THIS^.fbFeedback.Error THEN
+	eActiveCommand 				:= E_NcAxisCommands.None;
+END_IF
+
+
+
+
+
+//Update Collision subroutin
+THIS^.UpdateCollisionDetection();
+
+
+//Update xplanar object
+THIS^.fbEnvironment.Update();
+
+//Update feedback object
+fbFeedbackConfigure.Update(); 
+fbFeedbackClear.Update(); 
+fbFeedbackAddToGrp.Update(); 
+fbFeedbackRmvFromGrp.Update(); 
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UpdateCollisionDetection" Id="{a9513029-f962-44c5-9b2b-a1a01d10798b}" FolderPath="CollisionDetection\">
+      <Declaration><![CDATA[METHOD PROTECTED UpdateCollisionDetection : HRESULT
+VAR
+	bDisableDuringMoverDetection : BOOL;
+	ipMoverCollision : I_XP_Mover;
+	ipSystemPlc : I_XP_System_PLC;
+	nX, nY : DINT;
+END_VAR
+VAR_INST
+	{attribute 'hide'}	
+	ipMoverCollisionOldWarning : I_XP_Mover;
+	{attribute 'hide'}	
+	fbAlarmCollisionMoverWarning : FB_TcAlarm;	
+	{attribute 'hide'}	
+	ipMoverCollisionOldAlarm : I_XP_Mover;
+	{attribute 'hide'}	
+	fbAlarmCollisionMoverAlarm : FB_TcAlarm;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[bDisableDuringMoverDetection := THIS^.ProcessingUnitMoverDetectionStatus = MoverDetectionStatus.DetectionInProcess;
+
+
+//Check whether a mover has a collision with another mover and generate a warning.
+//Only 1 mover is found and displayed
+//WARNING - each mover default is 2mm larger
+IF THIS^.bCollisionCheckEnabled AND NOT bDisableDuringMoverDetection THEN
+	//get mover or 0 for no collision
+	ipMoverCollision := CollisionDetectionAlgorithm(fOffsetMoverSize := THIS^.fMoverOffsetWarning, ipListOfMovers := THIS^.ipXpSystem.Movers);
+	
+	IF ipMoverCollision <> 0 AND_THEN ipMoverCollision <> ipMoverCollisionOldWarning AND_THEN NOT ipMoverCollision.MoverIsNotPresent THEN
+		fbAlarmCollisionMoverWarning.CreateEx(tc_Events.CHALET_XPlanar_Events.MoverCollisionWarning, 0, THIS^.fbSourceInfo);
+		//Mover "{0}" has a collision with another mover at position X:{1} Y:{2}
+		nX := LREAL_TO_DINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.x);
+		nY := LREAL_TO_DINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.y);
+		fbAlarmCollisionMoverWarning.ipArguments.Clear().AddStringByValue(ipMoverCollision.LUID).AddDInt(nX).AddDint(nY);
+		fbAlarmCollisionMoverWarning.Raise(0);
+	ELSIF ipMoverCollision = 0 THEN
+		//No collision found
+		fbAlarmCollisionMoverWarning.Clear(0,0);
+	END_IF
+	ipMoverCollisionOldWarning := ipMoverCollision;
+ELSE
+	fbAlarmCollisionMoverWarning.Clear(0,0);
+	ipMoverCollisionOldWarning := 0;
+END_IF
+
+//Check whether a mover has a collision with another mover and generate a warning.
+//Only 1 mover is found and displayed
+//ERROR - each mover is default -1mm smaller
+IF THIS^.bCollisionCheckEnabled AND NOT bDisableDuringMoverDetection  THEN
+	//get mover or 0 for no collision
+	ipMoverCollision := CollisionDetectionAlgorithm(fOffsetMoverSize := THIS^.fMoverOffsetError, ipListOfMovers := THIS^.ipXpSystem.Movers);
+	
+	IF ipMoverCollision <> 0 AND ipMoverCollision <> ipMoverCollisionOldAlarm THEN
+		fbAlarmCollisionMoverAlarm.CreateEx(tc_Events.CHALET_XPlanar_Events.MoverCollisionStop, 0, THIS^.fbSourceInfo);
+		//Mover "{0}" has a collision with another mover at position X:{1} Y:{2}
+		fbAlarmCollisionMoverAlarm.ipArguments.AddStringByValue(ipMoverCollision.LUID).AddUDInt(LREAL_TO_UDINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.x)).AddUDInt(LREAL_TO_UDINT(ipMoverCollision.PlanarMover.MCTOPLC.ACT.ActPos.y));
+		fbAlarmCollisionMoverAlarm.Raise(0);
+
+		//Stop if this is a real system, keep running in simulation
+		IF THIS^.UtilityEnvirement.XpuTcIo(1).GetOperationMode() = OperationMode.Normal THEN
+			IF __QUERYINTERFACE(THIS^.ipXpSystem, ipSystemPlc) THEN
+				//Disable System
+				ipSystemPlc.FastStop();
+			END_IF
+		END_IF
+	ELSIF ipMoverCollision = 0 THEN
+		//No collision found
+		fbAlarmCollisionMoverAlarm.Clear(0,0);
+	END_IF
+		
+	ipMoverCollisionOldAlarm := ipMoverCollision;
+ELSE
+	fbAlarmCollisionMoverAlarm.Clear(0,0);
+	ipMoverCollisionOldAlarm := 0;
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="UtilityEnvirement" Id="{2e740e9d-ce68-40bf-aad7-1f44d441a8bc}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityEnvirement : Tc3_XPlanarUtility.I_Environment]]></Declaration>
+      <Get Name="Get" Id="{722af0ec-c8ab-4b67-b67b-63ac0647ba49}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[UtilityEnvirement := fbUtilityEnvirement;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

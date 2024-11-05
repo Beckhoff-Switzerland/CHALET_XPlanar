@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="ToXpMover" Id="{2c2fdd4a-dd5a-48ed-b93a-bea2315c217f}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION ToXpMover : BOOL
+VAR_INPUT
+	iChObject : I_CH_OBJECT;
+	iXpMover : Reference to I_XP_Mover;
+END_VAR
+
+VAR
+	iTmp : I_XP_Mover;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* 
+   1. Test if the interface exists
+   2. Test if the object implements a "Object" interface 
+   3. Write reference to interface in parameter
+   4. Returne TRUE if succesfull
+*)
+IF iChObject <> 0 AND_THEN __QUERYINTERFACE(iChObject,iTmp) THEN
+	iXpMover := iTmp;
+	ToXpMover := TRUE;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

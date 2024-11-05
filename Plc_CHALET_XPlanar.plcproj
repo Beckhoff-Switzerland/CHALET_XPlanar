@@ -1,0 +1,573 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <FileVersion>1.0.0.0</FileVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9e6dafc1-d901-4993-beb8-0b1f069714da}</ProjectGuid>
+    <SubObjectsSortedByName>True</SubObjectsSortedByName>
+    <DownloadApplicationInfo>true</DownloadApplicationInfo>
+    <WriteProductVersion>true</WriteProductVersion>
+    <GenerateTpy>false</GenerateTpy>
+    <Name>Plc</Name>
+    <ProgramVersion>3.1.4023.0</ProgramVersion>
+    <Application>{b6a46401-cc15-4de0-9b3a-9c78a4c7a5ef}</Application>
+    <TypeSystem>{a905b742-5ce1-4553-b266-22657c2beb24}</TypeSystem>
+    <Implicit_Task_Info>{6b643a04-eb0b-4c27-8cdd-be9f0e58c996}</Implicit_Task_Info>
+    <Implicit_KindOfTask>{375fbf38-4a12-4cc6-a570-fc532b5b9a2e}</Implicit_KindOfTask>
+    <Implicit_Jitter_Distribution>{06e9c2ac-dd7f-443d-9301-4072d48d7b60}</Implicit_Jitter_Distribution>
+    <LibraryReferences>{c93a3e1c-3558-480c-878a-f95c83852967}</LibraryReferences>
+    <DeploymentEvents>
+      <Events>
+        <Event>
+          <CommandType>Copy</CommandType>
+          <DeploymentType>ActivateConfiguration</DeploymentType>
+          <Command1>%SOLUTIONPATH%\OCFG\</Command1>
+          <Command2>%TC_BOOTPRJPATH%OCFG</Command2>
+        </Event>
+      </Events>
+    </DeploymentEvents>
+    <Released>false</Released>
+    <Company>Beckhoff CH</Company>
+    <ProjectVersion>5.1.2</ProjectVersion>
+    <Title>CHALET_XPlanar</Title>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="COMPONENTs\Environment\I_XP_Enviroment_PLC.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Feedback\FB_XP_Feedback.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Feedback\I_XP_Feedback.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Feedback\ST_PlanarObjectInfoEx.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Mover\FB_XP_Mover.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Mover\I_XP_Mover.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Mover\I_XP_Mover_PLC.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Mover\ProductData\FB_XP_ProductData.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Mover\ProductData\I_XP_ProductData.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Casting\ToXpMover.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Casting\ToXpStation.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Casting\ToXpTrack.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Trigger\FB_XP_Trigger.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Trigger\I_XP_Trigger.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Zone\FB_XP_SoretedListOfMover.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Optional\Zone\I_XP_Zone.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Path\FB_XP_Path.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Path\I_XP_Path.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Stationen\A-Star-Node\FB_AStarNode.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Stationen\A-Star-Node\I_PathAStarNode.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Stationen\FB_XP_Station.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Stationen\I_XP_Station.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Stationen\I_XP_Station_PLC.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Environment\FB_XP_Environment.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Environment\I_XP_Environment.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Group\FB_XP_Group.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Group\I_XP_Group.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\System\FB_XP_System.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\System\I_XP_System_PLC.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\System\I_XP_System_Registration.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Track\FB_XP_Track.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Track\I_XP_Track.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPONENTs\Track\I_XP_Track_PLC.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_DistXYVectors.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_Vector_Multiplication.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_Vector_Subtraction.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_GetDistToPosModulo.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_InLimitTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_RotatePositionXY.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FUNCTIONs\F_Vector_Addition.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="XPlanarParameterlist.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <PlaceholderReference Include="CHALET_BaseComponents">
+      <DefaultResolution>CHALET_BaseComponents, * (Beckhoff CH)</DefaultResolution>
+      <Namespace>CHALET_BaseComponents</Namespace>
+      <PublishSymbolsInContainer>true</PublishSymbolsInContainer>
+    </PlaceholderReference>
+    <PlaceholderReference Include="CHALET_Nc">
+      <DefaultResolution>CHALET_Nc, * (Beckhoff CH)</DefaultResolution>
+      <Namespace>CHALET_Nc</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_EtherCAT">
+      <DefaultResolution>Tc2_EtherCAT, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_EtherCAT</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Math">
+      <DefaultResolution>Tc2_Math, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Math</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Standard">
+      <DefaultResolution>Tc2_Standard, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Standard</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_System">
+      <DefaultResolution>Tc2_System, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_System</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Utilities">
+      <DefaultResolution>Tc2_Utilities, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Utilities</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_EventLogger">
+      <DefaultResolution>Tc3_EventLogger, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_EventLogger</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Mc3Definitions">
+      <DefaultResolution>Tc3_Mc3Definitions, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Mc3Definitions</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Mc3PlanarMotion">
+      <DefaultResolution>Tc3_Mc3PlanarMotion, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Mc3PlanarMotion</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Module">
+      <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Module</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Physics">
+      <DefaultResolution>Tc3_Physics, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Physics</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_XPlanarUtility">
+      <DefaultResolution>Tc3_XPlanarUtility, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_XPlanarUtility</Namespace>
+    </PlaceholderReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="COMPONENTs" />
+    <Folder Include="COMPONENTs\Mover\ProductData" />
+    <Folder Include="COMPONENTs\Feedback" />
+    <Folder Include="COMPONENTs\Path" />
+    <Folder Include="COMPONENTs\Optional" />
+    <Folder Include="COMPONENTs\Optional\Casting" />
+    <Folder Include="COMPONENTs\Optional\Trigger" />
+    <Folder Include="COMPONENTs\Optional\Zone" />
+    <Folder Include="COMPONENTs\Stationen" />
+    <Folder Include="COMPONENTs\Stationen\A-Star-Node" />
+    <Folder Include="COMPONENTs\Track" />
+    <Folder Include="COMPONENTs\Environment" />
+    <Folder Include="COMPONENTs\Group" />
+    <Folder Include="COMPONENTs\Mover" />
+    <Folder Include="COMPONENTs\System" />
+    <Folder Include="FUNCTIONs" />
+  </ItemGroup>
+  <ItemGroup>
+    <SubObject Include="FB_CH_List.AddObject" />
+    <SubObject Include="FB_CH_List.Clear" />
+    <SubObject Include="FB_CH_List.FindObject" />
+    <SubObject Include="FB_CH_List.FindLUID" />
+    <SubObject Include="FB_CH_List.GetNextObject" />
+    <SubObject Include="FB_CH_List.HasNextObject" />
+    <SubObject Include="FB_CH_List.IsEmpty" />
+    <SubObject Include="FB_CH_List.IsEmpty.Get" />
+    <SubObject Include="FB_CH_List.RemoveObject" />
+    <SubObject Include="FB_CH_List.ResetIterator" />
+    <SubObject Include="FB_CH_List.Size" />
+    <SubObject Include="FB_CH_List.Size.Get" />
+    <SubObject Include="FB_XP_System.CreateHelpStations">
+      <ExcludeFromBuild>true</ExcludeFromBuild>
+    </SubObject>
+    <SubObject Include="I_CH_Feedback.ActiveCommand" />
+    <SubObject Include="I_CH_Feedback.LastCommandAccepted" />
+    <SubObject Include="I_XP_Track_PLC.MoversOnTrack">
+      <ExcludeFromBuild>true</ExcludeFromBuild>
+    </SubObject>
+  </ItemGroup>
+  <ItemGroup>
+    <PlaceholderResolution Include="CAA Callback">
+      <Resolution>CAA Callback Extern, * (CAA Technical Workgroup)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CAA MemBlockMan">
+      <Resolution>CAA Memory Block Manager Extern, * (CAA Technical Workgroup)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CAA ResMan">
+      <Resolution>CAA Ressource Manager Extern, * (CAA Technical Workgroup)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CAA Types">
+      <Resolution>CAA Types Extern, * (CAA Technical Workgroup)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CHALET_BaseComponents">
+      <Resolution>CHALET_BaseComponents, 3.6.2 (Beckhoff CH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CHALET_Nc">
+      <Resolution>CHALET_Nc, 3.2.7 (Beckhoff CH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpApp">
+      <Resolution>CmpApp, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpBitmapPool">
+      <Resolution>CmpBitmapPool, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpDynamicText">
+      <Resolution>CmpDynamicText, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpEventMgr">
+      <Resolution>CmpEventMgr, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpLog">
+      <Resolution>CmpLog, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpSchedule">
+      <Resolution>CmpSchedule, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpTargetVisu">
+      <Resolution>CmpTargetVisu, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="CmpVisuHandler">
+      <Resolution>CmpVisuHandler, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Collections">
+      <Resolution>Collections, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Component Manager">
+      <Resolution>Component Manager, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="FloatingPointUtils">
+      <Resolution>FloatingPointUtils, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Standard">
+      <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Standard64">
+      <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="StringUtils">
+      <Resolution>StringUtils, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysCpuHandling">
+      <Resolution>SysCpuHandling, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysDir">
+      <Resolution>SysDir, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysFile">
+      <Resolution>SysFile, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysMem">
+      <Resolution>SysMem, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysProcess">
+      <Resolution>SysProcess, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysShm">
+      <Resolution>SysShm, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysTarget">
+      <Resolution>SysTarget, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuElemBase">
+      <Resolution>VisuElemBase, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuElemMeter">
+      <Resolution>VisuElemMeter, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuElems">
+      <Resolution>VisuElems, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuElemsSpecialControls">
+      <Resolution>VisuElemsSpecialControls, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuElemsWinControls">
+      <Resolution>VisuElemsWinControls, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuElemTextEditor">
+      <Resolution>VisuElemTextEditor, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="system_visuinputs">
+      <Resolution>VisuInputs, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuInputs">
+      <Resolution>VisuInputs, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="System_VisuNativeControl">
+      <Resolution>VisuNativeControl, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysTime">
+      <Resolution>SysTime, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysTimeCore">
+      <Resolution>SysTimeCore, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="SysTimeRtc">
+      <Resolution>SysTimeRtc, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_Drive">
+      <Resolution>Tc2_Drive, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_EtherCAT">
+      <Resolution>Tc2_EtherCAT, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_IoFunctions">
+      <Resolution>Tc2_IoFunctions, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_Math">
+      <Resolution>Tc2_Math, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_MC2">
+      <Resolution>Tc2_MC2, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_MC2_Drive">
+      <Resolution>Tc2_MC2_Drive, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_Standard">
+      <Resolution>Tc2_Standard, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_System">
+      <Resolution>Tc2_System, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc2_Utilities">
+      <Resolution>Tc2_Utilities, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_EventLogger">
+      <Resolution>Tc3_EventLogger, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_Mc3Definitions">
+      <Resolution>Tc3_Mc3Definitions, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_Mc3PlanarMotion">
+      <Resolution>Tc3_Mc3PlanarMotion, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_Module">
+      <Resolution>Tc3_Module, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_Physics">
+      <Resolution>Tc3_Physics, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Tc3_XPlanarUtility">
+      <Resolution>Tc3_XPlanarUtility, * (Beckhoff Automation GmbH)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="Util">
+      <Resolution>Util, * (System)</Resolution>
+    </PlaceholderResolution>
+    <PlaceholderResolution Include="VisuDialogs">
+      <Resolution>VisuDialogs, * (System)</Resolution>
+    </PlaceholderResolution>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="LICENSE.md">
+      <SubType>Content</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <PinnedGlobalDataType Include="ST_CHALET_Base_Events" />
+    <PinnedGlobalDataType Include="ST_CHALET_XPlanar_Events" />
+    <PinnedGlobalDataType Include="ST_Tc3_NcErrorCodes" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <PlcProjectOptions>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
+      <v n="Name">"&lt;ProjectRoot&gt;"</v>
+      <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+        <v>{8F99A816-E488-41E4-9FA3-846536012284}</v>
+        <o>
+          <v n="Name">"{8F99A816-E488-41E4-9FA3-846536012284}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="String">
+            <v>DisabledWarningIds</v>
+            <v>33,100,118,125,139,187,195,196,197,198,200,209,210,220,223,228,245,266,269,298,308,312,315,316,325,327,335,339,344,349,350,351,354,355,357,370,371,373,388,389,394,404,406,410,421,422,426,441</v>
+          </d>
+        </o>
+        <v>{29BD8D0C-3586-4548-BB48-497B9A01693F}</v>
+        <o>
+          <v n="Name">"{29BD8D0C-3586-4548-BB48-497B9A01693F}"</v>
+          <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+            <v>NamingConventions</v>
+            <o>
+              <v n="Name">"NamingConventions"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+            <v>Metrics</v>
+            <o>
+              <v n="Name">"Metrics"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+            <v>Rules</v>
+            <o>
+              <v n="Name">"Rules"</v>
+              <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+                <v>167</v>
+                <o>
+                  <v n="Name">"167"</v>
+                  <d n="SubKeys" t="Hashtable" />
+                  <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+                    <v>bActive</v>
+                    <v>False</v>
+                  </d>
+                </o>
+                <v>4</v>
+                <o>
+                  <v n="Name">"4"</v>
+                  <d n="SubKeys" t="Hashtable" />
+                  <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+                    <v>bActive</v>
+                    <v>False</v>
+                  </d>
+                </o>
+                <v>33</v>
+                <o>
+                  <v n="Name">"33"</v>
+                  <d n="SubKeys" t="Hashtable" />
+                  <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+                    <v>bActive</v>
+                    <v>True</v>
+                  </d>
+                </o>
+                <v>6</v>
+                <o>
+                  <v n="Name">"6"</v>
+                  <d n="SubKeys" t="Hashtable" />
+                  <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+                    <v>bActive</v>
+                    <v>False</v>
+                  </d>
+                </o>
+                <v>27</v>
+                <o>
+                  <v n="Name">"27"</v>
+                  <d n="SubKeys" t="Hashtable" />
+                  <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+                    <v>bActive</v>
+                    <v>False</v>
+                  </d>
+                </o>
+                <v>28</v>
+                <o>
+                  <v n="Name">"28"</v>
+                  <d n="SubKeys" t="Hashtable" />
+                  <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+                    <v>bActive</v>
+                    <v>False</v>
+                  </d>
+                </o>
+              </d>
+              <d n="Values" t="Hashtable" />
+            </o>
+          </d>
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>PerformStaticAnalyse</v>
+            <v>False</v>
+          </d>
+        </o>
+        <v>{40450F57-0AA3-4216-96F3-5444ECB29763}</v>
+        <o>
+          <v n="Name">"{40450F57-0AA3-4216-96F3-5444ECB29763}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="String">
+            <v>ActiveVisuProfile</v>
+            <v>IR0whWr8bwfwBwAAiD2qpQAAAABVAgAA37x72QAAAAABAAAAAAAAAAEaUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwACTHsAZgA5ADUAYgBiADQAMgA2AC0ANQA1ADIANAAtADQAYgA0ADUALQA5ADQAMAAwAC0AZgBiADAAZgAyAGUANwA3AGUANQAxAGIAfQADCE4AYQBtAGUABDBUAHcAaQBuAEMAQQBUACAAMwAuADEAIABCAHUAaQBsAGQAIAA0ADAAMgA0AC4ANwAFFlAAcgBvAGYAaQBsAGUARABhAHQAYQAGTHsAMQA2AGUANQA1AGIANgAwAC0ANwAwADQAMwAtADQAYQA2ADMALQBiADYANQBiAC0ANgAxADQANwAxADMAOAA3ADgAZAA0ADIAfQAHEkwAaQBiAHIAYQByAGkAZQBzAAhMewAzAGIAZgBkADUANAA1ADkALQBiADAANwBmAC0ANABkADYAZQAtAGEAZQAxAGEALQBhADgAMwAzADUANgBhADUANQAxADQAMgB9AAlMewA5AGMAOQA1ADgAOQA2ADgALQAyAGMAOAA1AC0ANAAxAGIAYgAtADgAOAA3ADEALQA4ADkANQBmAGYAMQBmAGUAZABlADEAYQB9AAoOVgBlAHIAcwBpAG8AbgALBmkAbgB0AAwKVQBzAGEAZwBlAA0KVABpAHQAbABlAA4aVgBpAHMAdQBFAGwAZQBtAE0AZQB0AGUAcgAPDkMAbwBtAHAAYQBuAHkAEAxTAHkAcwB0AGUAbQARElYAaQBzAHUARQBsAGUAbQBzABIwVgBpAHMAdQBFAGwAZQBtAHMAUwBwAGUAYwBpAGEAbABDAG8AbgB0AHIAbwBsAHMAEyhWAGkAcwB1AEUAbABlAG0AcwBXAGkAbgBDAG8AbgB0AHIAbwBsAHMAFCRWAGkAcwB1AEUAbABlAG0AVABlAHgAdABFAGQAaQB0AG8AcgAVIlYAaQBzAHUATgBhAHQAaQB2AGUAQwBvAG4AdAByAG8AbAAWFHYAaQBzAHUAaQBuAHAAdQB0AHMAFwxzAHkAcwB0AGUAbQAYGFYAaQBzAHUARQBsAGUAbQBCAGEAcwBlABkmRABlAHYAUABsAGEAYwBlAGgAbwBsAGQAZQByAHMAVQBzAGUAZAAaCGIAbwBvAGwAGyJQAGwAdQBnAGkAbgBDAG8AbgBzAHQAcgBhAGkAbgB0AHMAHEx7ADQAMwBkADUAMgBiAGMAZQAtADkANAAyAGMALQA0ADQAZAA3AC0AOQBlADkANAAtADEAYgBmAGQAZgAzADEAMABlADYAMwBjAH0AHRxBAHQATABlAGEAcwB0AFYAZQByAHMAaQBvAG4AHhRQAGwAdQBnAGkAbgBHAHUAaQBkAB8WUwB5AHMAdABlAG0ALgBHAHUAaQBkACBIYQBmAGMAZAA1ADQANAA2AC0ANAA5ADEANAAtADQAZgBlADcALQBiAGIANwA4AC0AOQBiAGYAZgBlAGIANwAwAGYAZAAxADcAIRRVAHAAZABhAHQAZQBJAG4AZgBvACJMewBiADAAMwAzADYANgBhADgALQBiADUAYwAwAC0ANABiADkAYQAtAGEAMAAwAGUALQBlAGIAOAA2ADAAMQAxADEAMAA0AGMAMwB9ACMOVQBwAGQAYQB0AGUAcwAkTHsAMQA4ADYAOABmAGYAYwA5AC0AZQA0AGYAYwAtADQANQAzADIALQBhAGMAMAA2AC0AMQBlADMAOQBiAGIANQA1ADcAYgA2ADkAfQAlTHsAYQA1AGIAZAA0ADgAYwAzAC0AMABkADEANwAtADQAMQBiADUALQBiADEANgA0AC0ANQBmAGMANgBhAGQAMgBiADkANgBiADcAfQAmFk8AYgBqAGUAYwB0AHMAVAB5AHAAZQAnVFUAcABkAGEAdABlAEwAYQBuAGcAdQBhAGcAZQBNAG8AZABlAGwARgBvAHIAQwBvAG4AdgBlAHIAdABpAGIAbABlAEwAaQBiAHIAYQByAGkAZQBzACgQTABpAGIAVABpAHQAbABlACkUTABpAGIAQwBvAG0AcABhAG4AeQAqHlUAcABkAGEAdABlAFAAcgBvAHYAaQBkAGUAcgBzACs4UwB5AHMAdABlAG0ALgBDAG8AbABsAGUAYwB0AGkAbwBuAHMALgBIAGEAcwBoAHQAYQBiAGwAZQAsEnYAaQBzAHUAZQBsAGUAbQBzAC1INgBjAGIAMQBjAGQAZQAxAC0AZAA1AGQAYwAtADQAYQAzAGIALQA5ADAANQA0AC0AMgAxAGYAYQA3ADUANgBhADMAZgBhADQALihJAG4AdABlAHIAZgBhAGMAZQBWAGUAcgBzAGkAbwBuAEkAbgBmAG8AL0x7AGMANgAxADEAZQA0ADAAMAAtADcAZgBiADkALQA0AGMAMwA1AC0AYgA5AGEAYwAtADQAZQAzADEANABiADUAOQA5ADYANAAzAH0AMBhNAGEAagBvAHIAVgBlAHIAcwBpAG8AbgAxGE0AaQBuAG8AcgBWAGUAcgBzAGkAbwBuADIMTABlAGcAYQBjAHkAMzBMAGEAbgBnAHUAYQBnAGUATQBvAGQAZQBsAFYAZQByAHMAaQBvAG4ASQBuAGYAbwA0MEwAbwBhAGQATABpAGIAcgBhAHIAaQBlAHMASQBuAHQAbwBQAHIAbwBqAGUAYwB0ADUaQwBvAG0AcABhAHQAaQBiAGkAbABpAHQAeQDQAAIaA9ADAS0E0AUGGgfQBwgaAUUHCQjQAAkaBEUKCwQDAAAABQAAAA0AAAAAAAAA0AwLrQIAAADQDQEtDtAPAS0Q0AAJGgRFCgsEAwAAAAUAAAANAAAAKAAAANAMC60BAAAA0A0BLRHQDwEtENAACRoERQoLBAMAAAAFAAAADQAAAAAAAADQDAutAgAAANANAS0S0A8BLRDQAAkaBEUKCwQDAAAABQAAAA0AAAAUAAAA0AwLrQIAAADQDQEtE9APAS0Q0AAJGgRFCgsEAwAAAAUAAAANAAAAAAAAANAMC60CAAAA0A0BLRTQDwEtENAACRoERQoLBAMAAAAFAAAADQAAAAAAAADQDAutAgAAANANAS0V0A8BLRDQAAkaBEUKCwQDAAAABQAAAA0AAAAAAAAA0AwLrQIAAADQDQEtFtAPAS0X0AAJGgRFCgsEAwAAAAUAAAANAAAAKAAAANAMC60EAAAA0A0BLRjQDwEtENAZGq0BRRscAdAAHBoCRR0LBAMAAAAFAAAADQAAAAAAAADQHh8tINAhIhoCRSMkAtAAJRoFRQoLBAMAAAADAAAAAAAAAAoAAADQJgutAAAAANADAS0n0CgBLRHQKQEtENAAJRoFRQoLBAMAAAADAAAAAAAAAAoAAADQJgutAQAAANADAS0n0CgBLRHQKQEtEJoqKwFFAAEC0AABLSzQAAEtF9AAHy0t0C4vGgPQMAutAQAAANAxC60XAAAA0DIarQDQMy8aA9AwC60CAAAA0DELrQMAAADQMhqtANA0Gq0A0DUarQA=</v>
+          </d>
+        </o>
+        <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
+        <o>
+          <v n="Name">"{192FAD59-8248-4824-A8DE-9177C94C195A}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{F66C7017-BDD8-4114-926C-81D6D687E35F}</v>
+        <o>
+          <v n="Name">"{F66C7017-BDD8-4114-926C-81D6D687E35F}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{246001F4-279D-43AC-B241-948EB31120E1}</v>
+        <o>
+          <v n="Name">"{246001F4-279D-43AC-B241-948EB31120E1}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+      </d>
+      <d n="Values" t="Hashtable" />
+    </o>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
+    </PlcProjectOptions>
+  </ProjectExtensions>
+</Project>

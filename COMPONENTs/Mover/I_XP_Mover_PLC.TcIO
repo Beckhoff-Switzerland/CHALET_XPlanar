@@ -1,0 +1,422 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Mover_PLC" Id="{6782d671-8977-4e78-ad46-9a03e207fc6f}">
+    <Declaration><![CDATA[INTERFACE I_XP_Mover_PLC EXTENDS I_CH_Object
+]]></Declaration>
+    <Folder Name="DynamicConstraint" Id="{89ab60cc-20b3-4c93-8816-921b4742aad0}" />
+    <Folder Name="ExternalSetpoint" Id="{5a587f93-4785-408d-88fb-b76e6ce1b65e}" />
+    <Folder Name="Movement" Id="{e165bd69-b1e7-4efb-b2c0-5ffe362e63fc}" />
+    <Folder Name="Status" Id="{64055996-adf0-46f9-a5d5-ca6a31ec7749}" />
+    <Folder Name="Track" Id="{ee4af8b6-4f54-45e5-b23b-3d9271cc66dc}" />
+    <Folder Name="XPlanarUtility" Id="{6478c364-b6b4-480e-8022-2f105afad6fe}" />
+    <Property Name="AccelerationSet" Id="{d16e9c85-0ddf-42c6-888d-c0eabff9589a}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the current planar mover setpoint XYZABC [mm/s²] *)
+PROPERTY AccelerationSet : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{2232bf06-3062-411e-a214-e121b8d61740}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointA" Id="{5ae13940-6160-40c8-894c-b3f7e1f826f0}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY  AxisExtSetpointA : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{5277f883-eccb-4a49-b708-d10c565bc49a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointB" Id="{4f5a2605-c866-48dc-b381-d3ae48e98651}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointB : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{7ab56427-cb17-48c1-a40e-96bd6b512c9b}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointC" Id="{9bcb1b93-9a17-4fdd-a279-0f1ea636dbde}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointC : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{1db36ab3-a54a-4205-83d1-d1c7a45f8f6b}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointX" Id="{cd4cd6f4-cab0-4cf0-b6d1-7920aa0ab5e9}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY  AxisExtSetpointX : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{b12c2d12-9f3a-466c-a4d2-24e7b3eb51bd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointY" Id="{f3058910-c8d7-4ba2-a2aa-8f210a100bdd}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointY : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{3c58cc72-79b7-456f-8c97-d676787cbebd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="AxisExtSetpointZ" Id="{8cf3dafd-7fa8-4f33-ba1c-cd2d9f322c30}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AxisExtSetpointZ : CHALET_Nc.I_NcAxis_PLC]]></Declaration>
+      <Get Name="Get" Id="{a8cba028-341c-4c14-b6cf-d1ea890abc3c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="CAxisModulo" Id="{ce3f4106-138d-44f5-951b-3fa1a6a55c36}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* C coordinate modulus set in MC3-Planar Mover[°] *)
+PROPERTY CAxisModulo : LREAL]]></Declaration>
+      <Get Name="Get" Id="{ac0c2ff0-4fda-477a-a3b6-1213635227c9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="CommandMode" Id="{6b8f4b07-4b3d-4bab-9e3d-244460c7d1b5}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Indicates the command mode of an enabled PlanarMover, i.e. how setpoints are currently produced. *)
+PROPERTY CommandMode : MC_PLANAR_MOVER_COMMAND_MODE]]></Declaration>
+      <Get Name="Get" Id="{fe742260-92f9-4bbb-a45f-49bdfce94d2c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="CurrentTrack" Id="{5a717340-c996-41fd-a662-95d1ccf6cbeb}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CurrentTrack : I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{f0e27e06-e36d-49e9-bd23-213b7c753771}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="DistToParentStation" Id="{22fa7e66-5191-4ca0-862b-12f2ab300e2e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY DistToParentStation : LREAL //Distance to the responsible parent station [mm]
+]]></Declaration>
+      <Get Name="Get" Id="{86891467-5806-43e3-86f6-b719891f9a5a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="DynConstraint" Id="{c966e1a8-1da6-47c7-81c5-b00755d2c520}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[PROPERTY DynConstraint : REFERENCE TO DynamicConstraint_Container]]></Declaration>
+      <Get Name="Get" Id="{15c85705-8eb2-489b-b2bb-18d3faaf3da6}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Enabled" Id="{10c53112-9a2f-425e-9bdb-ac45af88eb5a}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//operational and position control active(hovering)
+PROPERTY Enabled : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{b4f47ec2-164c-4d3a-b434-febe95a6231e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Feedback" Id="{1ff40969-dfc2-4746-ad9c-bc385fcf22c3}">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{9b8c6cff-0894-43e9-93b5-3f44de12fafd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Halt" Id="{86d97b7b-e1f3-4510-afbf-ab6fc5b81ce6}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD Halt : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="LagDistanceXY" Id="{b7480556-5c08-4ea8-a3f3-35fabac8ec12}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Retruns lentgh of hypotenuse of the x and y error. (>=0[mm]) *)
+PROPERTY LagDistanceXY : LREAL 
+]]></Declaration>
+      <Get Name="Get" Id="{c4d5434b-9caa-401b-b7f6-0fc94f8ccc52}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedGap" Id="{db446f6a-dc12-487d-90ed-ea6a74807477}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
+      <Get Name="Get" Id="{4cc78c1f-10a0-42f1-9fd1-f13f7555d683}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedPosition" Id="{a04c2157-ff1d-44ac-ae68-98042094b69c}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedPosition : LREAL]]></Declaration>
+      <Get Name="Get" Id="{1684f68c-3d98-4ff5-9816-cb3aafcc6a83}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedTrack" Id="{e86ba358-3d94-4400-bbc2-123d5ae598c0}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedTrack: I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{a46fefb8-f2e3-4a44-a9a4-0953c8e468ad}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LUID" Id="{a0e8f037-5723-4a48-8e65-348df53a5d14}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LUID : STRING //Locally unique identifier]]></Declaration>
+      <Get Name="Get" Id="{afa927fe-3c93-4459-8acd-3cb8590b311e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Mapped" Id="{4d9e8e03-fcb7-485f-900b-7669090a286a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
+]]></Declaration>
+      <Get Name="Get" Id="{6772fc1b-d7f0-48ce-a5db-a843bfe4a230}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="MoveA" Id="{d2a1985c-37e9-48a0-b818-a0432f356223}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveA : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveB" Id="{50844776-2ddf-49cf-b5eb-62c296aa4eb6}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveB : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveC" Id="{49b5a0ce-1cee-41c1-9554-326c01f1d53c}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveC : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+	
+	(* Addition turns to move in modulo movement (positive or negative). *)
+	additionalTurns : UDINT := 0;
+	
+	(* Direction in which the target is approached. *)
+	direction : Tc3_Mc3Definitions.MC_DIRECTION := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionNonModulo;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveOnTrack" Id="{f5f2470e-6f13-4bb3-bb30-8cecf63f4c61}" FolderPath="Track\">
+      <Declaration><![CDATA[METHOD MoveOnTrack : HRESULT
+VAR_INPUT
+	ipTrack : I_XP_Track;
+	fPosition : LREAL;
+	fGap : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="MoverHeight" Id="{d3934eab-8217-4f0d-8cc0-a32474e2f67a}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Height that is used for internal collision checks.[mm] *)
+PROPERTY MoverHeight : LREAL]]></Declaration>
+      <Get Name="Get" Id="{72f28ffa-9550-420b-be83-019d0ac7afd3}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverIsNotPresent" Id="{515fb499-79a9-4b44-be14-d054fc281c9c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Mover could not be detected or was removed from the system
+PROPERTY MoverIsNotPresent : BOOL]]></Declaration>
+      <Get Name="Get" Id="{23f8c345-c9c5-4479-9311-7cdc73a9d2a3}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverWidth" Id="{a4822df2-4e81-4c40-a114-52e1bf841cc2}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Width that is used for internal collision checks.[mm] *)
+PROPERTY MoverWidth : LREAL]]></Declaration>
+      <Get Name="Get" Id="{1fb55ad3-5c6d-44e4-bee5-4f4f1599444a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="MoveXY" Id="{a40220ca-38c9-4124-87f6-c5d28cb28e93}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveXY : HRESULT
+VAR_INPUT
+	fPosition_X : LREAL;
+	fPosition_Y : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveZ" Id="{4c98fd0b-c748-437d-9352-0a54c739b9d3}" FolderPath="Movement\">
+      <Declaration><![CDATA[METHOD MoveZ : HRESULT
+VAR_INPUT
+	fPosition : LREAL;
+END_VAR
+
+]]></Declaration>
+    </Method>
+    <Property Name="OID" Id="{7a866113-9bad-4a56-ae1b-6e863d4962f3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Unique object ID
+PROPERTY OID : OTCID ]]></Declaration>
+      <Get Name="Get" Id="{cf548f20-e1bb-47fa-9f8c-a527feaa35bd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ParentStation" Id="{87fed609-1c56-497d-8454-48ba4feaf121}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ParentStation : I_XP_Station
+]]></Declaration>
+      <Get Name="Get" Id="{5078ab3c-c84a-494e-a40b-46e31d568b3a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PlanarMover" Id="{67240efd-4de5-40da-aabb-b9717774b69a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarMover : REFERENCE TO MC_PlanarMover]]></Declaration>
+      <Get Name="Get" Id="{494deae8-3d01-44f0-844a-e4267c729056}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionAct" Id="{52158d61-6c37-4fef-a922-01daaee85535}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Contains the information of the Planar Mover passed from MC to PLC. XYZABC [mm] *)
+PROPERTY PositionAct : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{1ebdf44d-9bc0-470e-9523-682c61bdccf4}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{2fe4986b-b9fb-4b17-866c-03e497fe0186}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{18639e73-f148-4fa1-befe-d1ca4379f9cc}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionSet" Id="{1f77f1a9-e6ba-4bd7-9806-55f23dfdb90f}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the current planar mover setpoint XYZABC [mm] *)
+PROPERTY PositionSet : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{4478ba60-0ff7-496a-a1ca-8accfd424f81}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ProductData" Id="{acad8ab0-a588-443d-a82e-c3b5b4fc721e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PUBLIC ProductData : I_XP_ProductData]]></Declaration>
+      <Get Name="Get" Id="{44516aee-fa53-4107-8709-82e8fae55628}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{70554fcf-c50f-4144-af2d-e7e97f1ff28d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Method Name="SetDynConstraint_A" Id="{ee022766-ac20-4619-b289-ea8c9c49f204}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_A : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SetDynConstraint_B" Id="{57664816-80b7-4cc5-a24d-34061a5fbeff}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_B : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SetDynConstraint_C" Id="{daa2c313-7547-416f-a51c-9ffc869062e4}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_C : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SetDynConstraint_Path" Id="{4913baab-8f8e-4736-a7a6-3c62d51db687}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_Path : BOOL //One dimensional dynamic constraint along the XY-components of a path, ignoring non-tangential effects.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SetDynConstraint_X" Id="{c086a13e-cd55-42ca-b770-e8d95b9de588}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_X : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SetDynConstraint_Y" Id="{0a9c9113-3a34-434b-a606-7a2bb95c5195}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_Y : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SetDynConstraint_Z" Id="{a60ce8ea-d12b-47ae-8de7-521f505f8843}" FolderPath="DynamicConstraint\">
+      <Declaration><![CDATA[METHOD SetDynConstraint_Z : BOOL //Dynamic constraints for individual coordinates.
+VAR_INPUT
+    V : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    A : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    D : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+    J : MC_LREAL; //equivalent to data type LREAL + MC_DEFAULT, MC_MAXIMUM
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Standstill" Id="{f148acb4-47c0-41e7-b892-6c653004e288}" FolderPath="Movement\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Velocity is zero *)
+PROPERTY Standstill : BOOL]]></Declaration>
+      <Get Name="Get" Id="{599cee7a-731c-49b5-817c-ffd7f330fc15}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="StartExternalSetpoint" Id="{dfa775fa-11d4-4c40-8dc6-4667d8c90110}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[METHOD StartExternalSetpoint : HRESULT
+]]></Declaration>
+    </Method>
+    <Method Name="StopExternalSetpoint" Id="{e3065f32-6492-41df-8e2b-b06f37ec6597}" FolderPath="ExternalSetpoint\">
+      <Declaration><![CDATA[METHOD StopExternalSetpoint : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="TargetStation" Id="{651db133-db00-45b8-81f5-ffcbfefb230d}" FolderPath="Track\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargetStation : STRING]]></Declaration>
+      <Get Name="Get" Id="{69a560fe-9184-4378-8b65-27f38b1d02d0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{620ebb3e-356f-4589-b369-a813b79e912c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="TcIoXPlanarMover" Id="{a25e8f89-0fcd-4a3b-85ce-126595fd0c34}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TcIoXPlanarMover : Tc3_XPlanarUtility.I_TcIoXPlanarMover]]></Declaration>
+      <Get Name="Get" Id="{aeba3ed2-d0f8-4365-84e4-5348b2bc068d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="UtilityMover" Id="{6293431e-f388-4d14-9289-e5c8bcbb611f}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityMover : Tc3_XPlanarUtility.I_McPlanarMover]]></Declaration>
+      <Get Name="Get" Id="{90e40154-2355-447b-8e6b-dec8afc05b97}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="VelocitySet" Id="{e94fd615-5167-476e-9132-4c11ea5e5551}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the current planar mover setpoint XYZABC [mm/s] *)
+PROPERTY VelocitySet : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{c8c427ec-d078-42f7-a9f1-66de0248e3c6}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

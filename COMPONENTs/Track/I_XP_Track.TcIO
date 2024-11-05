@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XP_Track" Id="{3432d48a-a726-4b83-a12f-d272099ac173}">
+    <Declaration><![CDATA[INTERFACE I_XP_Track  EXTENDS I_CH_Object
+
+]]></Declaration>
+    <Method Name="AddMover" Id="{2b200b3a-86da-49d6-8e5e-103f557e3dc0}">
+      <Declaration><![CDATA[METHOD AddMover : HRESULT
+VAR_INPUT
+	ipMover : I_XP_Mover;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="AddToGroup" Id="{302bb858-5b9c-468d-9362-6205f917332d}">
+      <Declaration><![CDATA[METHOD AddToGroup : HRESULT
+VAR_INPUT
+	iGroup : I_XP_Group;
+END_VAR
+
+]]></Declaration>
+    </Method>
+    <Property Name="ClosedLoop" Id="{a2468070-3b2b-421b-9055-75836b9066dd}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ClosedLoop : BOOL]]></Declaration>
+      <Get Name="Get" Id="{af83d3fa-3fcc-4aee-8d0c-95c02d967deb}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Configure" Id="{c62dbb08-9afd-4532-97d6-aa5d2b5a1ef8}">
+      <Declaration><![CDATA[METHOD Configure : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Configuring" Id="{99ddac7c-0893-4b9e-849d-6ec656e69701}">
+      <Declaration><![CDATA[METHOD Configuring : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="CtsMoversOnTrack" Id="{11733006-6736-4805-a3ef-77a950d4f32e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsMoversOnTrack : UINT]]></Declaration>
+      <Get Name="Get" Id="{15f0dbd1-68cd-4f2a-8369-848e0f2a1464}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Disable" Id="{846f7e23-ca61-4e09-aaee-8a11a2364d2a}">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Enable" Id="{1d1eefd1-801d-44e6-af56-039a1cf4679d}">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Feedback" Id="{04374df7-b187-4c05-b1de-93763caf4aa2}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_XP_Feedback]]></Declaration>
+      <Get Name="Get" Id="{0b605435-87de-4ddb-b3ce-157455508880}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="GapAtPosition" Id="{4387fda7-8415-4e9f-ab5a-c5b1be5d697b}">
+      <Declaration><![CDATA[(* Calculates which gap the mover should have on a position
+	The gap results from the last station crossed.
+	If several stations are possible ( switch), the largest gap is displayed here *)
+METHOD GapAtPosition : LREAL
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Length" Id="{35044908-1b9c-4871-a3ff-14ae54040ef3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//[mm]
+PROPERTY Length : LREAL]]></Declaration>
+      <Get Name="Get" Id="{3d6b015c-79c3-4572-a415-52ab650d4cd2}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PlanarTrack" Id="{54d6428b-7468-4a87-b287-ed624feebdbb}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PlanarTrack : REFERENCE TO MC_PlanarTrack]]></Declaration>
+      <Get Name="Get" Id="{4b4abc4a-0f9b-46c5-ab81-216b9e4230d2}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="RemoveFromGroup" Id="{5404cd47-f9b8-4221-b66c-c23d46a77129}">
+      <Declaration><![CDATA[METHOD RemoveFromGroup : HRESULT
+]]></Declaration>
+    </Method>
+    <Method Name="Reset" Id="{2f8c91d6-0cfd-4177-bb04-2e49e3ecd0de}">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="StationAhedPosition" Id="{8f31d0eb-b127-41f6-a9ea-ceefd386b8d6}">
+      <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is ahead
+	If no station on this track, result is maybe on another track*)
+METHOD StationAhedPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="StationsOnTrack" Id="{e9fcb1ff-197a-4c9e-9a9a-8b0acd76a517}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces to stations on this track
+PROPERTY StationsOnTrack : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{35065c9a-f7a7-4fd2-bbc2-b5f6d10156cd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TracksAhead" Id="{01ae3317-26a9-4790-a3fe-0dfe598d8739}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces from other tracks
+PROPERTY TracksAhead : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{a77fe1ec-8bd8-482c-afed-45600b1a59cb}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TracksBehinde" Id="{63639ca9-73ad-4626-b3c9-81144942761a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces from other tracks
+PROPERTY TracksBehinde : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{688effa3-acac-48c2-9e99-dda83a78d8df}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TracksEndAtThis" Id="{2b7d0403-8812-431a-92f0-60cef6f1780d}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TracksEndAtThis : REFERENCE TO  ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{8cf88d14-2cf5-4374-a40a-bda85ffb07df}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TracksStartFromThis" Id="{96711d99-9b22-4448-8ae5-5143ac7d8434}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TracksStartFromThis : REFERENCE TO ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track]]></Declaration>
+      <Get Name="Get" Id="{7ea3e3f5-20d0-47aa-b1b0-ea4b617cfbd1}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>
