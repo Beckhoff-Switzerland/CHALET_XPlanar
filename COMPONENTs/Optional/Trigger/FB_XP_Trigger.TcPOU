@@ -301,7 +301,7 @@ END_VAR
         <Implementation>
           <ST><![CDATA[THIS^.Prepare();//Prepare Time-critical information
 
-///zzz todo exact time stamp calculatioin
+///zzz todo add exact time stamp calculatioin
  IF ipMoverAtTrigger <> 0 THEN
 	 TimeStamp := F_GetCurDcTaskTime64();
  ELSE

@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_PathAStarNode" Id="{be03b726-bf5e-4aa4-8cbd-e6818b63cc5e}">
+    <Declaration><![CDATA[INTERFACE I_PathAStarNode EXTENDS I_CH_Object
+]]></Declaration>
+    <Property Name="PathLength" Id="{a1e7f472-e25c-4988-874a-405294be83bf}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PathLength : LREAL]]></Declaration>
+      <Get Name="Get" Id="{402d665a-0db6-41d8-9d96-effb115101f5}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="RouteUsedToNode" Id="{cf4d0ab7-cd67-48fa-9114-196361431315}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY RouteUsedToNode : REFERENCE TO FB_CH_List]]></Declaration>
+      <Get Name="Get" Id="{a132d470-0dc2-4e7d-90e1-0fc70318764b}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Station" Id="{40b98fe3-6617-45bb-859c-69640d2a05e6}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Station : I_XP_Station]]></Declaration>
+      <Get Name="Get" Id="{8f793438-1b54-4ae9-a9ba-6b113472ffc5}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{fae487dc-535b-45a1-a0f9-4ba413d05a38}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+  </Itf>
+</TcPlcObject>

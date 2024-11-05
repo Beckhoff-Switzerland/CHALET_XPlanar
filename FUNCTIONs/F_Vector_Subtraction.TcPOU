@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="F_Vector_Subtraction" Id="{efd1a9cc-e21b-4987-b3aa-f9a4f8d3ac51}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION F_Vector_Subtraction : MoverVector //difference = minuend - subtrahend
+VAR_INPUT
+	minuend : REFERENCE TO MoverVector;
+	subtrahend : REFERENCE TO MoverVector;
+END_VAR
+VAR
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT __ISVALIDREF(minuend) OR NOT __ISVALIDREF(subtrahend) THEN
+	//Error
+	RETURN;
+END_IF
+
+F_Vector_Subtraction.x	:= minuend.x	- subtrahend.x;
+F_Vector_Subtraction.y	:= minuend.y	- subtrahend.y;
+F_Vector_Subtraction.z	:= minuend.z	- subtrahend.z;
+F_Vector_Subtraction.a	:= minuend.a	- subtrahend.a;
+F_Vector_Subtraction.b	:= minuend.b	- subtrahend.b;
+F_Vector_Subtraction.z	:= minuend.c	- subtrahend.c;
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

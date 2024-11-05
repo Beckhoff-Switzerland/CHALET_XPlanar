@@ -49,6 +49,15 @@ PROPERTY PlanarTrack : REFERENCE TO MC_PlanarTrack]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Method Name="StationAhedPosition" Id="{66046894-762c-43ad-932b-a335bdf7d057}">
+      <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is ahead
+	If no station on this track, result is maybe on another track*)
+METHOD StationAhedPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
     <Property Name="StationsOnTrack" Id="{bab9c82e-80cb-4b84-a9a8-d947fb34b427}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //List of interfaces to stations on this track

@@ -27,9 +27,11 @@ VAR
 	{attribute 'hide'}  
 	fbListOfStationsOnTrack : FB_CH_List;
 
-//Todo add hide
+	{attribute 'hide'}  
 	bIsClosedLoop : BOOL;
+	{attribute 'hide'}  
 	PreviousTrackOTCIDs 	: ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF OTCID;
+	{attribute 'hide'}  
 	SubsequentTrackOTCIDs 	: ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF OTCID;
 	
 	{attribute 'hide'}
@@ -38,6 +40,11 @@ VAR
 	fbTracksAhead : FB_CH_List;
 	{attribute 'hide'}  
 	fbTracksBehinde : FB_CH_List;
+	
+
+	{attribute 'hide'}  
+	fbListPathsOnThisTrack : FB_CH_List;	
+	
 END_VAR
 
 // Planar-Feedback objects
@@ -230,7 +237,7 @@ CASE nSeqConfiguring OF
 			//Get interface to object
 			ipEachTrackObj := THIS^.ipXpSystem.Tracks.FindOID(THIS^.PreviousTrackOTCIDs[nIdx]);
 			//convert object -> I_XP_Track. If found, store in list
-			IF ToXpTrack(ipEachTrackObj, ipTracksStartFromThis[nIdx]) THEN
+			IF ToXpTrack(ipEachTrackObj, ipTracksEndAtThis[nIdx]) THEN
 				fbTracksBehinde.AddObject(ipEachTrackObj);
 				
 			ELSIF THIS^.PreviousTrackOTCIDs[nIdx] = 0 THEN
@@ -356,6 +363,55 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="GapAtPosition" Id="{92b9e156-7ad7-46e1-9a4d-4507cbe51387}">
+      <Declaration><![CDATA[(* Calculates which gap the mover should have on a position
+	The gap results from the last station crossed.
+	If several stations are possible ( switch), the largest gap is displayed here *)
+METHOD GapAtPosition : LREAL
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+VAR
+	ipThisTrack : I_XP_Track := (THIS^);
+	bStartAndEndIsOnThisTrack : BOOL;
+	ipEachPathOnTrack : I_XP_Path;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+
+THIS^.fbListPathsOnThisTrack.ResetIterator();
+WHILE THIS^.fbListPathsOnThisTrack.HasNextObject() DO
+	IF __QUERYINTERFACE(THIS^.fbListPathsOnThisTrack.GetNextObject(), ipEachPathOnTrack) THEN
+			
+		bStartAndEndIsOnThisTrack := ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack AND ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack; 
+			
+		//Check if start of route is maybe on this track
+		IF (ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationStart.PositionOnTrack > fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
+			//start is after the searched position
+			CONTINUE;
+
+		//Check if end of route is maybe on this track
+		ELSIF (ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationDestination.PositionOnTrack <= fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
+			//end is befor the searched position
+			CONTINUE;		
+			
+		//Check if in limit - CLOSED LOOP, SHORT SEGMENT Start > End
+		ELSIF F_InLimitTest(fMinimum := ipEachPathOnTrack.StationStart.PositionOnTrack, fInput:= fPosOnTrack, fMaximum := ipEachPathOnTrack.StationDestination.PositionOnTrack) AND bStartAndEndIsOnThisTrack THEN
+			//track is outside the searched position
+			CONTINUE;		
+
+			
+		ELSE
+			//The gap is valide, use the largest one
+			GapAtPosition := MAX(GapAtPosition, ipEachPathOnTrack.StationStart.MoverGapAtExit);
+
+		END_IF
+		
+	END_IF
+END_WHILE
+THIS^.fbListPathsOnThisTrack.RestoreIterator();]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Initialize" Id="{b896fc44-0b73-4eff-afae-ecb801b264e1}">
       <Declaration><![CDATA[METHOD Initialize : HRESULT
 VAR
@@ -489,6 +545,22 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Property Name="PathsOnTrack" Id="{11d971dd-07f8-4664-bc9e-a2bf8fc67154}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of interfaces to paths on this track
+PROPERTY PathsOnTrack : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{d777e419-beeb-40dd-aa7d-7aa157846473}">
+        <Declaration><![CDATA[VAR
+
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare a list stations on this track
+
+PathsOnTrack := THIS^.fbListPathsOnThisTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="PlanarTrack" Id="{2fb9669f-5350-4c6c-81e0-7e96f15e447b}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PlanarTrack : REFERENCE TO MC_PlanarTrack]]></Declaration>
@@ -506,9 +578,10 @@ END_VAR
 The update method is usually at the end of the program and then it is already 'outdated'. *)
 METHOD PRIVATE Prepare : HRESULT
 VAR
-	ipThisTrack : I_XP_Track;
+	ipThisTrack : I_XP_Track := THIS^;
 	ipStation : I_XP_Station;
 	ipMover : I_XP_Mover;
+	ipPath : I_XP_Path;
 
 END_VAR
 
@@ -522,7 +595,6 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
 
 	//Creat a list of all Stations on this Track
-	ipThisTrack := THIS^;
 	THIS^.fbListOfStationsOnTrack.Clear();
 	THIS^.ipXpSystem.Stations.ResetIterator();
 	WHILE THIS^.ipXpSystem.Stations.HasNextObject() DO
@@ -533,8 +605,8 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 	THIS^.ipXpSystem.Stations.RestoreIterator();
 	
 	
+	
 	//Creat a list of all Movers on this Track
-	ipThisTrack := THIS^;
 	THIS^.fbListOfMoversOnTrack.Clear();
 	THIS^.ipXpSystem.Movers.ResetIterator();
 	WHILE THIS^.ipXpSystem.Movers.HasNextObject() DO
@@ -542,7 +614,19 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 			THIS^.fbListOfMoversOnTrack.AddObject(ipStation);
 		END_IF
 	END_WHILE
-	THIS^.ipXpSystem.Movers.RestoreIterator();
+	THIS^.ipXpSystem.Movers.RestoreIterator();	
+	
+	
+		
+	//Creat a list of all Paths on this Track
+	THIS^.fbListPathsOnThisTrack.Clear();
+	THIS^.ipXpSystem.Paths.ResetIterator();
+	WHILE THIS^.ipXpSystem.Paths.HasNextObject() DO
+		IF __QUERYINTERFACE(THIS^.ipXpSystem.Paths.GetNextObject(), ipPath)AND_THEN __ISVALIDREF(ipPath.TracksUsed) AND_THEN ipPath.TracksUsed.ObjectInList(ipThisTrack) THEN
+			THIS^.fbListPathsOnThisTrack.AddObject(ipPath);
+		END_IF
+	END_WHILE
+	THIS^.ipXpSystem.Paths.RestoreIterator();	
 	
 END_IF
 ]]></ST>
@@ -589,6 +673,57 @@ Reset := S_OK;
 
 
 ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="StationAhedPosition" Id="{b7ff30e8-52a5-4be1-97f6-04f993b8234e}">
+      <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is ahead
+	If no station on this track, result is maybe on another track*)
+METHOD StationAhedPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+VAR
+	fDistToTempBestStaton : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;;
+	ipTempBestStation : I_XP_Station;
+	fDist :LREAL;
+	bStartAndEndIsOnThisTrack : BOOL;
+	ipThisTrack : I_XP_Track := (THIS^);
+	ipEachPathOnTrack : I_XP_Path;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbListPathsOnThisTrack.ResetIterator();
+WHILE THIS^.fbListPathsOnThisTrack.HasNextObject() DO
+	IF __QUERYINTERFACE(THIS^.fbListPathsOnThisTrack.GetNextObject(), ipEachPathOnTrack) THEN
+		
+		bStartAndEndIsOnThisTrack := ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack AND ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack; 
+		
+		//Check if end of route is not before this station
+		IF (ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationDestination.PositionOnTrack < fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
+			//end is before the searched position - not a valide targed
+			CONTINUE;		
+		END_IF
+		
+		//Check if end of route is before this station - CLOSED LOOP, SHORT SEGMENT
+		IF NOT F_InLimitTest(fMinimum := ipEachPathOnTrack.StationStart.PositionOnTrack, fInput:= fPosOnTrack, fMaximum := ipEachPathOnTrack.StationDestination.PositionOnTrack) AND bStartAndEndIsOnThisTrack THEN
+			//end is before the searched position - not a valide targed
+			CONTINUE;		
+		END_IF
+	
+			
+		fDist := ipEachPathOnTrack.DistanceToDestiantion(	ipTrack := ipThisTrack, 
+															fPosOnTrack := 	fPosOnTrack);
+															
+		//Get shortest distance													
+		IF 	fDist <= fDistToTempBestStaton	THEN
+			fDistToTempBestStaton := fDist;
+			ipTempBestStation := ipEachPathOnTrack.StationDestination;
+		END_IF
+		
+	END_IF
+END_WHILE
+THIS^.fbListPathsOnThisTrack.RestoreIterator();
+
+StationAhedPosition := ipTempBestStation;]]></ST>
       </Implementation>
     </Method>
     <Property Name="StationsOnTrack" Id="{ca95f937-74e0-4a2d-ac82-7e91487478dd}">
@@ -665,6 +800,8 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[
+THIS^.Prepare();//Prepare time-critical information, if not already done
+
 
 
 // ********************** Set feedback depending on active command *******************************

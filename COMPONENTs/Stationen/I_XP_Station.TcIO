@@ -64,11 +64,54 @@ PROPERTY Filter : STRING]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
+    <Property Name="MoverAccAtExit" Id="{f6d020e5-5ae6-4fbd-871f-3ced3aa3dc8b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverAccAtExit : MC_LREAL //[mm/s² on Track] Every mover that leaves or passes the station gets this new acceleration as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{b5390215-9e0d-4f6c-9007-25100751e160}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverDecAtExit" Id="{8fa4da0d-915b-49f1-8edc-36b8ff2b8b12}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverDecAtExit : MC_LREAL //[mm/s² on Track] Every mover that leaves or passes the station gets this new deceleration as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{858d3fd4-dc9e-49c8-bbb9-316153a4983d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverGapAtExit" Id="{c5e80f53-5b29-456f-a007-b994ba73eb10}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//[mm] Every mover that leaves or passes the station gets this new gap as a target.
+PROPERTY MoverGapAtExit : LREAL 
+]]></Declaration>
+      <Get Name="Get" Id="{d12a186c-96cc-44d7-b200-559663ffbefe}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{4beb67d3-bee0-4a44-b3b8-42b2d2bb2df6}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoverQueueSize" Id="{80986d81-19b1-42b6-af07-3458ea2c0b50}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverQueueSize : UINT]]></Declaration>
+      <Get Name="Get" Id="{a8272dda-c098-47e7-9f23-a03ea55f0d6c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="MoversInPlace" Id="{0ac094d8-21dd-4bed-9c5a-66becba2a927}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY MoversInPlace : BOOL
 ]]></Declaration>
       <Get Name="Get" Id="{3f8d5da7-f95f-4c2c-bcd6-5db015e4c0cf}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverVelocityAtExit" Id="{5d9d42a8-4ac4-4607-a031-f46c9e2704cd}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverVelocityAtExit : MC_LREAL //[mm/s on Track] Every mover that leaves or passes the station gets this new velocity as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{f3533885-93e6-4be9-9c15-489b563bc262}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -112,6 +155,14 @@ PROPERTY PositionXY : REFERENCE TO  PositionXY]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Method Name="PushMoversOutOfStation" Id="{49ec1e31-cfe0-48bc-8941-6d431ddc0c3b}">
+      <Declaration><![CDATA[//The movers currently in this station must leave the station. 
+//The movers actively search for a destination, but only leave if a new destination is available.
+METHOD PushMoversOutOfStation : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
     <Property Name="ReadyToRecvMovers" Id="{587a5dac-08bc-4c6e-ac52-3ddc0f3e20f9}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //prevent further movers from entering the station, 
@@ -122,15 +173,6 @@ PROPERTY ReadyToRecvMovers : BOOL ]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Method Name="SearchNextBestStationByName" Id="{fcb1507d-3e4c-4581-87d2-84dd7ec17f5f}">
-      <Declaration><![CDATA[METHOD SearchNextBestStationByName : ST_PathFinder_1
-VAR_INPUT
-	sTargedStation : STRING; //unique station name or group of stations
-	nPermittedSearchDepth : UINT;
-	bCallFromExternal: BOOL; //set to true for an external call. set to false for a recursive call
-END_VAR
-]]></Declaration>
-    </Method>
     <Method Name="SendMoversToStation" Id="{ea1d0745-bc3a-4dc6-9685-a98523a491dd}">
       <Declaration><![CDATA[METHOD SendMoversToStation : I_CH_Feedback //All movers in the station are sent to this destination
 VAR_INPUT

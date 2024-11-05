@@ -64,6 +64,16 @@ PROPERTY Feedback : I_XP_Feedback]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Method Name="GapAtPosition" Id="{4387fda7-8415-4e9f-ab5a-c5b1be5d697b}">
+      <Declaration><![CDATA[(* Calculates which gap the mover should have on a position
+	The gap results from the last station crossed.
+	If several stations are possible ( switch), the largest gap is displayed here *)
+METHOD GapAtPosition : LREAL
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
     <Property Name="Length" Id="{35044908-1b9c-4871-a3ff-14ae54040ef3}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //[mm]
@@ -86,6 +96,15 @@ PROPERTY PlanarTrack : REFERENCE TO MC_PlanarTrack]]></Declaration>
     <Method Name="Reset" Id="{2f8c91d6-0cfd-4177-bb04-2e49e3ecd0de}">
       <Declaration><![CDATA[METHOD Reset : HRESULT
 VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="StationAhedPosition" Id="{8f31d0eb-b127-41f6-a9ea-ceefd386b8d6}">
+      <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is ahead
+	If no station on this track, result is maybe on another track*)
+METHOD StationAhedPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
 END_VAR
 ]]></Declaration>
     </Method>
