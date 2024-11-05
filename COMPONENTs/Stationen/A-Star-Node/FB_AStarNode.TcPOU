@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_AStarNode" Id="{07d206f6-a6ae-4246-bc90-54a51bd0a4a9}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_AStarNode EXTENDS FB_CH_Object IMPLEMENTS I_PathAStarNode
+VAR
+	{attribute 'hide'}  
+	ipStation : I_XP_Station;
+	{attribute 'hide'}  
+	fbRouteUsedToNode : FB_CH_LIST;	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Property Name="LUID" Id="{a22fdb79-52e5-4bd8-a02b-335ce2cb935b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LUID : STRING]]></Declaration>
+      <Get Name="Get" Id="{02bb79b6-1eed-4c6f-947f-6fe6ca564086}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF THIS^.Station <> 0 THEN
+	LUID := THIS^.Station.LUID;
+END_IF
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PathLength" Id="{ed571b1d-0c44-4396-83d0-0933f7c39ee1}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PathLength : LREAL]]></Declaration>
+      <Get Name="Get" Id="{020066ce-30d4-4faa-87ab-d7ac7b0165e8}">
+        <Declaration><![CDATA[VAR
+	ipEachPath : I_XP_Path;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PathLength := 0.0;
+
+
+fbRouteUsedToNode.ResetIterator();
+WHILE fbRouteUsedToNode.HasNextObject() DO
+	IF __QUERYINTERFACE(fbRouteUsedToNode.GetNextObject(), ipEachPath) THEN
+		PathLength := PathLength + ipEachPath.Length;
+	END_IF
+END_WHILE
+fbRouteUsedToNode.RestoreIterator();]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="RouteUsedToNode" Id="{f22f1e97-309c-4541-9532-c030602922aa}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY RouteUsedToNode : REFERENCE TO FB_CH_List]]></Declaration>
+      <Get Name="Get" Id="{671c6605-d6a2-44e5-a8be-d1bb5b8de6be}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RouteUsedToNode REF= fbRouteUsedToNode;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="SortOrderInList" Id="{6e4b2cee-5e39-476b-97f3-1c17e6c0a518}">
+      <Declaration><![CDATA[//here in this case the SortOrder is used to get the shortest path. 
+PROPERTY SortOrderInList : UDINT]]></Declaration>
+      <Get Name="Get" Id="{a393a764-1956-4616-8402-d905c4b73213}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SortOrderInList := TO_UDINT(THIS^.PathLength);]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Station" Id="{e464feea-c2fe-4643-b0fa-7f4321ef7b9a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Station : I_XP_Station]]></Declaration>
+      <Get Name="Get" Id="{31bcb329-9515-4ebc-a0da-80cba469274a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Station := ipStation;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{95e5c69c-0e2a-4890-aee8-6516de0d3a15}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ipStation := Station;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+  </POU>
+</TcPlcObject>

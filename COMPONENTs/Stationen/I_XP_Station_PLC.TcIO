@@ -52,6 +52,28 @@ PROPERTY LUID : STRING //Locally unique identifier]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="MoverAccAtExit" Id="{11c0add5-230d-4dca-a9d6-57753dabe61d}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverAccAtExit : MC_LREAL //[mm/s² on Track] Every mover that leaves or passes the station gets this new acceleration as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{e3cd6832-076b-4765-8753-f588b54eb118}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{76b92295-e851-4c52-bfa8-171252cbefa1}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoverDecAtExit" Id="{dd056c89-69d4-4515-9e74-e856a993ecda}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverDecAtExit : MC_LREAL //[mm/s² on Track] Every mover that leaves or passes the station gets this new deceleration as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{903c3e3d-3f04-488f-8d94-673f3c3429f9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{3826d7a0-f043-4050-82b6-450c3879cba4}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
     <Property Name="MoverGapAtExit" Id="{01f2af1f-47e7-48a3-aa21-f7dd138600f0}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY MoverGapAtExit : LREAL //[mm] Every mover that leaves or passes the station gets this new gap as a target.
@@ -88,6 +110,17 @@ PROPERTY MoversInQueue : REFERENCE TO ARRAY [0..(CHALET_BaseComponents.BaseParam
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="MoverVelocityAtExit" Id="{c00f5365-c9df-4ac8-8e39-b8da6a5a8fa1}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverVelocityAtExit : MC_LREAL //[mm/s on Track] Every mover that leaves or passes the station gets this new velocity as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{db2400f7-5ac3-4356-b553-562b21a4460e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{c4536fa6-9486-4046-a6c4-55448b951907}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
     <Property Name="PositionOnTrack" Id="{43fdffe2-b360-4cd4-a4b1-fd5a234944a6}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //[mm] from the beginning of the assigned track
@@ -119,6 +152,14 @@ PROPERTY ProcessSimulationActive : BOOL]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Method Name="PushMoversOutOfStation" Id="{83f61256-5574-42dc-bb3f-5e491aaa68f3}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[//The movers currently in this station must leave the station. 
+//The movers actively search for a destination, but only leave if a new destination is available.
+METHOD PushMoversOutOfStation : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
     <Property Name="ReadyToRecvMovers" Id="{cf91281f-c2a6-4445-a2e3-27207a7069dc}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //prevent further movers from entering the station, 
@@ -172,6 +213,25 @@ PROPERTY StationsAhead : I_CH_List]]></Declaration>
 //List of stations behinde this station
 PROPERTY StationsBehinde : I_CH_List]]></Declaration>
       <Get Name="Get" Id="{773577f4-83bf-4e7b-a3bf-ba926ea33d06}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="SuppressDynamicsChange" Id="{d4ece1d2-1669-4e46-880d-2b20311ea0f4}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Suppress to change the dynamic(Gap+velocity) of passing movers. This is usefull in startup
+PROPERTY SuppressDynamicsChange : BOOL ]]></Declaration>
+      <Get Name="Get" Id="{26f9f5ee-3ff9-4cf0-a777-376a9d2c6b60}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{c2c1e386-e29a-4a77-83bc-e1073ff7995a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="System" Id="{26464c50-5d93-4dac-8523-05b12c9c67cd}" FolderPath="Interaction with process\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to CHALET-XPlanar-System
+PROPERTY System : I_XP_System_PLC]]></Declaration>
+      <Get Name="Get" Id="{650666ee-9562-4109-9972-07f6b9ae1936}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
