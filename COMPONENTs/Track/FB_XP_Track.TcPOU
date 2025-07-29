@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="FB_XP_Track" Id="{3b47d2f9-b25f-432c-a6e7-cfeea4a711ff}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
 (* XPlanar track - n per associated XPlanar. Can be instantiated as an array and/or individually
@@ -11,7 +11,7 @@ VAR
 	fbTrack : MC_PlanarTrack;
 	
 	{attribute 'hide'}  
-	bInitDone :BOOL := FALSE;
+	bInitDone : BOOL := FALSE;
 	{attribute 'hide'}               	
 	fbFeedback 			: FB_XP_Feedback(ipSourceInfo := fbSourceInfo);	
 	{attribute 'hide'}                   	
@@ -44,21 +44,45 @@ VAR
 
 	{attribute 'hide'}  
 	fbListPathsOnThisTrack : FB_CH_List;	
+	//Interface to this track in XPlanar Utility Lib
+	ipUtilityTrack  : Tc3_XPlanarUtility.I_McPlanarTrack;
 	
+	fbHelpferStationOnEndOfThisTrack : FB_XP_Station(	ipSystem 			:= 0,
+														ipAccocietedTrack 	:= (THIS^),// =closest track
+														sUniqueName			:= '',
+														sTargetGroup		:= '',
+														nMoverQueueSize		:= 0,
+														xPos				:= 0,
+														yPos				:= 0);	
+														
+	//MC_CIRCLE_XYC_START_CENTER_END has the size of 72 byte													
+	aRawGeometricElements : ARRAY[0.. XPlanarParameterlist.N_MAX_GEOMETRIC_ELEMENTS_PER_TRACK *72] OF LREAL;
+	//Interface to TcComTrack ObjectId
+	ipComObject : ITComObject;
 END_VAR
+VAR CONSTANT
+	N_IDX_OFFSET_PREVIOUS_TRACK 	: UDINT := 16#050300D5; // Parameter(online) in Planar Track object
+	N_IDX_OFFSET_SUBSEQUENT_TRACK 	: UDINT := 16#050300D6; // Parameter(online) in Planar Track object	
+	N_IDX_OFFSET_IS_CLOSED_LOOP		: UDINT := 16#050300E1; // Parameter(online) in Planar Track object	
+	N_IDX_GEOMETRIC_INFO			: UDINT := 16#050300D7; // Parameter(offline) in Planar Track object	
+	GUID_MC_CIRCLE_XYC_START_CENTER_END			: GUID := Tc2_Utilities.STRING_TO_GUID(in:= 'C3BAEC31-7F05-4B2F-A9AE-F0D8872EE557');
+	GUID_MC_POINT_XYC 							: GUID := Tc2_Utilities.STRING_TO_GUID(in:= '9E820E67-264A-4170-958A-0B26CA5C91FA');
+	GUID_MC_LINE_XYC 							: GUID := Tc2_Utilities.STRING_TO_GUID(in:= 'B48A64D8-464F-4B39-8708-C82C1147C8B6');
+END_VAR
+
 
 // Planar-Feedback objects
 VAR
 	{attribute 'hide'} 
-	fbFeedbackDisable: MC_PlanarFeedback;
+	fbFeedbackDisable		: MC_PlanarFeedback;
 	{attribute 'hide'} 
-	fbFeedbackEnable : MC_PlanarFeedback;
+	fbFeedbackEnable 		: MC_PlanarFeedback;
 	{attribute 'hide'} 
-	fbFeedbackAddToGrp : MC_PlanarFeedback;
+	fbFeedbackAddToGrp 		: MC_PlanarFeedback;
 	{attribute 'hide'} 
-	fbFeedbackRmvFromGrp : MC_PlanarFeedback;
+	fbFeedbackRmvFromGrp 	: MC_PlanarFeedback;
 	{attribute 'hide'} 
-	fbFeedbackReset : MC_PlanarFeedback;
+	fbFeedbackReset 		: MC_PlanarFeedback;
 END_VAR
 	
 
@@ -67,7 +91,9 @@ END_VAR
       <ST><![CDATA[]]></ST>
     </Implementation>
     <Folder Name="Enable/Disable" Id="{2b869c2e-39f8-4722-a978-478fda933277}" />
+    <Folder Name="Geometric Informations" Id="{d9dfae71-a864-43d3-8e70-b94447eeedde}" />
     <Folder Name="Group" Id="{e6e14778-ea58-4882-a699-86e8e6047192}" />
+    <Folder Name="XPlanarUtility" Id="{ed4e03bd-4c35-4efc-bcf7-5657486553e7}" />
     <Method Name="AddMover" Id="{4e587a4b-a2fd-42e8-8022-3b33c6b80065}">
       <Declaration><![CDATA[METHOD AddMover : HRESULT
 VAR_INPUT
@@ -95,6 +121,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -150,6 +177,7 @@ END_IF
 
 
 THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Configure;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -167,11 +195,6 @@ VAR
 	nParaSize : UDINT;
 	pParaData : PVOID;
 	hr : HRESULT;
-END_VAR
-VAR CONSTANT
-	N_IDX_OFFSET_PREVIOUS_TRACK 	: UDINT := 16#050300D5; // Parameter(online) in Planar Track object
-	N_IDX_OFFSET_SUBSEQUENT_TRACK 	: UDINT := 16#050300D6; // Parameter(online) in Planar Track object	
-	N_IDX_OFFSET_IS_CLOSED_LOOP		: UDINT := 16#050300E1; // Parameter(online) in Planar Track object	
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -204,8 +227,8 @@ CASE nSeqConfiguring OF
 			//Read bool CLOSED_LOOP
 			nParaSize := SIZEOF(THIS^.bIsClosedLoop);	pParaData := ADR(THIS^.bIsClosedLoop);
 			hr := ipTrackComObject.TcGetObjPara(pid:=N_IDX_OFFSET_IS_CLOSED_LOOP , nData:= nParaSize, pData:= pParaData, pgp:=0 );		
+			FW_SafeRelease(ADR(ipTrackComObject));
 
-			ipTrackComObject.TcRelease();
 			nSeqConfiguring := 300;
 		END_IF
 		
@@ -249,9 +272,16 @@ CASE nSeqConfiguring OF
 				RETURN;;				
 			END_IF
 		END_FOR			
-		nSeqConfiguring := 999;
-			
+		nSeqConfiguring := 400;
+
 		
+	400: //Configure the helper station who is located at the end of this track to improve komplex track routing
+		THIS^.fbHelpferStationOnEndOfThisTrack.PositionXY.SetValuesXY(THIS^.EndPosition.x, THIS^.EndPosition.y);
+		THIS^.fbHelpferStationOnEndOfThisTrack.SuppressDynamicsChange := TRUE;
+		nSeqConfiguring := 999;
+
+		
+	
 	999: // Done
 		Configuring := S_OK;
 		
@@ -284,6 +314,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Disable;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -306,6 +337,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Enable;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -320,6 +352,45 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="EndPosition" Id="{3eee912d-154c-4b33-916a-01b4669bbc05}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position of the end point of this tracks
+PROPERTY EndPosition : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{63128c22-4f0f-4912-b653-cc8d40ba4beb}">
+        <Declaration><![CDATA[VAR_INST
+	stEndPositionXY : MoverVector;
+END_VAR
+VAR
+	fbPositionXYC : PositionXYC;
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.fbTrack.GetPositionAt(THIS^.Length,fbPositionXYC);
+
+
+stEndPositionXY.x := fbPositionXYC.x;
+stEndPositionXY.y := fbPositionXYC.y;
+stEndPositionXY.z := 0;
+stEndPositionXY.a := 0;
+stEndPositionXY.b := 0;
+stEndPositionXY.c := fbPositionXYC.c;
+
+
+
+EndPosition REF= stEndPositionXY;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="FB_exit" Id="{4f01476f-79a4-4db5-92f3-0972795e9781}">
+      <Declaration><![CDATA[METHOD FB_exit : BOOL
+VAR_INPUT
+	bInCopyCode : BOOL; // if TRUE, the exit method is called for exiting an instance that is copied afterwards (online change).
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+FW_SafeRelease(ADR(THIS^.ipComObject));]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="FB_init" Id="{bd7962a8-7fbc-4b97-8a9e-756a233bc51d}">
       <Declaration><![CDATA[METHOD FB_init : BOOL
 VAR_INPUT
@@ -328,14 +399,10 @@ VAR_INPUT
 	
 	ipSystem : I_CH_Object;
 END_VAR
-VAR_INST
-	{attribute 'hide'}
-	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
-END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Do the following code once during start up and not during onlinechange
-IF NOT bFBInitCalledOnce THEN 
+IF NOT bInCopyCode THEN 
 	
 	(* Register to the Xplanar System
 	   1. Test if the interface exists
@@ -343,12 +410,22 @@ IF NOT bFBInitCalledOnce THEN
 	*)
 	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.ipXpSystem) THEN
 		THIS^.ipXpSystem.RegisterTrack(THIS^);
+		
+		
+		THIS^.fbHelpferStationOnEndOfThisTrack.FB_init(	bInCopyCode			:= FALSE,
+														bInitRetains		:= bInitRetains,
+														ipSystem 			:= ipSystem,
+														ipAccocietedTrack 	:= (THIS^),// =closest track
+														sUniqueName			:= CONCAT('HelperStationAtEndOf', THIS^.LUID),
+														sTargetGroup		:= '',
+														nMoverQueueSize		:= 0,
+														xPos				:= 0,
+														yPos				:= 0);	
 	END_IF
-	
 
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 END_IF
-
-bFBInitCalledOnce := TRUE;]]></ST>
+]]></ST>
       </Implementation>
     </Method>
     <Property Name="Feedback" Id="{1564402b-ab3a-4608-8e90-81f38c847303}">
@@ -382,44 +459,65 @@ END_VAR]]></Declaration>
 THIS^.fbListPathsOnThisTrack.ResetIterator();
 WHILE THIS^.fbListPathsOnThisTrack.HasNextObject() DO
 	IF __QUERYINTERFACE(THIS^.fbListPathsOnThisTrack.GetNextObject(), ipEachPathOnTrack) THEN
-			
-		bStartAndEndIsOnThisTrack := ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack AND ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack; 
-			
-		//Check if start of route is maybe on this track
-		IF (ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationStart.PositionOnTrack > fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
-			//start is after the searched position
-			CONTINUE;
-
-		//Check if end of route is maybe on this track
-		ELSIF (ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationDestination.PositionOnTrack <= fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
-			//end is befor the searched position
-			CONTINUE;		
-			
-		//Check if in limit - CLOSED LOOP, SHORT SEGMENT Start > End
-		ELSIF F_InLimitTest(fMinimum := ipEachPathOnTrack.StationStart.PositionOnTrack, fInput:= fPosOnTrack, fMaximum := ipEachPathOnTrack.StationDestination.PositionOnTrack) AND bStartAndEndIsOnThisTrack THEN
-			//track is outside the searched position
-			CONTINUE;		
-
-			
-		ELSE
-			//The gap is valide, use the largest one
+		
+		IF ipEachPathOnTrack.Length > ipEachPathOnTrack.DistanceToDestiantion(fPosOnTrack := fPosOnTrack, ipTrack := ipThisTrack) THEN
 			GapAtPosition := MAX(GapAtPosition, ipEachPathOnTrack.StationStart.MoverGapAtExit);
-
 		END_IF
+			
+		//bStartAndEndIsOnThisTrack := ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack AND ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack; 
+		//	
+		////Check if start of route is maybe on this track
+		//IF (ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationStart.PositionOnTrack > fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
+		//	//start is after the searched position
+		//	CONTINUE;
+        //
+		////Check if end of route is maybe on this track
+		//ELSIF (ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationDestination.PositionOnTrack <= fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
+		//	//end is befor the searched position
+		//	CONTINUE;		
+		//	
+		////Check if in limit - CLOSED LOOP, SHORT SEGMENT Start > End
+		//ELSIF F_InLimitTest(fMinimum := ipEachPathOnTrack.StationStart.PositionOnTrack, fInput:= fPosOnTrack, fMaximum := ipEachPathOnTrack.StationDestination.PositionOnTrack) AND bStartAndEndIsOnThisTrack THEN
+		//	//track is outside the searched position
+		//	CONTINUE;		
+        //
+		//	
+		//ELSE
+		//	//The gap is valide, use the largest one
+		//	GapAtPosition := MAX(GapAtPosition, ipEachPathOnTrack.StationStart.MoverGapAtExit);
+        //
+		//END_IF
 		
 	END_IF
 END_WHILE
 THIS^.fbListPathsOnThisTrack.RestoreIterator();]]></ST>
       </Implementation>
     </Method>
+    <Property Name="HelperStationAtEndOfTrack" Id="{e8df97fd-3383-4b86-8571-fbb8107b888c}">
+      <Declaration><![CDATA[//Each track has an auxiliary station at the end of itself. This is used automatically or not, depending on whether the track also contains stations created by the user.
+//These are used by the movers as auxiliary links to navigate through a complex network.
+{attribute 'monitoring':='call'}
+PROPERTY HelperStationAtEndOfTrack : I_XP_Station]]></Declaration>
+      <Get Name="Get" Id="{c7670e4f-f7ad-4a84-923b-3c3e4ad2d39c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[HelperStationAtEndOfTrack :=  THIS^.fbHelpferStationOnEndOfThisTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="Initialize" Id="{b896fc44-0b73-4eff-afae-ecb801b264e1}">
       <Declaration><![CDATA[METHOD Initialize : HRESULT
 VAR
 	hr : HRESULT;
 	ipStation : I_XP_Station;
 	stVarInfo : __SYSTEM.VAR_INFO;
-	pObject : ITComObject;
 	sName : STRING;
+	ipTcIoXpu : I_TcIoXPlanarProcessingUnit;		
+	nIdxXpu : UDINT;
+	nIdxTrack : UDINT;
+	ipTcIoMover: INT;
 END_VAR
 
 VAR_INST
@@ -434,7 +532,7 @@ IF NOT THIS^.Mapped THEN
 	IF NOT fbInitError.bRaised THEN 
 		//This error cannot be reset. Requires a reset cold
 		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_Base_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
-		stVarInfo := __VARINFO(THIS^.fbTrack.MCTOPLC_STD);
+		stVarInfo := __VARINFO(fbTrack.MCTOPLC_STD);
 		fbInitError.ipArguments.AddString(stVarInfo.Symbol);
 		fbInitError.Raise(0);
 	END_IF
@@ -446,24 +544,34 @@ END_IF
 IF NOT bInitDone THEN
 	//Busy
 	Initialize := S_PENDING;
-	
+	FW_ObjMgr_GetObjectInstance(oid:= THIS^.fbTrack.MCTOPLC_STD.TrackOID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(THIS^.ipComObject));	
 	
 	//TRUE = Use inside PLC the track name from the TcCom Track Object. 
 	//FALSE = overwride TcCom Track object with instance name
-	FW_ObjMgr_GetObjectInstance(oid:= THIS^.fbTrack.MCTOPLC_STD.TrackOID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(pObject));
 	IF XPlanarParameterlist.B_TRACK_NAME_TACKOVER_FROM_TRACK_OBJECT THEN
-		IF pObject <> 0 THEN
-			pObject.TcGetObjectName(objName:= ADR(sName), nameLen := SIZEOF(sName));
-			pObject.TcRelease();
+		IF THIS^.ipComObject <> 0 THEN
+			THIS^.ipComObject.TcGetObjectName(objName:= ADR(sName), nameLen := SIZEOF(sName));	
 			THIS^.fbSourceInfo.sName := sName;
 		END_IF
 	ELSE
-		IF pObject <> 0 THEN
+		IF THIS^.ipComObject <> 0 THEN
 			sName := THIS^.LUID;
-			pObject.TcSetObjectName(ADR(sName));
-			pObject.TcRelease();
+			THIS^.ipComObject.TcSetObjectName(ADR(sName));	
 		END_IF
 	END_IF
+	
+	
+	//Search interface for this OID
+	IF ipXpSystem.Enviroment.UtilityEnvirement <> 0 THEN
+		//Get TcIo-Mover interface to utiliy lib
+		FOR nIdxTrack := 1 TO Param_TcIoXPlanarEnvironment.MaxXPlanarMoversPerXpu DO
+			IF ipXpSystem.Enviroment.UtilityEnvirement.P_TrackOids[nIdxTrack] = THIS^.fbTrack.MCTOPLC_STD.TrackOID THEN
+				THIS^.ipUtilityTrack := ipXpSystem.Enviroment.UtilityEnvirement.McTrack(nIdxTrack);
+				EXIT;
+			END_IF
+		END_FOR
+	END_IF
+
 
 	
 	//Done as sone list is initilized
@@ -476,8 +584,8 @@ END_IF
 
 
 
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
 THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
 //Set done or keep in busy state	
 THIS^.fbFeedback.HR := Initialize;
@@ -532,6 +640,66 @@ MoversOnTrack := THIS^.fbListOfMoversOnTrack;]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Property Name="NbOfGeometricElements" Id="{f55bce07-b4ca-4664-b1cf-7cf991b412c3}" FolderPath="Geometric Informations\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+// Number of elements describing the geometric curve of the track.
+PROPERTY NbOfGeometricElements : UINT]]></Declaration>
+      <Get Name="Get" Id="{88f93434-2753-4ab3-bf33-fe76bb272581}">
+        <Declaration><![CDATA[VAR
+	nParameterSize : UDINT;
+	hr : HRESULT;
+	pParaData : PVOID;
+	nFoundParameterSize : UDINT;
+	nIdx : UDINT;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF THIS^.ipComObject = 0 THEN
+	//Error invalide inteerface
+	RETURN;
+END_IF
+
+//Read Parameter with an unknown size, repeat until size matches
+pParaData := ADR(aRawGeometricElements);
+FOR nParameterSize := 0 TO SIZEOF(aRawGeometricElements) BY SIZEOF(aRawGeometricElements[0])  DO 
+	
+	hr := THIS^.ipComObject.TcGetObjPara(pid:= N_IDX_GEOMETRIC_INFO , nData:= nParameterSize, pData:= pParaData, pgp:=0 );
+	
+	//Exit if matching size is found
+	IF hr = S_OK THEN
+		nFoundParameterSize := nParameterSize;
+		EXIT;
+	END_IF
+END_FOR
+
+IF hr <> S_OK THEN
+	//Todo Error, list is not matching
+	RETURN;
+END_IF
+
+//Empty list
+IF nFoundParameterSize <= SIZEOF(GUID) THEN
+	NbOfGeometricElements := 0;
+	RETURN;
+END_IF
+
+//Count Nb of GUIDs in raw data
+FOR nIdx := 0 TO (nFoundParameterSize-SIZEOF(GUID)) DO
+	//Check if at the position x is a GUID of type GUID_MC_POINT_XYC
+	IF (Tc2_System.MEMCMP(pBuf1:= ADR(GUID_MC_POINT_XYC), pBuf2:= ADR(aRawGeometricElements[nIdx]), n:= SIZEOF(GUID)) = 0) THEN
+		NbOfGeometricElements := NbOfGeometricElements +1;
+		nIdx := nIdx + 20; //Skip size of element
+	ELSIF (Tc2_System.MEMCMP(pBuf1:= ADR(GUID_MC_LINE_XYC), pBuf2:= ADR(aRawGeometricElements[nIdx]), n:= SIZEOF(GUID)) = 0) THEN
+		NbOfGeometricElements := NbOfGeometricElements +1;	
+		nIdx := nIdx + 40; //Skip size of element	
+	ELSIF (Tc2_System.MEMCMP(pBuf1:= ADR(GUID_MC_CIRCLE_XYC_START_CENTER_END), pBuf2:= ADR(aRawGeometricElements[nIdx]), n:= SIZEOF(GUID)) = 0) THEN
+		NbOfGeometricElements := NbOfGeometricElements +1;		
+		nIdx := nIdx + 70; //Skip size of element
+	END_IF
+END_FOR]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="OID" Id="{90983f23-ab27-4c9b-83fe-ad4ce837aabc}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //Unique object ID
@@ -582,7 +750,6 @@ VAR
 	ipStation : I_XP_Station;
 	ipMover : I_XP_Mover;
 	ipPath : I_XP_Path;
-
 END_VAR
 
 VAR_INST
@@ -596,25 +763,25 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 
 	//Creat a list of all Stations on this Track
 	THIS^.fbListOfStationsOnTrack.Clear();
-	THIS^.ipXpSystem.Stations.ResetIterator();
-	WHILE THIS^.ipXpSystem.Stations.HasNextObject() DO
-		IF ToXpStation(THIS^.ipXpSystem.Stations.GetNextObject(), ipStation) AND_THEN ipStation.AccocietedTrack <> 0 AND_THEN ipStation.AccocietedTrack = ipThisTrack THEN
+	THIS^.ipXpSystem.StationsUsed.ResetIterator();
+	WHILE THIS^.ipXpSystem.StationsUsed.HasNextObject() DO
+		IF ToXpStation(THIS^.ipXpSystem.StationsUsed.GetNextObject(), ipStation) AND_THEN ipStation.AccocietedTrack <> 0 AND_THEN ipStation.AccocietedTrack = ipThisTrack THEN
 			THIS^.fbListOfStationsOnTrack.AddObject(ipStation);
 		END_IF
 	END_WHILE
-	THIS^.ipXpSystem.Stations.RestoreIterator();
+	THIS^.ipXpSystem.StationsUsed.RestoreIterator();
 	
 	
 	
 	//Creat a list of all Movers on this Track
 	THIS^.fbListOfMoversOnTrack.Clear();
-	THIS^.ipXpSystem.Movers.ResetIterator();
-	WHILE THIS^.ipXpSystem.Movers.HasNextObject() DO
-		IF ToXpMover(THIS^.ipXpSystem.Movers.GetNextObject(), ipMover) AND_THEN ipMover.CurrentTrack <> 0 AND_THEN ipMover.CurrentTrack = ipThisTrack THEN
+	THIS^.ipXpSystem.MoversPresent.ResetIterator();
+	WHILE THIS^.ipXpSystem.MoversPresent.HasNextObject() DO
+		IF ToXpMover(THIS^.ipXpSystem.MoversPresent.GetNextObject(), ipMover) AND_THEN ipMover.CurrentTrack <> 0 AND_THEN ipMover.CurrentTrack = ipThisTrack THEN
 			THIS^.fbListOfMoversOnTrack.AddObject(ipStation);
 		END_IF
 	END_WHILE
-	THIS^.ipXpSystem.Movers.RestoreIterator();	
+	THIS^.ipXpSystem.MoversPresent.RestoreIterator();	
 	
 	
 		
@@ -638,6 +805,7 @@ END_IF
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.RemoveFromGroupe;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -657,6 +825,43 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
+    <Method Name="ReplicateGeometricElements" Id="{949de8f3-2386-4c64-af06-a58d624abb64}" FolderPath="Geometric Informations\">
+      <Declaration><![CDATA[//The geometric points of a track are copied. Including the position and type. This only works if the system is disabled.
+METHOD ReplicateGeometricElements : HRESULT
+VAR_INPUT
+	ipTrackCopyFrom : I_XP_Track;
+END_VAR
+VAR
+	ipComObjectExternalTrack  : ITComObject;
+	nParameterSize : UDINT;
+	hr : HRESULT;
+	pParaData : PVOID;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF THIS^.ipComObject = 0 OR ipTrackCopyFrom = 0 THEN
+	//Error invalide interface
+	ReplicateGeometricElements := E_HRESULTAdsErr.INVALIDINTERFACE;
+	RETURN;
+END_IF
+
+pParaData := ADR(aRawGeometricElements);
+nParameterSize := SIZEOF(aRawGeometricElements);
+
+//Get interface to external track
+hr := FW_ObjMgr_GetObjectInstance(oid:= ipTrackCopyFrom.OID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObjectExternalTrack));	
+
+//Read Parameter from external track
+IF ipComObjectExternalTrack <> 0 THEN
+	hr := ipComObjectExternalTrack.TcGetObjPara(pid:= N_IDX_GEOMETRIC_INFO , nData:= nParameterSize, pData:= pParaData, pgp:=0 );
+	
+	//Set Parameter in this local track
+	IF (hr=S_OK) THEN
+		ReplicateGeometricElements := THIS^.ipComObject.TcSetObjPara(pid:= N_IDX_GEOMETRIC_INFO , nData:= nParameterSize, pData:= pParaData, pgp:=0 );
+	END_IF
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Reset" Id="{d67cf55e-473b-48f9-af14-d88c18e7c136}">
       <Declaration><![CDATA[METHOD Reset : HRESULT
 VAR_INPUT
@@ -664,6 +869,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Reset;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -675,6 +881,135 @@ Reset := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
+    <Method Name="ShiftTrack" Id="{94d896de-1ed1-443d-8df4-fcd8541a269b}" FolderPath="Geometric Informations\">
+      <Declaration><![CDATA[//move all points of the track geometry. Only works if the system is disabled.
+METHOD ShiftTrack : HRESULT
+VAR_INPUT
+	xOffset, yOffset : LREAL;
+END_VAR
+VAR
+	nParameterSize : UDINT;
+	hr : HRESULT;
+	pParaData : PVOID;
+	nFoundParameterSize : UDINT;
+	nIdx : UDINT;
+	nTempIndex : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF THIS^.ipComObject = 0 THEN
+	//Error invalide interface
+	ShiftTrack := E_HRESULTAdsErr.INVALIDINTERFACE;
+	RETURN;
+END_IF
+
+//Read Parameter with an unknown size, repeat until size matches
+pParaData := ADR(aRawGeometricElements);
+FOR nParameterSize := 0 TO SIZEOF(aRawGeometricElements) BY SIZEOF(aRawGeometricElements[0])  DO 
+	
+	hr := THIS^.ipComObject.TcGetObjPara(pid:= N_IDX_GEOMETRIC_INFO , nData:= nParameterSize, pData:= pParaData, pgp:=0 );
+	
+	//Exit if matching size is found
+	IF hr = S_OK THEN
+		nFoundParameterSize := nParameterSize;
+		EXIT;
+	END_IF
+END_FOR
+
+
+//List is not matching
+IF hr <> S_OK THEN
+	ShiftTrack := Tc2_System.E_HRESULTAdsErr.INVALIDSIZE;
+	RETURN;
+END_IF
+
+//Empty list
+IF nFoundParameterSize <= SIZEOF(GUID) THEN
+	ShiftTrack := S_FALSE;
+	RETURN;
+END_IF
+
+//Count Nb of GUIDs in raw data
+FOR nIdx := 0 TO (nFoundParameterSize-SIZEOF(GUID)) DO
+	//Check if at the position x is a GUID of type GUID_MC_POINT_XYC
+	IF (Tc2_System.MEMCMP(pBuf1:= ADR(GUID_MC_POINT_XYC), pBuf2:= ADR(aRawGeometricElements[nIdx]), n:= SIZEOF(GUID)) = 0) THEN
+		//Modify x
+		nTempIndex := nIdx+ 2(*GUID*) + 0*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + xOffset;
+		//Modify y
+		nTempIndex := nIdx+ 2(*GUID*) + 1*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + yOffset;
+		nIdx := nIdx + 3 -1; //Skip size of element
+	ELSIF (Tc2_System.MEMCMP(pBuf1:= ADR(GUID_MC_LINE_XYC), pBuf2:= ADR(aRawGeometricElements[nIdx]), n:= SIZEOF(GUID)) = 0) THEN
+		//Modify start x
+		nTempIndex := nIdx+ 2(*GUID*) + 0*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + xOffset;
+		//Modify start y
+		nTempIndex := nIdx+ 2(*GUID*) + 1*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + yOffset;
+		//Modify end x
+		nTempIndex := nIdx+ 2(*GUID*) + 3*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + xOffset;
+		//Modify end y
+		nTempIndex := nIdx+ 2(*GUID*) + 4*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + yOffset;
+		nIdx := nIdx + 6 -1; //Skip size of element	
+	ELSIF (Tc2_System.MEMCMP(pBuf1:= ADR(GUID_MC_CIRCLE_XYC_START_CENTER_END), pBuf2:= ADR(aRawGeometricElements[nIdx]), n:= SIZEOF(GUID)) = 0) THEN
+		//Modify start x
+		nTempIndex := nIdx+ 2(*GUID*) + 0*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + xOffset;
+		//Modify start y
+		nTempIndex := nIdx+ 2(*GUID*) + 1*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + yOffset;
+		//Modify end x
+		nTempIndex := nIdx+ 2(*GUID*) + 3*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + xOffset;
+		//Modify end y
+		nTempIndex := nIdx+ 2(*GUID*) + 4*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + yOffset;
+		//Modify center x
+		nTempIndex := nIdx+ 2(*GUID*) + 6*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + xOffset;
+		//Modify center y
+		nTempIndex := nIdx+ 2(*GUID*) + 7*1(*LREAL*);
+		aRawGeometricElements[nTempIndex] := aRawGeometricElements[nTempIndex] + yOffset;
+		nIdx := nIdx + 9 -1; //Skip size of element
+	END_IF
+END_FOR
+
+
+//Write new raw parameter to tccom track
+pParaData := ADR(aRawGeometricElements);
+ShiftTrack := THIS^.ipComObject.TcSetObjPara(pid:= N_IDX_GEOMETRIC_INFO , nData:= nFoundParameterSize, pData:= pParaData, pgp:=0 );]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="StartPosition" Id="{29915506-1bd6-4ad9-b148-10b27e13ced7}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position of the start point of this tracks
+PROPERTY StartPosition : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{8a608550-8056-4959-9949-33edef428741}">
+        <Declaration><![CDATA[VAR_INST
+	stStartPositionXY : MoverVector;
+END_VAR
+VAR
+	fbPositionXYC : PositionXYC;
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.fbTrack.GetPositionAt(0,position := fbPositionXYC);
+
+
+stStartPositionXY.x := fbPositionXYC.x;
+stStartPositionXY.y := fbPositionXYC.y;
+stStartPositionXY.z := 0;
+stStartPositionXY.a := 0;
+stStartPositionXY.b := 0;
+stStartPositionXY.c := fbPositionXYC.c;
+
+
+
+StartPosition REF= stStartPositionXY;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="StationAhedPosition" Id="{b7ff30e8-52a5-4be1-97f6-04f993b8234e}">
       <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is ahead
 	If no station on this track, result is maybe on another track*)
@@ -699,13 +1034,13 @@ WHILE THIS^.fbListPathsOnThisTrack.HasNextObject() DO
 		
 		//Check if end of route is not before this station
 		IF (ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationDestination.PositionOnTrack < fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
-			//end is before the searched position - not a valide targed
+			//end is before the searched position - not a valide target
 			CONTINUE;		
 		END_IF
 		
 		//Check if end of route is before this station - CLOSED LOOP, SHORT SEGMENT
 		IF NOT F_InLimitTest(fMinimum := ipEachPathOnTrack.StationStart.PositionOnTrack, fInput:= fPosOnTrack, fMaximum := ipEachPathOnTrack.StationDestination.PositionOnTrack) AND bStartAndEndIsOnThisTrack THEN
-			//end is before the searched position - not a valide targed
+			//end is before the searched position - not a valide target
 			CONTINUE;		
 		END_IF
 	
@@ -726,6 +1061,112 @@ THIS^.fbListPathsOnThisTrack.RestoreIterator();
 StationAhedPosition := ipTempBestStation;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="StationBehindPosition" Id="{297140b3-c91d-4235-b57f-f377efcd965e}">
+      <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is behind
+	If no station on this track, result is maybe on another track*)
+METHOD StationBehindPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+VAR
+	fDistToTempBestStaton : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;;
+	ipTempBestStation : I_XP_Station;
+	fDist :LREAL;
+	bStartAndEndIsOnThisTrack : BOOL;
+	ipThisTrack : I_XP_Track := (THIS^);
+	ipEachPathOnTrack : I_XP_Path;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbListPathsOnThisTrack.ResetIterator();
+WHILE THIS^.fbListPathsOnThisTrack.HasNextObject() DO
+	IF __QUERYINTERFACE(THIS^.fbListPathsOnThisTrack.GetNextObject(), ipEachPathOnTrack) THEN
+		
+		bStartAndEndIsOnThisTrack := ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack AND ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack; 
+		
+		//Check if end of route is not before this station
+		IF (ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationDestination.PositionOnTrack < fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
+			//end is before the searched position - not a valide target
+			CONTINUE;		
+		END_IF
+		
+		//Check if end of route is before this station - CLOSED LOOP, SHORT SEGMENT
+		IF NOT F_InLimitTest(fMinimum := ipEachPathOnTrack.StationStart.PositionOnTrack, fInput:= fPosOnTrack, fMaximum := ipEachPathOnTrack.StationDestination.PositionOnTrack) AND bStartAndEndIsOnThisTrack THEN
+			//end is before the searched position - not a valide target
+			CONTINUE;		
+		END_IF
+	
+		//Dist to Start	
+		fDist := ipEachPathOnTrack.Length - ipEachPathOnTrack.DistanceToDestiantion(	ipTrack := ipThisTrack, 
+																						fPosOnTrack := 	fPosOnTrack);
+															
+		//Get shortest distance													
+		IF 	fDist <= fDistToTempBestStaton	THEN
+			fDistToTempBestStaton := fDist;
+			ipTempBestStation := ipEachPathOnTrack.StationDestination;
+		END_IF
+		
+	END_IF
+END_WHILE
+THIS^.fbListPathsOnThisTrack.RestoreIterator();
+
+StationBehindPosition := ipTempBestStation;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="StationClosestTo" Id="{17715c8f-0fa8-4d44-9e57-92ed973b8dcc}">
+      <Declaration><![CDATA[(* Returns the closest station on current, ahead or behind track*)
+METHOD StationClosestTo : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+VAR
+	fDistToTempBestStaton : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;;
+	ipTempBestStation : I_XP_Station;
+	fDist :LREAL;
+	bStartAndEndIsOnThisTrack : BOOL;
+	ipThisTrack : I_XP_Track := (THIS^);
+	ipEachPathOnTrack : I_XP_Path;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbListPathsOnThisTrack.ResetIterator();
+WHILE THIS^.fbListPathsOnThisTrack.HasNextObject() DO
+	IF __QUERYINTERFACE(THIS^.fbListPathsOnThisTrack.GetNextObject(), ipEachPathOnTrack) THEN
+		
+		bStartAndEndIsOnThisTrack := ipEachPathOnTrack.StationStart.AccocietedTrack = ipThisTrack AND ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack; 
+		
+		//Check if end of route is not before this station
+		IF (ipEachPathOnTrack.StationDestination.AccocietedTrack = ipThisTrack) AND (ipEachPathOnTrack.StationDestination.PositionOnTrack < fPosOnTrack) AND NOT bStartAndEndIsOnThisTrack THEN
+			//end is before the searched position - not a valide target
+			CONTINUE;		
+		END_IF
+		
+		//Check if end of route is before this station - CLOSED LOOP, SHORT SEGMENT
+		IF NOT F_InLimitTest(fMinimum := ipEachPathOnTrack.StationStart.PositionOnTrack, fInput:= fPosOnTrack, fMaximum := ipEachPathOnTrack.StationDestination.PositionOnTrack) AND bStartAndEndIsOnThisTrack THEN
+			//end is before the searched position - not a valide target
+			CONTINUE;		
+		END_IF
+	
+		//Dist to End				
+		fDist := ipEachPathOnTrack.DistanceToDestiantion(	ipTrack := ipThisTrack, 
+															fPosOnTrack := 	fPosOnTrack);
+		//Dist to Start	
+		fDist := MIN(fDist, ipEachPathOnTrack.Length - ipEachPathOnTrack.DistanceToDestiantion(	ipTrack := ipThisTrack, 
+																						fPosOnTrack := 	fPosOnTrack));
+
+
+															
+		//Get shortest distance													
+		IF 	fDist <= fDistToTempBestStaton	THEN
+			fDistToTempBestStaton := fDist;
+			ipTempBestStation := ipEachPathOnTrack.StationDestination;
+		END_IF
+		
+	END_IF
+END_WHILE
+THIS^.fbListPathsOnThisTrack.RestoreIterator();
+
+StationClosestTo := ipTempBestStation;]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="StationsOnTrack" Id="{ca95f937-74e0-4a2d-ac82-7e91487478dd}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //List of interfaces to stations on this track
@@ -739,6 +1180,19 @@ END_VAR
           <ST><![CDATA[THIS^.Prepare();//Prepare a list stations on this track
 
 StationsOnTrack := THIS^.fbListOfStationsOnTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="System" Id="{f15f37e0-fbd4-47cc-95b2-b22fc3a063ba}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to CHALET system to which this object belongs
+PROPERTY System : I_XP_System_PLC]]></Declaration>
+      <Get Name="Get" Id="{047a92ef-c19f-4e3b-8184-c08487dbff88}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//get I_x_System_PLC interface from I_x_System_Registration
+__QUERYINTERFACE(THIS^.ipXpSystem, System);
+]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -805,10 +1259,6 @@ THIS^.Prepare();//Prepare time-critical information, if not already done
 
 
 // ********************** Set feedback depending on active command *******************************
-IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
-	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
-END_IF
-
 CASE THIS^.eActiveCommand OF
 	E_NcAxisCommands.None: 
 		//Display if a Mover Error is active during no command is active
@@ -880,9 +1330,19 @@ fbFeedbackDisable.Update();
 fbFeedbackReset.Update(); 
 fbFeedbackAddToGrp.Update(); 
 fbFeedbackRmvFromGrp.Update(); 
-
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="UtilityTrack" Id="{7c6756da-6b50-4c54-8f7f-c35e18a32b59}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to this track in XPlanar Utility Lib
+PROPERTY UtilityTrack : Tc3_XPlanarUtility.I_McPlanarTrack]]></Declaration>
+      <Get Name="Get" Id="{c02674e6-d175-4a6b-b428-baf9f7b8de19}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[UtilityTrack :=  THIS^.ipUtilityTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
   </POU>
 </TcPlcObject>

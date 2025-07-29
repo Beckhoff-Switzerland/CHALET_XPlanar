@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="F_DistXYVectors" Id="{843066a7-4527-404e-9f56-dd28a8b67375}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION F_DistXYVectors : LREAL
 VAR_INPUT
@@ -13,7 +13,7 @@ END_VAR
     <Implementation>
       <ST><![CDATA[IF NOT __ISVALIDREF(pos1) OR NOT __ISVALIDREF(pos2) THEN
 	//Error
-	F_DistXYVectors := -1;
+	F_DistXYVectors := 0;
 	RETURN;
 END_IF
 

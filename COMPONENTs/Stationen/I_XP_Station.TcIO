@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
   <Itf Name="I_XP_Station" Id="{3d974a17-7bf1-45ea-a1bb-e6a1207524fe}">
     <Declaration><![CDATA[INTERFACE I_XP_Station EXTENDS I_CH_Object
 
@@ -48,8 +48,30 @@ PROPERTY CtsMoversInQueue : UDINT]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="DecisionDistance" Id="{a9da13fa-8337-418d-9117-b2c1523e92c8}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(*[mm]
+As soon as the mover is closer than this distance, the mover can be sent on to the next one if necessary.
+This is the distance from the station to the end of the track or the shortest path to this station. Depending on which is closer. This is to ensure that the mover can no longer be overhauled.
+This proberty can make the internal calculated distance smaller but not larger
+Recalculated each disable/enable of the system*)
+PROPERTY DecisionDistance : LREAL]]></Declaration>
+      <Get Name="Get" Id="{405afc6b-9925-4cfa-b508-7fcad423d239}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{70ccc7ca-62fa-40ae-928f-d46d523e6afa}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
     <Method Name="DeleteMoversQueue" Id="{4df869e3-43c4-41fb-9494-0537850d74ad}">
       <Declaration><![CDATA[METHOD DeleteMoversQueue : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Disassemble" Id="{e6bedab8-8607-4691-b4e5-90a983451aee}">
+      <Declaration><![CDATA[//This method is called when the system is disabled. Links are deleted as they may no longer be valid
+METHOD Disassemble : HRESULT
 VAR_INPUT
 END_VAR
 ]]></Declaration>
@@ -144,6 +166,14 @@ PROPERTY PositionOnTrack : LREAL]]></Declaration>
 //Position on the assigned track
 PROPERTY PositionOnTrackXY : REFERENCE TO PositionXY]]></Declaration>
       <Get Name="Get" Id="{a9dbad2f-8ea7-4f41-a263-b3e5c35b4ffd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrackXYZABC" Id="{d08e8e29-d601-4521-a5e9-1051d678fa65}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position on the assigned track
+PROPERTY PositionOnTrackXYZABC : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{7501df68-fb33-448f-b2b2-f6c0d14452d7}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

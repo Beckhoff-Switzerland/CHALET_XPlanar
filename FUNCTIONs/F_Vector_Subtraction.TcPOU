@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="F_Vector_Subtraction" Id="{efd1a9cc-e21b-4987-b3aa-f9a4f8d3ac51}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION F_Vector_Subtraction : MoverVector //difference = minuend - subtrahend
+    <Declaration><![CDATA[FUNCTION F_Vector_Subtraction : MoverVector //difference.x = minuend.x - subtrahend.x
 VAR_INPUT
 	minuend : REFERENCE TO MoverVector;
 	subtrahend : REFERENCE TO MoverVector;
@@ -21,7 +21,7 @@ F_Vector_Subtraction.y	:= minuend.y	- subtrahend.y;
 F_Vector_Subtraction.z	:= minuend.z	- subtrahend.z;
 F_Vector_Subtraction.a	:= minuend.a	- subtrahend.a;
 F_Vector_Subtraction.b	:= minuend.b	- subtrahend.b;
-F_Vector_Subtraction.z	:= minuend.c	- subtrahend.c;
+F_Vector_Subtraction.c	:= minuend.c	- subtrahend.c;
 ]]></ST>
     </Implementation>
   </POU>

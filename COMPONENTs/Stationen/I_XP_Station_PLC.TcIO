@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <Itf Name="I_XP_Station_PLC" Id="{3b987664-67f6-4cb7-a8f7-0d8b2fa4f315}">
     <Declaration><![CDATA[INTERFACE I_XP_Station_PLC EXTENDS I_CH_Object
 ]]></Declaration>
@@ -26,6 +26,21 @@ PROPERTY CtsMoversInQueue : UDINT]]></Declaration>
       <Get Name="Get" Id="{005f92e2-a7c7-47bd-b35f-f23a0d16341e}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
+    </Property>
+    <Property Name="DecisionDistance" Id="{7ac0fbf9-a57b-4b32-bb60-ff91bf8ba5ae}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(*[mm]
+As soon as the mover is closer than this distance, the mover can be sent on to the next one if necessary.
+This is the distance from the station to the end of the track or the shortest path to this station. Depending on which is closer. This is to ensure that the mover can no longer be overhauled.
+This proberty can make the internal calculated distance smaller but not larger
+Recalculated each disable/enable of the system*)
+PROPERTY DecisionDistance : LREAL]]></Declaration>
+      <Get Name="Get" Id="{eb9186e5-2510-4225-be5c-8362bb15a4c1}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{13eb82e3-8b93-40ac-bbdd-f0a90e5a3b38}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
     </Property>
     <Property Name="Feedback" Id="{8f47576e-547d-412b-ac71-24aad7948980}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
@@ -184,7 +199,7 @@ END_VAR]]></Declaration>
 METHOD SimulationStart : HRESULT
 VAR_INPUT
 	fProcessDuration 		: LREAL; //[s]
-	sTargedStation	: STRING; //Group of the targed station to automatic send after the duration
+	sTargetStation	: STRING; //Group of the target station to automatic send after the duration
 END_VAR]]></Declaration>
     </Method>
     <Method Name="SimulationStartEx" Id="{96f143e8-fb6f-420c-b0c8-ed94be7b1804}" FolderPath="Simulation\">
@@ -229,7 +244,7 @@ PROPERTY SuppressDynamicsChange : BOOL ]]></Declaration>
     </Property>
     <Property Name="System" Id="{26464c50-5d93-4dac-8523-05b12c9c67cd}" FolderPath="Interaction with process\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-//Interface to CHALET-XPlanar-System
+//Interface to CHALET system to which this object belongs
 PROPERTY System : I_XP_System_PLC]]></Declaration>
       <Get Name="Get" Id="{650666ee-9562-4109-9972-07f6b9ae1936}">
         <Declaration><![CDATA[]]></Declaration>

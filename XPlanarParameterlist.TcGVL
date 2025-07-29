@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <GVL Name="XPlanarParameterlist" Id="{8edd5463-cd5b-4961-b538-f0641ed78251}" ParameterList="True">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL CONSTANT 
@@ -8,12 +8,15 @@ VAR_GLOBAL CONSTANT
 	 The default value is “not defined” so the movers remain in the closest station and wait for a valid destination*)
 	S_MOVER_TARGED_INIT : STRING := 'not defined';	
 	
-	(*This value as a Station.Filter allows all movers of any targed*)
-	S_ANY_STATION_NAME : STRING := '';
-	
 	(*Only if enabled, mover take over "VelocytiAtExit" of passed station*)	
 	B_STATIONS_OVERRIDE_MOVER_DYN_CONSTRAINT : BOOL := FALSE;
-
+	
+	(* Automatic generation of missing auxiliary stations on the track. 
+	In order to clearly control the route of a mover, for example, when splitting a track into two tracks, an auxiliary station is created on both tracks. 
+	The mover must pass this auxiliary station. It moves to it and crosses over as soon as the switch point is passed. 
+	This auxiliary station cannot hold a mover (queue size 0) *)
+	B_AUTOMATIC_GENARATE_HELPER_STATIONS : BOOL := TRUE;
+	
 	(*Minimum gap center to center on track [mm] *)
 	F_MOVER_MINIMUM_GAP_ON_TRACK : LREAL := 100.0;
 	
@@ -22,6 +25,19 @@ VAR_GLOBAL CONSTANT
 	
 	(*Determine the absolute C-rotation of the mover when starting up. Requires an “APM9001-0000-4xxx | XPlanar-ID-Bumper”. *)
 	B_GET_MOVER_ORIENTATION : BOOL := FALSE;	
+	B_ID_BUMPER_INSTALLED : BOOL := TRUE;
+	
+	(*Read mover ID when starting up. Requires an “APM9001-0000-4xxx | XPlanar-ID-Bumper”. *)
+	B_GET_MOVER_ID : BOOL := FALSE;	
+	
+	//Quick stop on disable.
+	//TRUE = The mover stops immediately AT the current position
+	//FALSE = The mover cancels the superimposed ExternalSetpoint movement and returns to the track with maximum dynamic. -> Like a rubber band
+	B_QUICKSTOP_ON_DISABLING : BOOL := TRUE;
+	
+	//When the system is enabled, the system checks which movers are actually present. 
+	//Any movers that are not present are moved forward to the “NotPresent” list
+	B_AUTOMATICALLY_REMOVE_NOT_PRESENT_MOVER_AT_ENABLING : BOOL := TRUE;	
 	
 	(*Add envirement to groupe during enabling *)
 	B_ADD_ENVIROMENT_TO_GROUP : BOOL := TRUE;	
@@ -32,6 +48,21 @@ VAR_GLOBAL CONSTANT
 	(*Add movers to groupe during enabling *)
 	B_ADD_MOVERS_TO_GROUP : BOOL := FALSE;	
 					
+	//Velocity during enabling move on track. 0=Default
+	F_ENABLING_ON_TRACK_VELOCITY	: LREAL := 0;
+	
+	(*Acc-/Deceleration during enabling move on track. 0=Default*)
+	F_ENABLING_ON_TRACK_ACC_DEC		: LREAL := 0;
+	
+	(*This value as a Station.Filter allows all movers of any target*)
+	S_ANY_STATION_NAME : STRING := '';
+	
+	//TRUE = Use inside PLC the track name from the TcCom Track Object. If FALSE overwride TcCom Track object with instance name
+	B_TRACK_NAME_TACKOVER_FROM_TRACK_OBJECT : BOOL := TRUE;
+	
+	//If a single-cell sequence step takes longer than this time when enabling the entire system, an error is generated and the enabling is aborted
+	F_TIMEOUT_ERROR_ENABLING : LREAL := 30.0; //[s]
+	
 	(*The movers are only sent to the next free station on the way to the destination. 
 	The distance in mm can be specified here to indicate how much further away the new move command can already be sent.  *)
 	F_DIST_SET_NEW_MOVE_CMD_BEFORE_REACHING_PARENT_STATION : LREAL := 200.0;
@@ -39,16 +70,22 @@ VAR_GLOBAL CONSTANT
 	(*max tracks after a track switch *)
 	N_MAX_STATIONS_AHEAD_OR_BEHIND : UINT := 20;	
 	
-	//Velocity during enabling move on track. 0=Default
-	F_ENABLING_ON_TRACK_VELOCITY	: LREAL := 0;
+	(*A mover must leave the station immediately when the ‘SendMoversToStation’ method is called. The station is then available again.
+	Otherwise, if no destination station is available, the mover waits in the station.*)
+	B_MOVER_MUST_LEAVE_STATION_AT_SET_NEW_TARGED : BOOL := TRUE;
 	
-	//Acc-/Deceleration during enabling move on track. 0=Default
-	F_ENABLING_ON_TRACK_ACC_DEC		: LREAL := 0;
+	(*0: Indicates no or invalid information, e.g. no connection or component not yet ready. 
+	1: The Planar Mover interprets the given dynamic limits in a one-dimensional fashion, with respect to the track's arclength. This way, the maximum velocity is aimed at even in curves. 
+	2: The maximal velocity in curves is reduced to not exceed the maximum x,y radial acceleration there. Produces the same behavior as the None mode when on a straight track. 	*)
+	N_SELECT_MODE_HOW_DYNAMIC_IS_PLANED_ON_TRACK : UINT := 2;
 	
-	//TRUE = Use inside PLC the track name from the TcCom Track Object. If FALSE overwride TcCom Track object with instance name
-	B_TRACK_NAME_TACKOVER_FROM_TRACK_OBJECT : BOOL := TRUE;
+	(*Indicates the way in which gap control is done on track.
+	1:The Planar Mover keeps a distance to its neighbours on track that is at least the sum of gap and stop distance.
+	2:The Planar Mover keeps a distance to its neighbours on track that is at least the gap.*)
+	N_GAP_MODE_ON_TRACK : UINT := 2;
 	
-
+	(* How many elements (point, line or arc) does the most complex track have? *)
+	N_MAX_GEOMETRIC_ELEMENTS_PER_TRACK : UINT := 20;
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

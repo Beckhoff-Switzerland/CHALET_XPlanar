@@ -3530,7 +3530,7 @@ However, it cannot overtake. The station never gives the process a ready signal]
 			</Hides>
 		</DataType>
 		<DataType>
-			<Name GUID="{E50A8DC0-767B-43DD-AE31-A0A4985C325D}">CHALET_Base_Events</Name>
+			<Name GUID="{4E87FD30-6F46-4D9A-82EC-7BB9D1AAB022}">CHALET_Base_Events</Name>
 			<DisplayName TxtId=""><![CDATA[CHALET_Base_Events]]></DisplayName>
 			<EventId>
 				<Name Id="1">ListIsFull</Name>
@@ -3580,6 +3580,27 @@ In the Op state the slave copies the output data of the masters to its outputs. 
 				<DisplayName TxtId=""><![CDATA[EtherCAT device "{0}" is missing connection on Port "{1}"]]></DisplayName>
 				<Severity>Warning</Severity>
 			</EventId>
+			<EventId>
+				<Name Id="10">Invalive_EndOfList</Name>
+				<DisplayName TxtId=""><![CDATA[Invalid. End of the list has already been reached]]></DisplayName>
+				<Severity>Critical</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="11">Invalide_Inputparameter</Name>
+				<DisplayName TxtId=""><![CDATA[Invalid input parameter in method call]]></DisplayName>
+				<Severity>Critical</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="12">ListIsToSmall</Name>
+				<DisplayName TxtId=""><![CDATA[Object cannot be added to the list. The list has too little free space.]]></DisplayName>
+				<Severity>Critical</Severity>
+			</EventId>
+			<EventId>
+				<Name Id="13">FeedbackBusy</Name>
+				<DisplayName TxtId=""><![CDATA[Command {0} is in progress]]></DisplayName>
+				<Comment TxtId=""><![CDATA[This message is pending as long as the function block used is busy.]]></Comment>
+				<Severity>Info</Severity>
+			</EventId>
 			<Hides>
 				<Hide GUID="{646AC05C-D6F8-4D85-9633-FF6C5A75B426}"/>
 				<Hide GUID="{608137E8-90FD-4526-9E9A-9881BE219F3E}"/>
@@ -3599,6 +3620,16 @@ In the Op state the slave copies the output data of the masters to its outputs. 
 				<Hide GUID="{BBF42CD0-4BCA-40D0-9216-18FA736E7E29}"/>
 				<Hide GUID="{A6A35033-8D1E-40D4-9519-4CB4D997550A}"/>
 				<Hide GUID="{6D9C64F9-CB26-46C2-997A-F18F1ACBEFD1}"/>
+				<Hide GUID="{E50A8DC0-767B-43DD-AE31-A0A4985C325D}"/>
+				<Hide GUID="{A0C2081A-E83A-4A9B-9DE1-8D93E59F11FF}"/>
+				<Hide GUID="{8BF3C431-7FB9-426F-897A-77BE4B7B4983}"/>
+				<Hide GUID="{C42DAD2F-6CEC-423C-A63D-3FF502B5C5E8}"/>
+				<Hide GUID="{E9A3FF3D-D26A-4CDF-862D-3EF5E9551B2B}"/>
+				<Hide GUID="{8F4712BD-209B-4BC8-956D-0BB5783CD5BC}"/>
+				<Hide GUID="{9BDFDA69-4855-4483-BC2C-ACB4510818EC}"/>
+				<Hide GUID="{313B71FC-1ABD-4F74-B198-57B896C0D5F7}"/>
+				<Hide GUID="{4141F299-76DA-4EB1-82BE-5293D180523F}"/>
+				<Hide GUID="{35793266-81B7-4216-A4A1-7937E4425D7E}"/>
 			</Hides>
 		</DataType>
 		<DataType>

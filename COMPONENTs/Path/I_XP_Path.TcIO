@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
   <Itf Name="I_XP_Path" Id="{d0a7e409-20e8-490f-be78-3b4ffcbf57b0}">
     <Declaration><![CDATA[INTERFACE I_XP_Path  EXTENDS I_CH_Object
 ]]></Declaration>
@@ -20,12 +20,6 @@ PROPERTY Length : LREAL]]></Declaration>
       <Set Name="Set" Id="{e5b36e72-b398-44b3-b515-7e84f3c44be8}">
         <Declaration><![CDATA[]]></Declaration>
       </Set>
-    </Property>
-    <Property Name="PointerToThis" Id="{2dd54737-87ff-403b-bec1-2c19dbbf8181}">
-      <Declaration><![CDATA[PROPERTY PointerToThis : POINTER TO FB_XP_Path]]></Declaration>
-      <Get Name="Get" Id="{31b8df92-0c58-4bb2-aecd-e42541e7fbef}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
     </Property>
     <Property Name="StationDestination" Id="{0b1ccaa1-9c39-4bc1-b84e-444daddcdd93}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}

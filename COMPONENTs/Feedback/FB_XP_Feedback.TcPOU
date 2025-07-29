@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="FB_XP_Feedback" Id="{67e3d560-09f1-41ce-b857-21295b33fa36}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
-FUNCTION_BLOCK FB_XP_Feedback EXTENDS CHALET_BaseComponents.FB_CH_Feedback IMPLEMENTS I_XP_Feedback
+FUNCTION_BLOCK FB_XP_Feedback EXTENDS CHALET_Nc.FB_NcFeedback IMPLEMENTS I_XP_Feedback
 VAR_INPUT
 END_VAR
 VAR_OUTPUT

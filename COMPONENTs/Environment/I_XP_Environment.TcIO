@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
   <Itf Name="I_XP_Environment" Id="{82d4e6a8-d939-49b0-818e-86b258207442}">
     <Declaration><![CDATA[INTERFACE I_XP_Environment EXTENDS I_CH_Object]]></Declaration>
     <Method Name="AddToGroup" Id="{f4493e59-ad90-4dac-89cb-3c35b7abff5c}">
@@ -11,7 +11,8 @@ END_VAR
 ]]></Declaration>
     </Method>
     <Method Name="Clear" Id="{2eaf657c-b06a-4ac5-8bfd-2f4b4ad6572c}">
-      <Declaration><![CDATA[METHOD Clear : HRESULT
+      <Declaration><![CDATA[(* Clears the Planar Environment (stators and boundary). *)
+METHOD Clear : HRESULT
 ]]></Declaration>
     </Method>
     <Method Name="Configure" Id="{9bbca1e7-a2f1-485d-8de7-8f90a1dc3677}">

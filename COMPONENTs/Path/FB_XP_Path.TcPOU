@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="FB_XP_Path" Id="{a479f742-a551-40e5-a493-f32ce50e69f9}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'enable_dynamic_creation'}
 {attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
@@ -20,8 +20,15 @@ VAR_INPUT
 	fPosOnTrack : LREAL;
 END_VAR
 VAR
-	ipTrackTemp : I_XP_Track; 
-	bStartTrackFound : BOOL := FALSE;
+	bCorrectPos, bCorrectTrack : BOOL;
+	bPosFound : BOOL;
+	fDistReturnNotOnThisTrack : LREAL;
+	fStart, fEnd : LREAL;
+	ipEachTrack : I_XP_Track; 
+END_VAR
+VAR
+	//Todo add tolerance to Size >1
+	fToleranceWindow : LREAL := 0.001;//[mm] if Mover is this distance mor far away from the parent, return 0mm
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF ipTrack = 0 THEN
@@ -30,37 +37,95 @@ END_VAR]]></Declaration>
 	RETURN;
 END_IF
 
+fDistReturnNotOnThisTrack := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+
 IF (fbTracksUsed.OIDInList(ipTrack.OID) = 0) OR fPosOnTrack < 0 OR  fPosOnTrack > ipTrack.Length THEN
 	//Error -  position not on track
-	DistanceToDestiantion := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	DistanceToDestiantion := fDistReturnNotOnThisTrack;
 	RETURN;
 END_IF
 
-//the whole thing works because the tracklist is sorted from start to finish
-fbTracksUsed.ResetIterator();
-WHILE fbTracksUsed.HasNextObject() DO
-	IF ToXpTrack(fbTracksUsed.GetNextObject(),ipTrackTemp) THEN
-		//start countion on requestet track
-		IF ipTrackTemp = ipTrack OR bStartTrackFound THEN
-			bStartTrackFound := TRUE;
-			DistanceToDestiantion := DistanceToDestiantion + ipTrackTemp.Length;
- 		END_IF
+
+IF fbTracksUsed.Size = 1 THEN
+	bCorrectPos := F_InLimitTest(fMinimum :=  THIS^.StationStart.PositionOnTrack, fInput:=fPosOnTrack , fMaximum:=  (THIS^.StationDestination.PositionOnTrack + fToleranceWindow));
+	bCorrectTrack := (ipTrack = StationDestination.AccocietedTrack);
+
+	IF bCorrectPos AND bCorrectTrack THEN
+		DistanceToDestiantion := F_GetDistToPosModulo(fTargetPosition := THIS^.StationDestination.PositionOnTrack, fActualPosition := fPosOnTrack, fModulo := ipTrack.Length);
+		//check tolerance window
+		IF (DistanceToDestiantion + fToleranceWindow) >= ipTrack.Length THEN
+			DistanceToDestiantion := 0.0;
+		END_IF
+	ELSE
+		DistanceToDestiantion := fDistReturnNotOnThisTrack;
 	END_IF
-END_WHILE	
-
-//Startpos
-DistanceToDestiantion := DistanceToDestiantion - fPosOnTrack;
-
-//EndPos
-DistanceToDestiantion := DistanceToDestiantion - (THIS^.StationDestination.AccocietedTrack.Length - THIS^.StationDestination.PositionOnTrack);
-
-//Closed Track Modulo
-//use -1 insted of 0 because thera are LREAL rounding problems if position is exact on destination
-IF (DistanceToDestiantion <= -1.0) AND THIS^.StationDestination.AccocietedTrack.ClosedLoop THEN
-	DistanceToDestiantion := DistanceToDestiantion + THIS^.StationDestination.AccocietedTrack.Length;
+	RETURN;
 END_IF
 
 
+IF fbTracksUsed.Size > 1 THEN 
+	fbTracksUsed.ResetIterator();	
+	
+	////First track in list
+	IF ToXpTrack(fbTracksUsed.GetNextObject(),ipEachTrack) THEN
+		fStart 	:= THIS^.StationStart.PositionOnTrack;
+		fEnd 	:= ipEachTrack.Length;
+		
+		bCorrectPos := F_InLimitTest(fMinimum :=  fStart, fInput:=fPosOnTrack , fMaximum:=  fEnd);
+		bCorrectTrack := (ipTrack = ipEachTrack);
+		IF bCorrectPos AND bCorrectTrack THEN
+			bPosFound := TRUE;
+			DistanceToDestiantion := fEnd - fPosOnTrack;
+		END_IF
+	END_IF
+	
+	
+	//All tracks in between
+	WHILE fbTracksUsed.HasNextObject() DO
+		IF ToXpTrack(fbTracksUsed.GetNextObject(),ipEachTrack) AND_THEN fbTracksUsed.HasNextObject() THEN
+			fStart 	:= 0;
+			fEnd 	:= ipEachTrack.Length;
+			
+			// still locking for the startpoint to measure the distance to Destination
+			IF NOT bPosFound THEN
+				bCorrectPos := F_InLimitTest(fMinimum :=  fStart, fInput:=fPosOnTrack , fMaximum:=  fEnd);
+				bCorrectTrack := (ipTrack = ipEachTrack);
+				IF bCorrectPos AND bCorrectTrack THEN
+					bPosFound := TRUE;
+					DistanceToDestiantion := fEnd - fPosOnTrack;
+				END_IF
+			ELSE
+				// add all the tracklengths
+				DistanceToDestiantion := DistanceToDestiantion + fEnd;		
+			END_IF
+		END_IF
+	END_WHILE	
+	
+	
+	//Last track
+		fStart 	:= 0;
+		fEnd 	:= (THIS^.StationDestination.PositionOnTrack + fToleranceWindow);
+		// still locking for the startpoint to measure the distance to Destination
+		IF NOT bPosFound THEN
+			bCorrectPos := F_InLimitTest(fMinimum :=  fStart, fInput:=fPosOnTrack , fMaximum :=  fEnd);
+			bCorrectTrack := (ipTrack = ipEachTrack);
+			IF bCorrectPos AND bCorrectTrack THEN
+				bPosFound := TRUE;
+				DistanceToDestiantion := MAX(0, THIS^.StationDestination.PositionOnTrack - fPosOnTrack);
+			END_IF
+		ELSE
+			// add all the tracklengths
+			DistanceToDestiantion := DistanceToDestiantion + fEnd;		
+		END_IF
+
+	
+	fbTracksUsed.RestoreIterator();
+	
+	IF NOT bPosFound THEN
+		DistanceToDestiantion := fDistReturnNotOnThisTrack;
+		RETURN;
+	END_IF
+END_IF
 ]]></ST>
       </Implementation>
     </Method>
@@ -114,17 +179,6 @@ END_IF
 
 
 LUID := sTempName;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
-    <Property Name="PointerToThis" Id="{7cb45473-79bc-4eb8-b536-e692625fe3db}">
-      <Declaration><![CDATA[PROPERTY PointerToThis : POINTER TO FB_XP_Path]]></Declaration>
-      <Get Name="Get" Id="{41c51cb3-dcf5-493f-a0fd-76991d480e5a}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[PointerToThis := ADR(THIS^);]]></ST>
         </Implementation>
       </Get>
     </Property>

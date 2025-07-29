@@ -1,9 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <Itf Name="I_XP_Track" Id="{3432d48a-a726-4b83-a12f-d272099ac173}">
     <Declaration><![CDATA[INTERFACE I_XP_Track  EXTENDS I_CH_Object
 
 ]]></Declaration>
+    <Folder Name="XPlanarUtility" Id="{bd4ad0ae-a07d-41d9-baf8-a68836e551ca}" />
     <Method Name="AddMover" Id="{2b200b3a-86da-49d6-8e5e-103f557e3dc0}">
       <Declaration><![CDATA[METHOD AddMover : HRESULT
 VAR_INPUT
@@ -57,6 +58,14 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="EndPosition" Id="{1f5b9e70-ac6a-41a7-9476-96d5d030f0fe}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position of the end point of this tracks
+PROPERTY EndPosition : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{3b096c57-b23c-43bd-9996-4f914659e395}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="Feedback" Id="{04374df7-b187-4c05-b1de-93763caf4aa2}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Feedback : I_XP_Feedback]]></Declaration>
@@ -74,6 +83,15 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="HelperStationAtEndOfTrack" Id="{9cace7ae-a9e0-405e-9b80-5f02561cebbc}">
+      <Declaration><![CDATA[//Each track has an auxiliary station at the end of itself. This is used automatically or not, depending on whether the track also contains stations created by the user.
+//These are used by the movers as auxiliary links to navigate through a complex network.
+{attribute 'monitoring':='call'}
+PROPERTY HelperStationAtEndOfTrack : I_XP_Station]]></Declaration>
+      <Get Name="Get" Id="{1506d667-f833-47d7-8f6e-524c57b03f7f}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="Length" Id="{35044908-1b9c-4871-a3ff-14ae54040ef3}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //[mm]
@@ -99,10 +117,35 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="StartPosition" Id="{b951fada-170d-40a0-8875-d5b54e155019}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position of the start point of this tracks
+PROPERTY StartPosition : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{9abe35cd-10b9-4074-b8ee-7c677dbbb225}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="StationAhedPosition" Id="{8f31d0eb-b127-41f6-a9ea-ceefd386b8d6}">
       <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is ahead
 	If no station on this track, result is maybe on another track*)
 METHOD StationAhedPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="StationBehindPosition" Id="{95de7e33-15e1-4070-9087-dc1b0d564902}">
+      <Declaration><![CDATA[(* Returns the first station on current track who has exact this position or is behind
+	If no station on this track, result is maybe on another track*)
+METHOD StationBehindPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="StationClosestTo" Id="{857eea40-4d49-431b-a1ab-c8065fdbabcf}">
+      <Declaration><![CDATA[(* Returns the closest station on current, ahead or behind track*)
+METHOD StationClosestTo : I_XP_Station
 VAR_INPUT
 	fPosOnTrack : LREAL;//[mm]	
 END_VAR
@@ -143,6 +186,14 @@ PROPERTY TracksEndAtThis : REFERENCE TO  ARRAY[0..(XPlanarParameterlist.N_MAX_ST
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY TracksStartFromThis : REFERENCE TO ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track]]></Declaration>
       <Get Name="Get" Id="{7ea3e3f5-20d0-47aa-b1b0-ea4b617cfbd1}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="UtilityTrack" Id="{d5542f20-7b0f-42e9-9939-59bb65a65b5a}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to this track in XPlanar Utility Lib
+PROPERTY UtilityTrack : Tc3_XPlanarUtility.I_McPlanarTrack]]></Declaration>
+      <Get Name="Get" Id="{cb71f299-d24c-4a6b-8033-bc7047ce4914}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

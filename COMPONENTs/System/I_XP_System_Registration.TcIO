@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <Itf Name="I_XP_System_Registration" Id="{e8de1029-edf1-48ac-8767-37955aeef3bf}">
     <Declaration><![CDATA[INTERFACE I_XP_System_Registration EXTENDS __SYSTEM.IQueryInterface
 
@@ -42,9 +42,18 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Property Name="Movers" Id="{aa051c7e-753f-4cb5-af11-a844d1bb7650}">
+    <Property Name="MoversNotPresent" Id="{209a36cf-6132-4c9c-9062-1e0c87841d24}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY Movers : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+//List of movers that are not present in the current system
+PROPERTY MoversNotPresent : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{cdaff729-127d-4706-93ba-7ac4e0f81734}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoversPresent" Id="{aa051c7e-753f-4cb5-af11-a844d1bb7650}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of movers that are present in the current system
+PROPERTY MoversPresent : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
       <Get Name="Get" Id="{4ff00d70-0801-4749-9f80-ee76d2d47538}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
@@ -92,10 +101,19 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Property Name="Stations" Id="{9e267d53-e260-4129-93cb-10ac6925b467}">
+    <Property Name="StationsAll" Id="{9e267d53-e260-4129-93cb-10ac6925b467}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY Stations : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+//List of all station objects that exist in this project
+PROPERTY StationsAll : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
       <Get Name="Get" Id="{90067f51-2017-4171-ab12-0b28128fd963}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationsUsed" Id="{0e1a6eca-e6ff-4cea-a6a6-da2f48e61189}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of all station objects that are considered for path planning in the currently running system
+PROPERTY StationsUsed : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{fb567a7d-510d-42e3-b536-ba786f3eb048}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

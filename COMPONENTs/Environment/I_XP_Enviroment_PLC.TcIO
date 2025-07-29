@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
   <Itf Name="I_XP_Enviroment_PLC" Id="{d23b004d-987a-48e1-9bb8-d66144d5420d}">
     <Declaration><![CDATA[INTERFACE I_XP_Enviroment_PLC EXTENDS I_CH_Object
 ]]></Declaration>
@@ -54,6 +54,14 @@ PROPERTY MoverDetectionStatus : MoverDetectionStatus]]></Declaration>
 //Object ID of the IoXPlanar processing unit
 PROPERTY ProcessingUnitOID : OTCID]]></Declaration>
       <Get Name="Get" Id="{f1baa752-a470-47d8-936f-8d777d44a21c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="System" Id="{64ddc72a-12e5-40c0-b185-6159ffa98088}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to CHALET system to which this object belongs
+PROPERTY System : I_XP_System_PLC]]></Declaration>
+      <Get Name="Get" Id="{5ec636f5-9a36-488a-9c13-85aa482137f4}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

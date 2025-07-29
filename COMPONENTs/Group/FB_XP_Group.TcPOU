@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="FB_XP_Group" Id="{8498ca03-d67c-40d7-a201-fbe2556517c0}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
 (* XPlanar Collision Avoidance Groupe - 1 per associated XPlanar 
@@ -15,7 +15,7 @@ VAR
 	{attribute 'hide'}  
 	bInitDone :BOOL := FALSE;
 	{attribute 'hide'}
-	iXpSystem : I_XP_System_Registration;
+	ipXpSystem : I_XP_System_Registration;
 	{attribute 'hide'}               	
 	fbFeedback 			: FB_XP_Feedback(ipSourceInfo := fbSourceInfo);	
 	{attribute 'hide'}                   	
@@ -77,6 +77,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Disable;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -94,6 +95,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Enable;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -116,29 +118,24 @@ VAR_INPUT
 	
 	ipSystem : I_CH_Object;
 END_VAR
-VAR_INST
-	{attribute 'hide'}
-	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
-END_VAR]]></Declaration>
+]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Do the following code once during start up and not during onlinechange
-IF NOT bFBInitCalledOnce THEN 
+IF NOT bInCopyCode THEN 
 	
 
 	(* Register to the Xplanar System
 	   1. Test if the interface exists
 	   2. Test if the object implements a "System for Mover" interface 
 	*)
-	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.iXpSystem) THEN
-		THIS^.iXpSystem.LinkGroup(THIS^);
+	IF ipSystem <> 0 AND_THEN __QUERYINTERFACE(ipSystem,THIS^.ipXpSystem) THEN
+		THIS^.ipXpSystem.LinkGroup(THIS^);
 	END_IF
 	
 	
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
+	
 END_IF
-
-bFBInitCalledOnce := TRUE;
-
-
 ]]></ST>
       </Implementation>
     </Method>
@@ -194,9 +191,8 @@ ELSE
 END_IF
 
 
-
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
 THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
 //Set done or keep in busy state	
 THIS^.fbFeedback.HR := Initialize;
@@ -252,6 +248,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Reset;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -266,6 +263,19 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="System" Id="{cf2df25f-a536-4535-afaa-409caed81220}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to CHALET system to which this object belongs
+PROPERTY System : I_XP_System_PLC]]></Declaration>
+      <Get Name="Get" Id="{332880f2-2291-4700-9ccb-48789bbf0329}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//get I_x_System_PLC interface from I_x_System_Registration
+__QUERYINTERFACE(THIS^.ipXpSystem, System);
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="Update" Id="{c50a1686-3c62-4921-a488-8252c4ec92b4}">
       <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
 VAR_INPUT
@@ -276,10 +286,6 @@ END_VAR
 
 
 // ********************** Set feedback depending on active command *******************************
-IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
-	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
-END_IF
-
 CASE THIS^.eActiveCommand OF
 	E_NcAxisCommands.None: 
 		//Display if a Mover Error is active during no command is active

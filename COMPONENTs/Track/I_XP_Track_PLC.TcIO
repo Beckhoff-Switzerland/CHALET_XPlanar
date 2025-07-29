@@ -1,13 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <Itf Name="I_XP_Track_PLC" Id="{e6e7f968-03d3-4a49-a729-42c6442c0da9}">
     <Declaration><![CDATA[INTERFACE I_XP_Track_PLC EXTENDS I_CH_Object
 
 ]]></Declaration>
+    <Folder Name="Geometric Informations" Id="{0951d9d5-ee59-43fc-8a00-09cee739e20e}" />
+    <Folder Name="XPlanarUtility" Id="{ccfbdd43-39df-4637-b44a-ca0a91f5232d}" />
     <Property Name="CtsMoversOnTrack" Id="{a3257dbe-6eca-46f1-99cd-8564a818db88}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY CtsMoversOnTrack : UINT]]></Declaration>
       <Get Name="Get" Id="{3e3d2acb-3129-4e2a-b86f-7221798788aa}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="EndPosition" Id="{0467c31c-39ee-4e7c-a08a-2b3ebbc0a6fc}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position of the end point of this tracks
+PROPERTY EndPosition : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{fa8bb0d4-6f6b-4299-8afc-5f1f48097ac4}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -34,6 +44,14 @@ PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="NbOfGeometricElements" Id="{5f3ba8d3-e4d2-46c1-996b-375415f72df2}" FolderPath="Geometric Informations\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+// Number of elements describing the geometric curve of the track.
+PROPERTY NbOfGeometricElements : UINT]]></Declaration>
+      <Get Name="Get" Id="{1ed8d8bf-ae26-44ce-b01e-becab3357331}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="OID" Id="{bd1cf5af-57a1-4927-b6f2-46edb4bf8d4c}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //Unique object ID
@@ -49,10 +67,50 @@ PROPERTY PlanarTrack : REFERENCE TO MC_PlanarTrack]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Method Name="ReplicateGeometricElements" Id="{421f4eb4-6f86-499b-84fa-22f8f729aa8f}" FolderPath="Geometric Informations\">
+      <Declaration><![CDATA[//The geometric points of a track are copied. Including the position and type. This only works if the system is disabled.
+METHOD ReplicateGeometricElements : HRESULT
+VAR_INPUT
+	ipTrackCopyFrom : I_XP_Track;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="ShiftTrack" Id="{5576c06a-b989-4b4c-a995-12b2e674a4a6}" FolderPath="Geometric Informations\">
+      <Declaration><![CDATA[//move all points of the track geometry. Only works if the system is disabled.
+METHOD ShiftTrack : HRESULT
+VAR_INPUT
+	xOffset, yOffset : LREAL;
+END_VAR]]></Declaration>
+    </Method>
+    <Property Name="StartPosition" Id="{3ed5e23d-2522-4d8f-8969-4f5650f22a1a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Position of the start point of this tracks
+PROPERTY StartPosition : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{3582947b-192b-4bec-a191-36824bc3281e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Method Name="StationAhedPosition" Id="{66046894-762c-43ad-932b-a335bdf7d057}">
       <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is ahead
 	If no station on this track, result is maybe on another track*)
 METHOD StationAhedPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="StationBehindPosition" Id="{379cc49c-cd2b-44f2-be5d-08e490a9f981}">
+      <Declaration><![CDATA[(* Returns the first station on current track who has exact thsi position or is behind
+	If no station on this track, result is maybe on another track*)
+METHOD StationBehindPosition : I_XP_Station
+VAR_INPUT
+	fPosOnTrack : LREAL;//[mm]	
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="StationClosestTo" Id="{61c0f7e9-b231-4b00-97c4-e8d8e0527df1}">
+      <Declaration><![CDATA[(* Returns the closest station on current, ahead or behind track*)
+METHOD StationClosestTo : I_XP_Station
 VAR_INPUT
 	fPosOnTrack : LREAL;//[mm]	
 END_VAR
@@ -63,6 +121,14 @@ END_VAR
 //List of interfaces to stations on this track
 PROPERTY StationsOnTrack : I_CH_List]]></Declaration>
       <Get Name="Get" Id="{fbccfe6e-bcfc-4280-834d-3732a1fcf525}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="System" Id="{535f0e69-98db-40a6-8772-c95521e27bd7}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to CHALET system to which this object belongs
+PROPERTY System : I_XP_System_PLC]]></Declaration>
+      <Get Name="Get" Id="{5ef9fbe2-208d-485d-a201-e83a3cbdc4c5}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -93,6 +159,14 @@ PROPERTY TracksEndAtThis : REFERENCE TO  ARRAY[0..(XPlanarParameterlist.N_MAX_ST
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY TracksStartFromThis : REFERENCE TO ARRAY[0..(XPlanarParameterlist.N_MAX_STATIONS_AHEAD_OR_BEHIND-1)] OF I_XP_Track]]></Declaration>
       <Get Name="Get" Id="{bd47bc51-5d4a-4d12-a9ad-c780a8623c18}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="UtilityTrack" Id="{83f97179-a849-4fcb-90bb-288de50b8323}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to this track in XPlanar Utility Lib
+PROPERTY UtilityTrack : Tc3_XPlanarUtility.I_McPlanarTrack]]></Declaration>
+      <Get Name="Get" Id="{c4857739-c112-45d5-99c0-b1ff254c45a6}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

@@ -27,8 +27,18 @@
     </DeploymentEvents>
     <Released>false</Released>
     <Company>Beckhoff CH</Company>
-    <ProjectVersion>5.1.2</ProjectVersion>
+    <ProjectVersion>5.8.1</ProjectVersion>
     <Title>CHALET_XPlanar</Title>
+    <LibraryCategories>
+      <LibraryCategory xmlns="">
+        <Id>{cbf89c28-b790-4701-8e32-e9e980280c19}</Id>
+        <Version>1.0.0.0</Version>
+        <DefaultName>CHALET</DefaultName>
+      </LibraryCategory>
+    </LibraryCategories>
+    <SelectedLibraryCategories>
+      <Id xmlns="">{cbf89c28-b790-4701-8e32-e9e980280c19}</Id>
+    </SelectedLibraryCategories>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="COMPONENTs\Environment\I_XP_Enviroment_PLC.TcIO">
@@ -209,6 +219,12 @@
     <PlaceholderReference Include="Tc3_XPlanarUtility">
       <DefaultResolution>Tc3_XPlanarUtility, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc3_XPlanarUtility</Namespace>
+      <Parameters>
+        <Parameter ListName="PARAM_TCIOXPLANARENVIRONMENT">
+          <Key>MAXSUBTILES</Key>
+          <Value>3</Value>
+        </Parameter>
+      </Parameters>
     </PlaceholderReference>
   </ItemGroup>
   <ItemGroup>
@@ -265,10 +281,10 @@
       <Resolution>CAA Types Extern, * (CAA Technical Workgroup)</Resolution>
     </PlaceholderResolution>
     <PlaceholderResolution Include="CHALET_BaseComponents">
-      <Resolution>CHALET_BaseComponents, 3.6.2 (Beckhoff CH)</Resolution>
+      <Resolution>CHALET_BaseComponents, * (Beckhoff CH)</Resolution>
     </PlaceholderResolution>
     <PlaceholderResolution Include="CHALET_Nc">
-      <Resolution>CHALET_Nc, 3.2.7 (Beckhoff CH)</Resolution>
+      <Resolution>CHALET_Nc, * (Beckhoff CH)</Resolution>
     </PlaceholderResolution>
     <PlaceholderResolution Include="CmpApp">
       <Resolution>CmpApp, * (System)</Resolution>

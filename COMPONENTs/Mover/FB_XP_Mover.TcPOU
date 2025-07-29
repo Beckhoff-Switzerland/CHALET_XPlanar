@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="FB_XP_Mover" Id="{ab327e23-c80a-4275-af5f-c83c5ee6f670}" SpecialFunc="None">
     <Declaration><![CDATA[// The warning " Interface of overridden methode xxx of base I_xxx doesn't match declaration" can be disabled here. 
 {warning disable C0094 }
@@ -9,12 +9,13 @@
 	for the user. In addition, the user has the possibility to influence or control the state of the real mover via the Planar mover. *)	
 FUNCTION_BLOCK FB_XP_Mover EXTENDS FB_CH_Object IMPLEMENTS I_XP_Mover, I_XP_Mover_PLC
 VAR
-	fbRoute : FB_CH_List;
+	fbRouteRemaining : FB_CH_List;//Remaining route to the parent station
+	fbRouteComplete : FB_CH_List;//Complete route from last parent to active parent station
 END_VAR
 
 VAR
 	//Link to MC-Mover
-	fbMover : MC_PlanarMover;
+	fbMover : MC_PlanarMover; 
 	
 	{attribute 'hide'}  
 	bInitDone :BOOL := FALSE;
@@ -22,37 +23,39 @@ VAR
 	fbFeedback 			: FB_XP_Feedback(ipSourceInfo := fbSourceInfo);	
 	{attribute 'hide'}                   	
 	eActiveCommand 		: CHALET_Nc.E_NcAxisCommands := CHALET_Nc.E_NcAxisCommands.None;
-	{attribute 'hide'} 
-	fbUtilityMover : FB_McPlanarMover;
 	{attribute 'hide'}
 	ipXpSystem : I_XP_System_Registration;
 	{attribute 'hide'} 
-	sTargedStation : STRING := XPlanarParameterlist.S_MOVER_TARGED_INIT;
+	sTargetStation : STRING := XPlanarParameterlist.S_MOVER_TARGED_INIT;
 	{attribute 'hide'} 
 	sCurrentStation : STRING;
 	{attribute 'hide'}
 	ipParentStation : I_XP_Station; //This is the station in which the Mover is currently standing or moving.	
 	{attribute 'hide'}
 	ipProductData : I_XP_ProductData; //later the required interface of the tool or product can be queried via query interface
+	{attribute 'hide'}	
+	ipMcMover : Tc3_XPlanarUtility.I_McPlanarMover;
+	{attribute 'hide'}	
+	ipTcIoMover : Tc3_XPlanarUtility.I_TcIoXPlanarMover;
 END_VAR
 
 //Recovery
 VAR
 	{attribute 'hide'}
-	//This was the last valid (system enabled) actual  position of the mover
-	stLastValidPositionXYZABC :  MoverVector;
+	stLastValidPositionXYZABC :  MoverVector;//This was the last valid (system enabled) actual  position of the mover
 	{attribute 'hide'}
 	//This was the last valid (system enabled) actual  position of the mover
 	fLastValidPositionOnTrack :  LREAL;
 	{attribute 'hide'}
-	//This was the last valid (system enabled) actual  position of the mover
-	ipLastValidTrack : I_XP_Track;
+	ipLastValidTrack : I_XP_Track;	//This was the last valid (system enabled) actual  position of the mover
 	{attribute 'hide'}
-	fLastCmdTargedPosition : LREAL; //the last commanded target position [mm]
+	fLastCmdTargetPosition : LREAL; //the last commanded target position [mm]
 	{attribute 'hide'}	
-	fLastCmdTargedGap 	: LREAL; //the last commanded target gap
+	fLastCmdTargetGap 	: LREAL; //the last commanded target gap
 	{attribute 'hide'}		
-	ipLastCmdTrack : I_XP_Track;	
+	ipLastCmdTrack : I_XP_Track; //the last commanded target track
+	{attribute 'hide'}			
+	ipLastValidParentStation : I_XP_Station; //the last commanded parent station
 END_VAR
 
 
@@ -64,26 +67,34 @@ VAR
 	AxisSetpointA : FB_NcAxis;
 	AxisSetpointB : FB_NcAxis;
 	AxisSetpointC : FB_NcAxis;
-//	{attribute 'hide'} 
+	{attribute 'hide'} 
 	nSeqStartExternalSetpoint : UINT;
-//	{attribute 'hide'} 	
+	{attribute 'hide'} 	
 	//As long as the bit is still false, the MC_PlanarFeedback should not be evaluated as it may still indicate an old error
 	bEvaluateFeedback: BOOL; 
-//	{attribute 'hide'} 
+	{attribute 'hide'} 
 	bFeedExternalSetpointActive : BOOL; 
-//	{attribute 'hide'} 
+	{attribute 'hide'} 
 	fbFeedbackExternalSetpointStartSeq : FB_CH_Feedback(0);
-//	{attribute 'hide'} 
-	ipMasterMover : I_XP_Mover;
-
-	
-//	{attribute 'hide'} 
+	{attribute 'hide'} 
+	ipMasterMover : I_XP_Mover;	
+	{attribute 'hide'} 
 	stMasterMovementScaling : MoverVector; // if 0, Mover is not folowing this mover axis
-//	{attribute 'hide'} 
+	{attribute 'hide'} 
 	stMasterPositionAtStart : MoverVector;
-	
-	
-	
+END_VAR
+
+
+//Unknown Level
+VAR
+//	{attribute 'hide'} 
+	nSeqLiftFromUnknown : UINT;
+//	{attribute 'hide'} 
+	nSeqLowerToUnknown : UINT;	
+//	{attribute 'hide'} 
+	fbFeedbackLiftFromUnknown  : FB_CH_Feedback(0);
+//	{attribute 'hide'} 
+	fbFeedbackLowerToUnknown : FB_CH_Feedback(0);
 END_VAR
 
 
@@ -136,11 +147,13 @@ END_VAR
       <ST><![CDATA[]]></ST>
     </Implementation>
     <Folder Name="DynamicConstraint" Id="{d445897a-09cb-4fda-a46e-ec867f4d3abd}" />
+    <Folder Name="Enable/Disable" Id="{118cfbc8-9c5c-4824-939f-4f4d77b16207}" />
     <Folder Name="ExternalSetpoint" Id="{a2bf1c81-8843-4280-a370-a856ca37652a}" />
     <Folder Name="Group" Id="{15b18c0c-c114-42c6-81c4-6f4fec930060}" />
+    <Folder Name="Lift/Lower" Id="{4cd918e7-4e80-40e4-995e-703fb0249362}" />
     <Folder Name="Movement" Id="{71fc6c5f-a715-4757-9cea-ae0964b87573}" />
-    <Folder Name="Power" Id="{118cfbc8-9c5c-4824-939f-4f4d77b16207}" />
     <Folder Name="Recovery" Id="{376c217d-78e5-45c7-a391-0a945415567e}" />
+    <Folder Name="RouteToParent" Id="{076d34ec-9f7d-4b2d-bfef-132e00e090c4}" />
     <Folder Name="Status" Id="{7c319981-3d18-43ce-a6fc-e8a539b271cb}" />
     <Folder Name="Track" Id="{b9c51507-74e6-496d-bd54-4011234c577f}" />
     <Folder Name="XPlanarUtility" Id="{6265d6cf-bf94-4db5-a67a-38e99f167093}" />
@@ -155,7 +168,7 @@ PROPERTY AccelerationSet : REFERENCE TO MoverVector]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
+          <ST><![CDATA[//Creat an copy of the struct to view value in targetdbrowser and plc online view
 copyOfData := THIS^.fbMover.MCTOPLC.SET.SetAcc;
 AccelerationSet REF= copyOfData;]]></ST>
         </Implementation>
@@ -210,7 +223,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
-	THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -328,7 +341,7 @@ END_IF
 nParaSize := SIZEOF(fData);	pParaData := ADR(fData);
 
 hr := ipTrackComObject.TcGetObjPara(pid:=N_IDX_OFFSET , nData:= nParaSize, pData:= pParaData, pgp:=0 );
-ipTrackComObject.TcRelease();	
+FW_SafeRelease(ADR(ipTrackComObject));
 
 
 CAxisModulo := TO_LREAL(TO_DINT(fData));]]></ST>
@@ -367,7 +380,7 @@ CurrentTrack := ipTrack;]]></ST>
         </Implementation>
       </Get>
     </Property>
-    <Method Name="Disable" Id="{b8cb871a-a3c3-4b84-ac07-f23f90d00314}" FolderPath="Power\">
+    <Method Name="Disable" Id="{b8cb871a-a3c3-4b84-ac07-f23f90d00314}" FolderPath="Enable/Disable\">
       <Declaration><![CDATA[METHOD Disable : HRESULT
 VAR_INPUT
 END_VAR
@@ -386,17 +399,41 @@ Disable := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
-    <Property Name="DistToParentStation" Id="{7318bf17-d807-4416-9e99-18f45b6519ca}" FolderPath="Status\">
+    <Method Name="Disassemble" Id="{9007d2ab-440d-44f3-a117-b8f7b2035ba9}" FolderPath="Enable/Disable\">
+      <Declaration><![CDATA[//This method is called when the system is disabled. Links are deleted as they may no longer be valid
+METHOD Disassemble : HRESULT
+VAR_INPUT
+END_VAR
+
+//Todo zzz Braucht es diese methode noch?]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[fbRouteComplete.Clear(); 
+fbRouteRemaining.Clear(); 
+
+
+Disassemble := S_OK;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="DistToParentStation" Id="{7318bf17-d807-4416-9e99-18f45b6519ca}" FolderPath="RouteToParent\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 //Distance to the responsible parent station [mm]
 PROPERTY DistToParentStation : LREAL
 ]]></Declaration>
       <Get Name="Get" Id="{f210e1e2-3a19-426e-b9e1-7aab2065228e}">
         <Declaration><![CDATA[VAR
-	fDistToParentStationTemp : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
-	ipPath : I_XP_Path;
+	fDistToParentStationStartup : LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	fDistToParentStationReturn : LREAL;
 	
-	fbPosXY: PositionXY;
+	
+	ipPath : I_XP_Path;
+	bPathFound : BOOL;
+	fTempDistToDest : LREAL;
+	
+	refPosOnTrack : REFERENCE TO MoverVector;
+	ipNextWaypoint : I_XP_Station;
+	
+	fTotalLength : LREAL;
+	fDistToBegin : LREAL;
 END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IF THIS^.ParentStation = 0 THEN
@@ -404,34 +441,71 @@ END_VAR]]></Declaration>
 	RETURN;
 END_IF
 
+//--- Not on track, line 
+IF THIS^.CurrentTrack = 0 THEN
+	refPosOnTrack REF= THIS^.ParentStation.PositionOnTrackXYZABC;
+	fDistToParentStationReturn := F_DistXYVectors(THIS^.PositionAct,refPosOnTrack);
+// ---- ---- ----	
 
-//On track, follow track to parent
-IF THIS^.CurrentTrack <> 0 THEN
 
-	//Get distance to targed station
+//--- at startup there is no route - parent is station ahead
+ELSIF THIS^.fbRouteComplete.IsEmpty THEN
 	//check each path behind the parentstation if the mover is on it
-	THIS^.ParentStation.PathsBehinde.ResetIterator();
-	WHILE THIS^.ParentStation.PathsBehinde.HasNextObject() DO
-		IF __QUERYINTERFACE(THIS^.ParentStation.PathsBehinde.GetNextObject(), ipPath) THEN
+	ParentStation.PathsBehinde.ResetIterator();
+	WHILE ParentStation.PathsBehinde.HasNextObject() DO
+		IF __QUERYINTERFACE(ParentStation.PathsBehinde.GetNextObject(), ipPath) THEN
 			//get shortest distance
-			fDistToParentStationTemp:= MIN(ipPath.DistanceToDestiantion(ipTrack:= THIS^.CurrentTrack, fPosOnTrack := THIS^.PositionOnTrack), fDistToParentStationTemp);
+			fDistToParentStationStartup:= MIN(ipPath.DistanceToDestiantion(ipTrack:= THIS^.CurrentTrack, fPosOnTrack := THIS^.PositionOnTrack), fDistToParentStationStartup);
 		END_IF
 	END_WHILE
-	THIS^.ParentStation.PathsBehinde.RestoreIterator();	
-	DistToParentStation := fDistToParentStationTemp;	
-	RETURN;
+	ParentStation.PathsBehinde.RestoreIterator();	
+	fDistToParentStationReturn := fDistToParentStationStartup;
+// ---- ---- ----
+
+// ---- Normal route dureing enabled system
+ELSE
+	THIS^.fbRouteComplete.ResetIterator();
+	WHILE THIS^.fbRouteComplete.HasNextObject() DO
+		IF __QUERYINTERFACE(THIS^.fbRouteComplete.GetNextObject(), ipPath) THEN
+			fTotalLength := fTotalLength + ipPath.Length;
+		
+			IF NOT bPathFound THEN
+				fTempDistToDest := ipPath.DistanceToDestiantion(ipTrack := THIS^.CurrentTrack, fPosOnTrack := THIS^.PositionOnTrack); 
+				IF 	fTempDistToDest <> CHALET_BaseComponents.GVL_Datatypes.cMaxLreal THEN
+					bPathFound := TRUE;
+					fDistToParentStationReturn := fTempDistToDest;
+				END_IF
+			ELSE 
+				fDistToParentStationReturn := fDistToParentStationReturn + ipPath.Length;
+			END_IF
+		END_IF
+	END_WHILE
+	THIS^.fbRouteComplete.RestoreIterator();
+	// ---- ---- ----
+	
+	
+	//--- If Mover is not on the path, return total length + dist to beginn
+	IF NOT bPathFound THEN
+		THIS^.fbRouteComplete.ResetIterator();
+		IF __QUERYINTERFACE(THIS^.fbRouteComplete.GetNextObject(), ipPath) THEN
+			refPosOnTrack REF= ipPath.StationDestination.PositionOnTrackXYZABC;
+			fDistToBegin := F_DistXYVectors(THIS^.PositionAct, refPosOnTrack);	
+		END_IF
+		THIS^.fbRouteComplete.RestoreIterator();
+		
+		
+		fDistToParentStationReturn := fDistToBegin + fTotalLength;
+	END_IF
+	 // ---- ---- ----
+
 END_IF
+// ---- ---- ----
 
+DistToParentStation := fDistToParentStationReturn;
 
-//Not on track, line 
-IF THIS^.CurrentTrack = 0 THEN
-	fbPosXY.x := THIS^.ParentStation.PositionOnTrackXY.x - THIS^.PositionAct.x;
-	fbPosXY.y := THIS^.ParentStation.PositionOnTrackXY.y - THIS^.PositionAct.y;
-	DistToParentStation := fbPosXY.GetRadius();
-	RETURN;	
-END_IF
-
-
+//Todo absturz, maximalwert von LREAL überschritten
+//redce to 3 decimal places
+//DistToParentStation := DINT_TO_LREAL(LREAL_TO_DINT(fDistToParentStationReturn*1000))/1000.0; 
 ]]></ST>
         </Implementation>
       </Get>
@@ -472,7 +546,7 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
-    <Method Name="Enable" Id="{6cc533e9-b130-4dda-9303-da74bf481acf}" FolderPath="Power\">
+    <Method Name="Enable" Id="{6cc533e9-b130-4dda-9303-da74bf481acf}" FolderPath="Enable/Disable\">
       <Declaration><![CDATA[METHOD Enable : HRESULT
 VAR_INPUT
 END_VAR
@@ -480,7 +554,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Enable;
-	THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -524,13 +598,10 @@ VAR_INPUT
 	
 	ipSystem : I_CH_Object;
 END_VAR
-VAR_INST
-	{attribute 'hide'}
-	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
-END_VAR]]></Declaration>
+]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Do the following code once during start up and not during onlinechange
-IF NOT bFBInitCalledOnce THEN 
+IF NOT bInCopyCode THEN 
 	
 	
 	(* Register to the Xplanar System
@@ -541,9 +612,13 @@ IF NOT bFBInitCalledOnce THEN
 		THIS^.ipXpSystem.RegisterMover(THIS^);
 	END_IF
 
+	
+	
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
+	
+	
 END_IF
-
-bFBInitCalledOnce := TRUE;]]></ST>
+]]></ST>
       </Implementation>
     </Method>
     <Property Name="Feedback" Id="{5ec6e350-9706-452f-beac-38fa18f64b32}">
@@ -565,7 +640,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Halt;
-THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -584,6 +659,19 @@ VAR
 	bWaitForAxisInit : BOOL;
 	hrExtAxis : HRESULT;
 	stVarInfo : __SYSTEM.VAR_INFO;
+	
+	nIdxXpu : UDINT;
+	nIdxMover : UDINT;
+	ipTcIoXpu : I_TcIoXPlanarProcessingUnit;	
+	//nMoverOID : OTCID;
+	nOidHardwareMover : OTCID;
+	hr : HRESULT;
+	ipComObject : ITComObject;
+	nParaSize : UDINT;
+	pParaData : PVOID;
+END_VAR
+VAR CONSTANT
+	N_IDX_HARDWARE_MOVER_OID 	: UDINT := 16#0503012D; // Parameter(online) "Hardware mover OTCID"
 END_VAR
 
 VAR_INST
@@ -609,6 +697,50 @@ END_IF
 
 	
 IF NOT bInitDone THEN
+	//Get MC-Mover interface to utiliy lib
+	FOR nIdxMover := 1 TO ipXpSystem.Enviroment.UtilityEnvirement.P_MoverCount DO
+		IF ipXpSystem.Enviroment.UtilityEnvirement.P_MoverOids[nIdxMover] = THIS^.fbMover.MCTOPLC.STD.MoverOID THEN
+			THIS^.ipMcMover := ipXpSystem.Enviroment.UtilityEnvirement.McMover(nIdxMover);
+			EXIT;
+		END_IF
+	END_FOR
+
+	
+	//get OID of to MC-Mover mapped TcIoMover
+	hr := FW_ObjMgr_GetObjectInstance(oid:= THIS^.fbMover.MCTOPLC.STD.MoverOID, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+	IF ipComObject <> 0 THEN
+		//Get ADR and SIZE
+		nParaSize := SIZEOF(nOidHardwareMover);	pParaData := ADR(nOidHardwareMover);
+		hr := ipComObject.TcGetObjPara(pid:=N_IDX_HARDWARE_MOVER_OID , nData:= nParaSize, pData:= pParaData, pgp:=0 );
+		FW_SafeRelease(ADR(ipComObject));
+		
+		IF nOidHardwareMover = 0 THEN
+			//TODO Errormessage. MC is not mapped to TcIO
+			RETURN;
+		END_IF
+	
+		//Search interface for this OID
+		FOR nIdxXpu := 1 TO ipXpSystem.Enviroment.UtilityEnvirement.P_XpuCount DO
+			ipTcIoXpu := ipXpSystem.Enviroment.UtilityEnvirement.TcIoXpu(nIdxXpu);
+			
+			IF ipTcIoXpu <> 0 THEN
+				//Get TcIo-Mover interface to utiliy lib
+				FOR nIdxMover := 1 TO Param_TcIoXPlanarEnvironment.MaxXPlanarMoversPerXpu DO
+					IF ipTcIoXpu.P_MoverOids[nIdxMover] = nOidHardwareMover THEN
+						THIS^.ipTcIoMover := ipTcIoXpu.TcIoMover(nIdxMover);
+						EXIT;
+					END_IF
+				END_FOR
+			END_IF
+		END_FOR	
+	END_IF
+	
+	IF THIS^.ipTcIoMover = 0 OR THIS^.ipMcMover = 0 THEN
+		//TODO Errormessage. Utility interface not found
+		RETURN;
+	END_IF
+	
+
 	//Set all move dynamic constraint to the axis default value.
 	THIS^.SetDynConstraint_X(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);
 	THIS^.SetDynConstraint_Y(MC_DEFAULT,MC_DEFAULT,MC_DEFAULT,MC_DEFAULT);	
@@ -624,9 +756,10 @@ IF NOT bInitDone THEN
 	IF AxisSetpointZ.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointZ.Initialize());END_IF
 	IF AxisSetpointA.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointA.Initialize());END_IF
 	IF AxisSetpointB.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointB.Initialize());END_IF
-	IF AxisSetpointC.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointC.Initialize());END_IF
+	IF AxisSetpointC.Mapped THEN hrExtAxis := GetMostSignificant(hrExtAxis, AxisSetpointC.Initialize());END_IF	
 	
 	bInitDone := (hrExtAxis = S_OK);	
+	
 	
 	//Pending
 	Initialize := S_PENDING;;	
@@ -636,9 +769,8 @@ ELSE
 END_IF
 
 
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
 THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
-THIS^.fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
 //Set done or keep in busy state	
 THIS^.fbFeedback.HR := Initialize;
@@ -704,39 +836,56 @@ LagDistanceXY := SQRT(EXPT(fErrorX,2) + EXPT(fErrorY,2));
         </Implementation>
       </Get>
     </Property>
-    <Property Name="LastCmdTargedGap" Id="{ca47efdf-1e96-4e64-b8e6-43f733c3da42}" FolderPath="Recovery\">
+    <Property Name="LastCmdTargetGap" Id="{ca47efdf-1e96-4e64-b8e6-43f733c3da42}" FolderPath="Recovery\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
+//The last driving command given had the following value
+PROPERTY LastCmdTargetGap : LREAL]]></Declaration>
       <Get Name="Get" Id="{fbbf4cb3-58d2-4862-af4b-6981a711799e}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[LastCmdTargedGap := fLastCmdTargedGap;]]></ST>
+          <ST><![CDATA[LastCmdTargetGap := fLastCmdTargetGap;]]></ST>
         </Implementation>
       </Get>
     </Property>
-    <Property Name="LastCmdTargedPosition" Id="{6482a76a-6491-4c21-89ec-7fa30453a7d3}" FolderPath="Recovery\">
+    <Property Name="LastCmdTargetPosition" Id="{6482a76a-6491-4c21-89ec-7fa30453a7d3}" FolderPath="Recovery\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY LastCmdTargedPosition : LREAL]]></Declaration>
+//The last driving command given had the following value
+PROPERTY LastCmdTargetPosition : LREAL]]></Declaration>
       <Get Name="Get" Id="{8ec5f96b-7922-4cd0-b523-21fd282e52d5}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[LastCmdTargedPosition := fLastCmdTargedPosition;]]></ST>
+          <ST><![CDATA[LastCmdTargetPosition := fLastCmdTargetPosition;]]></ST>
         </Implementation>
       </Get>
     </Property>
-    <Property Name="LastCmdTargedTrack" Id="{4a89196f-6c6d-425e-991b-80e0f510161a}" FolderPath="Recovery\">
+    <Property Name="LastCmdTargetTrack" Id="{4a89196f-6c6d-425e-991b-80e0f510161a}" FolderPath="Recovery\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY LastCmdTargedTrack: I_XP_Track]]></Declaration>
+//The last driving command given had the following value
+PROPERTY LastCmdTargetTrack: I_XP_Track]]></Declaration>
       <Get Name="Get" Id="{474e9fbb-3f66-4e12-bb99-199d288e7964}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[LastCmdTargedTrack := ipLastCmdTrack;]]></ST>
+          <ST><![CDATA[LastCmdTargetTrack := ipLastCmdTrack;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastValidParentStation" Id="{0159a9a4-bb4e-4a2b-8371-54291b9ebbf1}" FolderPath="Recovery\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//This was the last valid (system enabled) parent station of the mover
+PROPERTY LastValidParentStation : I_XP_Station;]]></Declaration>
+      <Get Name="Get" Id="{1e727396-87c4-4682-82b0-ffde063cd254}">
+        <Declaration><![CDATA[VAR_INST
+
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastValidParentStation := THIS^.ipLastValidParentStation;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -782,6 +931,80 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="LiftFromUnknownLevel" Id="{74cea006-96ba-48bf-8d24-fd9b1707d0f0}" FolderPath="Lift/Lower\">
+      <Declaration><![CDATA[//The mover returns to its SetPos. The force of the Z, A and B axis is slowly increased.
+METHOD LiftFromUnknownLevel : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.LiftFromUnknownLevel;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+
+IF THIS^.fbMover.MCTOPLC.STD.State <> MC_PLANAR_STATE.Enabled THEN
+	//Error wrong state
+	
+	;//zzz Todo Error message
+	
+ELSIF NOT THIS^.Standstill THEN
+	//Error not allowed if mover is moving
+	
+	;//zzz Todo Error message
+	
+ELSE
+	//Start of internal sequence
+	THIS^.fbFeedbackLiftFromUnknown.Busy		:= TRUE;
+	THIS^.nSeqLiftFromUnknown := 1;
+	THIS^.nSeqLowerToUnknown := 0;
+END_IF
+
+
+
+LiftFromUnknownLevel := S_OK;	
+
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="LowerToUnknownLevel" Id="{e789b74c-fe33-48b6-8b0b-5593dd96f5d7}" FolderPath="Lift/Lower\">
+      <Declaration><![CDATA[(* The mover is lowered. The target height is unknown. The force from the Z, A and B axles is then reduced to a minimum. X, Y and C still remain active.
+   This function can be used, for example, to place the mover in a holder.  *)
+METHOD LowerToUnknownLevel : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.LowerToUnknownLevel;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);		
+THIS^.fbFeedback.Busy 				:= TRUE;
+
+
+IF THIS^.fbMover.MCTOPLC.STD.State <> MC_PLANAR_STATE.Enabled THEN
+	//Error wrong state
+	
+	;//zzz Todo Error message
+
+ELSIF NOT THIS^.Standstill THEN
+	//Error not allowed if mover is moving
+	
+	;//zzz Todo Error message
+	
+	
+ELSE
+	//Start of internal sequence
+	THIS^.fbFeedbackLowerToUnknown.Busy		:= TRUE;
+	THIS^.nSeqLowerToUnknown := 1;
+	THIS^.nSeqLiftFromUnknown := 0;
+END_IF
+
+
+
+LowerToUnknownLevel := S_OK;	
+
+	]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="Mapped" Id="{dcb60397-9711-4709-befc-4d0421e5330c}" FolderPath="Status\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Mapped : BOOL //Project is mapped to MC (McToPlc and PlcToMc)
@@ -908,9 +1131,11 @@ END_VAR
       <Implementation>
         <ST><![CDATA[moveOptions.direction := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionPositive;
 moveOptions.additionalTurns := 0;
+moveOptions.gap := XPlanarParameterlist.N_GAP_MODE_ON_TRACK; 
 
 //Use fix gap if requested gap is to small
 moveOptions.gap := MAX(fGap, XPlanarParameterlist.F_MOVER_MINIMUM_GAP_ON_TRACK);
+moveOptions.dynamicMode := XPlanarParameterlist.N_SELECT_MODE_HOW_DYNAMIC_IS_PLANED_ON_TRACK;
 
 IF ipTrack <> 0 THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveOnTrack;
@@ -926,8 +1151,8 @@ IF ipTrack <> 0 THEN
 		options					:= moveOptions);
 	
 	//Store the values
-	fLastCmdTargedPosition 	:= fPosition; //the last commanded target position [mm]
-	fLastCmdTargedGap 		:= moveOptions.gap; //the last commanded target gap
+	fLastCmdTargetPosition 	:= fPosition; //the last commanded target position [mm]
+	fLastCmdTargetGap 		:= moveOptions.gap; //the last commanded target gap
 	ipLastCmdTrack		 	:= ipTrack; //the last commanded target track	
 	
 	
@@ -957,10 +1182,11 @@ END_VAR
       <Implementation>
         <ST><![CDATA[moveOptions.direction := Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionShortestWay;
 moveOptions.additionalTurns := 0;
+moveOptions.gap := XPlanarParameterlist.N_GAP_MODE_ON_TRACK; 
 
 //Use fix gap if requested gap is to small
 moveOptions.gap := MAX(fGap, XPlanarParameterlist.F_MOVER_MINIMUM_GAP_ON_TRACK);
-
+moveOptions.dynamicMode := XPlanarParameterlist.N_SELECT_MODE_HOW_DYNAMIC_IS_PLANED_ON_TRACK;
 
 IF ipTrack <> 0 THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.MoveOnTrack;		
@@ -975,8 +1201,8 @@ IF ipTrack <> 0 THEN
 		constraint				:= THIS^.fbDynConstraintPath, 
 		options					:= moveOptions);
 				
-	fLastCmdTargedPosition 	:= fPosition; //the last commanded target position [mm]
-	fLastCmdTargedGap 		:= moveOptions.gap; //the last commanded target gap
+	fLastCmdTargetPosition 	:= fPosition; //the last commanded target position [mm]
+	fLastCmdTargetGap 		:= moveOptions.gap; //the last commanded target gap
 	ipLastCmdTrack		 	:= ipTrack; //the last commanded target track	
 		
 	MoveOnTrack_ShortestWay := S_OK;
@@ -992,7 +1218,6 @@ END_IF
 VAR_INPUT
 	ipStation : I_XP_Station;
 	fGap : LREAL;
-
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -1035,7 +1260,7 @@ END_IF
 nParaSize := SIZEOF(fData);	pParaData := ADR(fData);
 
 hr := ipTrackComObject.TcGetObjPara(pid:=N_IDX_OFFSET , nData:= nParaSize, pData:= pParaData, pgp:=0 );
-ipTrackComObject.TcRelease();	
+FW_SafeRelease(ADR(ipTrackComObject));
 
 
 MoverHeight := fData;]]></ST>
@@ -1108,7 +1333,7 @@ END_IF
 
 nParaSize := SIZEOF(fData);	pParaData := ADR(fData);
 hr := ipTrackComObject.TcGetObjPara(pid:=N_IDX_OFFSET , nData:= nParaSize, pData:= pParaData, pgp:=0 );
-ipTrackComObject.TcRelease();	
+FW_SafeRelease(ADR(ipTrackComObject));
 
 MoverWidth := fData;]]></ST>
         </Implementation>
@@ -1199,7 +1424,12 @@ END_VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[ipParentStation := ParentStation;]]></ST>
+          <ST><![CDATA[THIS^.ipParentStation := ParentStation;
+
+IF ParentStation <> 0 THEN
+	THIS^.ipLastValidParentStation := ParentStation;
+END_IF
+]]></ST>
         </Implementation>
       </Set>
     </Property>
@@ -1226,7 +1456,7 @@ PROPERTY PositionAct : REFERENCE TO MoverVector]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
+          <ST><![CDATA[//Creat an copy of the struct to view value in targetdbrowser and plc online view
 copyOfActPosition := THIS^.fbMover.MCTOPLC.ACT.ActPos;
 PositionAct REF= copyOfActPosition;]]></ST>
         </Implementation>
@@ -1236,9 +1466,13 @@ PositionAct REF= copyOfActPosition;]]></ST>
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PositionOnTrack : LREAL]]></Declaration>
       <Get Name="Get" Id="{06559a55-124b-46e7-b48f-ab959cd8f5a1}">
-        <Declaration><![CDATA[]]></Declaration>
+        <Declaration><![CDATA[VAR_INST
+	{attribute 'hide'}	
+	fPosOnTrack : LREAL;
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[PositionOnTrack := THIS^.fbMover.MCTOPLC.SETONTRACK.SetPos;]]></ST>
+          <ST><![CDATA[fPosOnTrack := THIS^.fbMover.MCTOPLC.SETONTRACK.SetPos;
+PositionOnTrack := fPosOnTrack;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -1253,7 +1487,7 @@ PROPERTY PositionSet : REFERENCE TO MoverVector]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
+          <ST><![CDATA[//Creat an copy of the struct to view value in targetdbrowser and plc online view
 copyOfSetPosition := THIS^.fbMover.MCTOPLC.SET.SetPos;
 PositionSet REF= copyOfSetPosition;]]></ST>
         </Implementation>
@@ -1353,7 +1587,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="Reset" Id="{c8def4ef-0dd7-4936-ac99-b601ff6334d8}" FolderPath="Power\">
+    <Method Name="Reset" Id="{c8def4ef-0dd7-4936-ac99-b601ff6334d8}" FolderPath="Enable/Disable\">
       <Declaration><![CDATA[METHOD Reset : HRESULT
 VAR_INPUT
 END_VAR
@@ -1372,18 +1606,43 @@ Reset := S_OK;
 ]]></ST>
       </Implementation>
     </Method>
-    <Property Name="Route" Id="{225c188a-e791-4700-b379-0e23d03c467b}" FolderPath="Status\">
+    <Property Name="RouteComplete" Id="{9447cb08-e1b2-48d7-ad55-d4e94022da5b}" FolderPath="RouteToParent\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY Route : REFERENCE TO FB_CH_List]]></Declaration>
+//Complete route from last parent to active parent station
+PROPERTY RouteComplete : I_CH_List]]></Declaration>
+      <Get Name="Get" Id="{a0c6e30e-1f5d-4f6a-b4dc-c70c0f990ace}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RouteComplete := THIS^.fbRouteComplete;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="RouteRemaining" Id="{225c188a-e791-4700-b379-0e23d03c467b}" FolderPath="RouteToParent\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Remaining route to the parent
+PROPERTY RouteRemaining: I_CH_List]]></Declaration>
       <Get Name="Get" Id="{6fce2f11-b3c5-45b0-b007-152ec2b18eb4}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[Route ref= THIS^.fbRoute;]]></ST>
+          <ST><![CDATA[RouteRemaining := THIS^.fbRouteRemaining;]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Method Name="RouteSegmentDone" Id="{55e9e021-1da2-487c-876a-45bcc5abf875}" FolderPath="RouteToParent\">
+      <Declaration><![CDATA[//done segments can be transferred here. these are removed from the remaining route
+METHOD RouteSegmentDone : BOOL
+VAR_INPUT
+	ipPathDone : I_XP_Path;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RouteSegmentDone := THIS^.fbRouteRemaining.RemoveObject(ipPathDone);]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="SetDynConstraint_A" Id="{258e8b01-9716-4568-9659-e1dc2f970166}" FolderPath="DynamicConstraint\">
       <Declaration><![CDATA[METHOD SetDynConstraint_A : BOOL //Dynamic constraints for individual coordinates.
 VAR_INPUT
@@ -1551,6 +1810,25 @@ fbDynConstraintContainer.AddConstraint(fbDynConstraintCoordinates);
 	]]></ST>
       </Implementation>
     </Method>
+    <Method Name="SetRouteToParent" Id="{7ac32361-32cc-4ea7-a1f4-6c007f2bdb28}" FolderPath="RouteToParent\">
+      <Declaration><![CDATA[METHOD SetRouteToParent : HRESULT
+VAR_INPUT
+	ipRoute : I_CH_LIST;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ipRoute = 0 THEN
+	//Clear on empty input
+	THIS^.fbRouteRemaining.Clear();
+	THIS^.fbRouteComplete.Clear();
+ELSE	
+	//set as new route
+	THIS^.fbRouteRemaining.Duplicate(ipRoute);
+	THIS^.fbRouteComplete.Duplicate(ipRoute);	
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="Standstill" Id="{0a4cd6a8-cc63-454a-b536-6c0ade3fd0bc}" FolderPath="Movement\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 (* Velocity is zero *)
@@ -1638,6 +1916,19 @@ END_IF
 StopExternalSetpoint := S_OK;]]></ST>
       </Implementation>
     </Method>
+    <Property Name="System" Id="{2fb804d3-1a54-4817-84d1-21adb4af2ffc}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to CHALET system to which this object belongs
+PROPERTY System : I_XP_System_PLC]]></Declaration>
+      <Get Name="Get" Id="{fa594037-9a16-4f1a-ab0a-e126ea4f39d7}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//get I_x_System_PLC interface from I_x_System_Registration
+__QUERYINTERFACE(THIS^.ipXpSystem, System);
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="TargetStation" Id="{126f0d16-a041-46ed-a396-2cbc60d632b5}" FolderPath="Track\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY TargetStation : STRING]]></Declaration>
@@ -1646,7 +1937,7 @@ PROPERTY TargetStation : STRING]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[TargetStation := THIS^.sTargedStation;]]></ST>
+          <ST><![CDATA[TargetStation := THIS^.sTargetStation;]]></ST>
         </Implementation>
       </Get>
       <Set Name="Set" Id="{e2830ca2-bb79-47b3-8db1-40364793a2cf}">
@@ -1654,29 +1945,9 @@ END_VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[THIS^.sTargedStation := TargetStation;]]></ST>
+          <ST><![CDATA[THIS^.sTargetStation := TargetStation;]]></ST>
         </Implementation>
       </Set>
-    </Property>
-    <Property Name="TcIoXPlanarMover" Id="{8b11592d-c5fc-49f9-8ea2-4c230e1380b3}" FolderPath="XPlanarUtility\">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY TcIoXPlanarMover : Tc3_XPlanarUtility.I_TcIoXPlanarMover]]></Declaration>
-      <Get Name="Get" Id="{94982195-fa79-480b-85bc-04315239c2d2}">
-        <Declaration><![CDATA[VAR
-	nLoopIndex : UINT;
-	ipPlanarMover : I_TcIoXPlanarMover;
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[FOR nLoopIndex := 1 TO UDINT_TO_UINT(Param_TcIoXPlanarEnvironment.MaxXPlanarMoversPerXpu) DO
-	ipPlanarMover := ipXpSystem.Enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
-	IF ipPlanarMover <> 0 AND_THEN ipPlanarMover.GetNcMoverOid() = OID THEN
-		TcIoXPlanarMover := ipXpSystem.enviroment.UtilityEnvirement.XpuTcIo(1).MoverTcIo(nLoopIndex);
-		RETURN;
-	END_IF
-END_FOR]]></ST>
-        </Implementation>
-      </Get>
     </Property>
     <Method Name="Update" Id="{392ff8f6-dff3-42fc-aff2-06120a04576e}">
       <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
@@ -1698,12 +1969,9 @@ END_VAR]]></Declaration>
         <ST><![CDATA[THIS^.Prepare();//Prepare time-critical information, if not already done
 
 THIS^.UpdateExternalSetpoint();
+THIS^.UpdateUnknownLevel();
 
 // ********************** Set feedback depending on active command *******************************
-IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
-	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
-END_IF
-
 CASE THIS^.eActiveCommand OF
 	E_NcAxisCommands.None: 
 		//Display if a Mover Error is active during no command is active
@@ -1804,7 +2072,19 @@ CASE THIS^.eActiveCommand OF
 		;// in Subroutine "UpdateExternalSetpoint"
 	
 	E_NcAxisCommands.StopExternalSetpoint:
-		;// in Subroutine "UpdateExternalSetpoint"
+		;// in Subroutine "UpdateExternalSetpoint"		
+			
+	E_NcAxisCommands.LiftFromUnknownLevel:
+		fbFeedback.Busy 			:= fbFeedbackLiftFromUnknown.Busy;
+		fbFeedback.Done 			:= fbFeedbackLiftFromUnknown.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackLiftFromUnknown.ErrorID;
+        fbFeedback.ClearObjectInfo();
+	
+	E_NcAxisCommands.LowerToUnknownLevel:
+		fbFeedback.Busy 			:= fbFeedbackLowerToUnknown.Busy;
+		fbFeedback.Done 			:= fbFeedbackLowerToUnknown.Done;
+		fbFeedback.ErrorId 			:= fbFeedbackLowerToUnknown.ErrorID;
+        fbFeedback.ClearObjectInfo();
 		
 	ELSE//External command in subclass
 		;
@@ -1821,7 +2101,7 @@ END_IF
 IF Feedback.ObjectInfoEx.Id <> 0 AND Feedback.ObjectInfoEx.Id <> nFeedbackOidOld THEN
 	CASE Feedback.ObjectInfo.ObjectType OF
 		EPlanarObjectType.Mover:
-			Feedback.ObjectInfoEx.ipObject := THIS^.ipXPSystem.Movers.FindOID(Feedback.ObjectInfo.Id);
+			Feedback.ObjectInfoEx.ipObject := THIS^.ipXPSystem.MoversPresent.FindOID(Feedback.ObjectInfo.Id);
 			
 		EPlanarObjectType.Track:
 				Feedback.ObjectInfoEx.ipObject := THIS^.ipXPSystem.Tracks.FindOID(Feedback.ObjectInfo.Id);
@@ -1849,7 +2129,7 @@ ELSIF (nOldNcErrorCode <> THIS^.fbMover.MCTOPLC.STD.ErrorCode) THEN
 	//New Error - Reset, Create and Raise
 	fbAlarmNcErrorCode.Clear(0,0);
 	fbAlarmNcErrorCode.Create(	eventClass		:= TC_EVENT_CLASSES.Tc3_NcErrorCodes, 
-								nEventId		:= (THIS^.fbMover.MCTOPLC.STD.ErrorCode AND 16#FFFF), //Cut HRESULT to 4 digit error code
+								nEventId		:= (TO_DWORD(THIS^.fbMover.MCTOPLC.STD.ErrorCode) AND 16#FFFF), //Cut HRESULT to 4 digit error code
 								eSeverity		:= TcEventSeverity.Error, 
 								ipSourceInfo 	:= THIS^.fbSourceInfo, 
 								bWithConfirmation := FALSE);
@@ -2150,15 +2430,403 @@ IF AxisSetpointB.Mapped THEN AxisSetpointB.Update() ;END_IF
 IF AxisSetpointC.Mapped THEN AxisSetpointC.Update() ;END_IF]]></ST>
       </Implementation>
     </Method>
-    <Property Name="UtilityMover" Id="{cab4f1ac-f949-4b0f-9abb-2fd50f7eddd0}" FolderPath="XPlanarUtility\">
+    <Method Name="UpdateUnknownLevel" Id="{cd7c4d75-1bdc-403d-95c4-20dc11727512}" FolderPath="Lift/Lower\">
+      <Declaration><![CDATA[METHOD PROTECTED UpdateUnknownLevel : HRESULT
+VAR
+	hr : HRESULT;
+	stForceLimitMax: Tc3_XPlanarUtility.Force6D;
+	stForceLimitMin: Tc3_XPlanarUtility.Force6D;
+	stPosLagValueTemp : MoverVector;
+	ipComObject: Tc3_Module.ITComObject;
+	pstForcesAtBeginn : POINTER TO MoverVector;
+END_VAR
+VAR_INST
+	fLowerNPerS : LREAL := 30.0;
+	fLiftNPerS : LREAL := 50.0;
+	fMaxForceFactor : LREAL := 1.0;
+	fMinForceFactor : LREAL := 0.1;
+	fPowerFactor : LREAL := 1.0;
+	fCycleTime_s : LREAL; //[s]	
+	bDoOnceIfDisabled : BOOL;
+	stLagValuesAtBeginn : MoverVector;
+	stForcesAtBeginn :  MoverVector;
+	stForceLimitMaxAtBeginn : Tc3_XPlanarUtility.Force6D;
+	stForceLimitMinAtBeginn : Tc3_XPlanarUtility.Force6D;
+	stValideMinForce		: Tc3_XPlanarUtility.Force6D;
+END_VAR
+VAR CONSTANT
+	N_PTCID_ForceLimitMax : PTCID := 16#03175051;
+	N_PTCID_ForceLimitMin : PTCID := 16#03175052;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.Enabled THEN
+	THIS^.nSeqLowerToUnknown := 0;
+	THIS^.nSeqLiftFromUnknown := 0;
+	
+	fCycleTime_s :=  TO_LREAL(TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleTime(*100ns*)) / 10_000_000.0;
+	stLagValuesAtBeginn := THIS^.UtilityMcMover.GetMaximumPositionLagValue();
+END_IF
+
+//if no TcIoMover is linked e.g. MC-Mover is in Simulation Mover:
+IF THIS^.UtilityTcIoMover = 0 THEN
+	IF fbFeedbackLowerToUnknown.Busy THEN
+		fbFeedbackLowerToUnknown.Done := TRUE;
+	END_IF
+	IF fbFeedbackLiftFromUnknown.Busy THEN
+		fbFeedbackLiftFromUnknown.Done := TRUE;
+	END_IF
+	RETURN;
+END_IF
+
+
+
+IF THIS^.ipXpSystem.Disabled AND bDoOnceIfDisabled THEN
+	bDoOnceIfDisabled := FALSE;
+	fPowerFactor := fMaxForceFactor;
+	
+	FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityTcIoMover.ObjectId, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+	IF ipComObject <> 0 THEN
+		// No minimum can be set if one of the 6 values in the struct is greater than the maximum. Equal is allowed.
+		// The minimum is therefore first written to something valid. Followed by Max and the original minimum
+		hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stValideMinForce), pData := ADR(stValideMinForce), pgp := 0);
+		hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMax, nData := SIZEOF(stForceLimitMaxAtBeginn), pData := ADR(stForceLimitMaxAtBeginn), pgp := 0);
+		hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stForceLimitMinAtBeginn), pData := ADR(stForceLimitMinAtBeginn), pgp := 0);
+		FW_SafeRelease(ADR(ipComObject));
+	END_IF
+
+	THIS^.UtilityMcMover.SetMaximumPositionLagValue(stLagValuesAtBeginn);
+END_IF
+
+
+//Down
+CASE nSeqLowerToUnknown OF
+	0: //Wait for start
+		;
+		
+	1: // Check if not already lewered	
+		IF fPowerFactor = fMinForceFactor THEN
+			nSeqLowerToUnknown := 999;
+		ELSE
+			nSeqLowerToUnknown := 5;
+		END_IF
+		
+	5:	//Get some values
+		pstForcesAtBeginn := THIS^.UtilityTcIoMover.ScopeAdr.GetOutputForce();
+		stForcesAtBeginn := pstForcesAtBeginn^;
+		stForceLimitMaxAtBeginn := THIS^.UtilityTcIoMover.GetForceLimitMax();
+		stForceLimitMinAtBeginn := THIS^.UtilityTcIoMover.GetForceLimitMin();
+		stValideMinForce.Fx := (stForceLimitMinAtBeginn.Fx * fMinForceFactor);
+		stValideMinForce.Fy := (stForceLimitMinAtBeginn.Fy * fMinForceFactor);
+		stValideMinForce.Fz := (stForceLimitMinAtBeginn.Fz * fMinForceFactor);
+		stValideMinForce.Mx := (stForceLimitMinAtBeginn.Mx * fMinForceFactor);
+		stValideMinForce.My := (stForceLimitMinAtBeginn.My * fMinForceFactor);
+		stValideMinForce.Mz := (stForceLimitMinAtBeginn.Mz * fMinForceFactor);
+		bDoOnceIfDisabled := TRUE;
+		
+		stPosLagValueTemp := stLagValuesAtBeginn;
+		stPosLagValueTemp.z := THIS^.PositionSet.z + 0.5;
+		THIS^.UtilityMcMover.SetMaximumPositionLagValue(stPosLagValueTemp);
+		
+		
+		//0.0 - 1.0
+		fPowerFactor := (stForcesAtBeginn.z / stForceLimitMaxAtBeginn.Fz);
+		
+		//add 5%
+		fPowerFactor := fPowerFactor + 0.05;
+		
+		//Limit to 0.1 - 1.0
+		fPowerFactor := MIN(fPowerFactor, fMaxForceFactor);
+		fPowerFactor := MAX(fPowerFactor, fMinForceFactor);
+		
+		//set force Z, a and b
+		stForceLimitMin := stForceLimitMinAtBeginn;		
+		stForceLimitMin.fz := stForceLimitMin.Fz * fPowerFactor;
+		stForceLimitMin.Mx := stForceLimitMin.Mx * fPowerFactor;
+		stForceLimitMin.My := stForceLimitMin.My * fPowerFactor;
+		
+		stForceLimitMax := stForceLimitMaxAtBeginn;	
+		stForceLimitMax.fz := stForceLimitMax.Fz * fPowerFactor;
+		stForceLimitMax.Mx := stForceLimitMax.Mx * fPowerFactor;
+		stForceLimitMax.My := stForceLimitMax.My * fPowerFactor;
+
+		// 13.01.2025 Todo PLC Chash if Min > Max. use objParm insted
+		//	THIS^.TcIoXPlanarMover.SetForceLimitMin(stForceLimitMin);
+		//	THIS^.TcIoXPlanarMover.SetForceLimitMax(stForceLimitMax);
+		FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityTcIoMover.ObjectId, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+		IF ipComObject <> 0 THEN	
+			// No minimum can be set if one of the 6 values in the struct is greater than the maximum. Equal is allowed.
+			// The minimum is therefore first written to something valid. Followed by Max and the original minimum
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stValideMinForce), pData := ADR(stValideMinForce), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMax, nData := SIZEOF(stForceLimitMax), pData := ADR(stForceLimitMax), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stForceLimitMin), pData := ADR(stForceLimitMin), pgp := 0);
+			FW_SafeRelease(ADR(ipComObject));
+		END_IF
+
+	
+		nSeqLowerToUnknown := 10;
+		
+		
+	10: 	
+		//A lowering of the mover was detected followed by speed ~0
+		IF (THIS^.PositionAct.z < THIS^.PositionSet.z * 0.5) AND (ABS(THIS^.VelocityAct.z) < 5.0)  THEN
+			nSeqLowerToUnknown := 20;
+			
+		ELSIF (fPowerFactor <= fMinForceFactor) THEN
+			nSeqLowerToUnknown := 20;
+				
+		ELSE
+			//Reduce force each cycle
+			fPowerFactor := fPowerFactor - ((fLowerNPerS/stForceLimitMaxAtBeginn.Fz) * fCycleTime_s);
+					
+			//Limit to 0.1 - 1.0
+			fPowerFactor := MIN(fPowerFactor, fMaxForceFactor);
+			fPowerFactor := MAX(fPowerFactor, fMinForceFactor);
+			
+			//set force Z, a and b to current + 10%
+			stForceLimitMin := stForceLimitMinAtBeginn;		
+			stForceLimitMin.fz := stForceLimitMin.Fz * fPowerFactor;
+			stForceLimitMin.Mx := stForceLimitMin.Mx * fPowerFactor;
+			stForceLimitMin.My := stForceLimitMin.My * fPowerFactor;
+			
+			stForceLimitMax := stForceLimitMaxAtBeginn;	
+			stForceLimitMax.fz := stForceLimitMax.Fz * fPowerFactor;
+			stForceLimitMax.Mx := stForceLimitMax.Mx * fPowerFactor;
+			stForceLimitMax.My := stForceLimitMax.My * fPowerFactor;
+	
+			// 13.01.2025 Todo PLC Chash if Min > Max. use objParm insted
+			//	THIS^.TcIoXPlanarMover.SetForceLimitMin(stForceLimitMin);
+			//	THIS^.TcIoXPlanarMover.SetForceLimitMax(stForceLimitMax);
+			FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityTcIoMover.ObjectId, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+			IF ipComObject <> 0 THEN
+				// No minimum can be set if one of the 6 values in the struct is greater than the maximum. Equal is allowed.
+				// The minimum is therefore first written to something valid. Followed by Max and the original minimum
+				hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stValideMinForce), pData := ADR(stValideMinForce), pgp := 0);
+				hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMax, nData := SIZEOF(stForceLimitMax), pData := ADR(stForceLimitMax), pgp := 0);
+				hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stForceLimitMin), pData := ADR(stForceLimitMin), pgp := 0);
+				FW_SafeRelease(ADR(ipComObject));
+			END_IF
+
+	
+		END_IF
+	
+		
+	20: // Reduce Force to minimum
+		fPowerFactor := fMinForceFactor;
+		
+		//set force Z, a and b to minimum
+		stForceLimitMin := stForceLimitMinAtBeginn;		
+		stForceLimitMin.fz := stForceLimitMin.Fz * fPowerFactor;
+		stForceLimitMin.Mx := stForceLimitMin.Mx * fPowerFactor;
+		stForceLimitMin.My := stForceLimitMin.My * fPowerFactor;
+		
+		stForceLimitMax := stForceLimitMaxAtBeginn;	
+		stForceLimitMax.fz := stForceLimitMax.Fz * fPowerFactor;
+		stForceLimitMax.Mx := stForceLimitMax.Mx * fPowerFactor;
+		stForceLimitMax.My := stForceLimitMax.My * fPowerFactor;
+	    
+	    
+		// 13.01.2025 Todo PLC Chash if Min > Max. use objParm insted
+		//	THIS^.TcIoXPlanarMover.SetForceLimitMin(stForceLimitMin);
+		//	THIS^.TcIoXPlanarMover.SetForceLimitMax(stForceLimitMax);
+		FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityTcIoMover.ObjectId, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+		IF ipComObject <> 0 THEN
+			// No minimum can be set if one of the 6 values in the struct is greater than the maximum. Equal is allowed.
+			// The minimum is therefore first written to something valid. Followed by Max and the original minimum
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stValideMinForce), pData := ADR(stValideMinForce), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMax, nData := SIZEOF(stForceLimitMax), pData := ADR(stForceLimitMax), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stForceLimitMin), pData := ADR(stForceLimitMin), pgp := 0);
+			FW_SafeRelease(ADR(ipComObject));
+		END_IF
+
+		
+		nSeqLowerToUnknown := 999;
+				
+	999: // finish seqence feedback
+		fbFeedbackLowerToUnknown.Done := TRUE;
+		
+	1000..1999:
+		//Error
+		fbFeedbackLowerToUnknown.HR := E_FAIL;
+END_CASE
+
+
+
+//Up
+CASE nSeqLiftFromUnknown OF
+	0: //Wait for start
+		;
+		
+	1: // Check if not already lifted	
+		IF fPowerFactor = fMaxForceFactor THEN
+			nSeqLiftFromUnknown := 999;
+		ELSE
+			nSeqLiftFromUnknown := 5;
+		END_IF		
+		
+	5: 
+		//0.0 - 1.0
+		fPowerFactor := (stForcesAtBeginn.z / stForceLimitMaxAtBeginn.Fz);
+		
+		// -5%
+		fPowerFactor := fPowerFactor - 0.05;
+		
+		//Limit to 0.1 - 1.0
+		fPowerFactor := MIN(fPowerFactor, fMaxForceFactor);
+		fPowerFactor := MAX(fPowerFactor, fMinForceFactor);
+		
+		//set force Z, a and b
+		stForceLimitMin := stForceLimitMinAtBeginn;		
+		stForceLimitMin.fz := stForceLimitMin.Fz * fPowerFactor;
+		stForceLimitMin.Mx := stForceLimitMin.Mx * fPowerFactor;
+		stForceLimitMin.My := stForceLimitMin.My * fPowerFactor;
+		
+		stForceLimitMax := stForceLimitMaxAtBeginn;	
+		stForceLimitMax.fz := stForceLimitMax.Fz * fPowerFactor;
+		stForceLimitMax.Mx := stForceLimitMax.Mx * fPowerFactor;
+		stForceLimitMax.My := stForceLimitMax.My * fPowerFactor;
+
+		// 13.01.2025 Todo PLC Chash if Min > Max. use objParm insted
+		//THIS^.TcIoXPlanarMover.SetForceLimitMax(stForceLimitMax);
+		//THIS^.TcIoXPlanarMover.SetForceLimitMin(stForceLimitMin);
+		FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityTcIoMover.ObjectId, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+		IF ipComObject <> 0 THEN
+			// No minimum can be set if one of the 6 values in the struct is greater than the maximum. Equal is allowed.
+			// The minimum is therefore first written to something valid. Followed by Max and the original minimum
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stValideMinForce), pData := ADR(stValideMinForce), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMax, nData := SIZEOF(stForceLimitMax), pData := ADR(stForceLimitMax), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stForceLimitMin), pData := ADR(stForceLimitMin), pgp := 0);
+			FW_SafeRelease(ADR(ipComObject));
+		END_IF
+		
+		nSeqLiftFromUnknown := 10;
+		
+
+		
+	10: 	
+		//A lift of the mover was detected followed by speed ~0
+		IF (THIS^.PositionAct.z > THIS^.PositionSet.z * 0.5) AND (ABS(THIS^.VelocityAct.z) < 5.0)  THEN
+			nSeqLiftFromUnknown := 20;
+			
+		ELSIF (fPowerFactor >= fMaxForceFactor ) THEN
+			nSeqLiftFromUnknown := 20;
+				
+		ELSE
+			//Reduce force each cycle
+			fPowerFactor := fPowerFactor + ((fLiftNPerS/stForceLimitMaxAtBeginn.Fz) * fCycleTime_s);
+					
+			//Limit to 0.1 - 1.0
+			fPowerFactor := MIN(fPowerFactor, fMaxForceFactor);
+			fPowerFactor := MAX(fPowerFactor, fMinForceFactor);
+			
+			//set force Z, a and b 
+			stForceLimitMin := stForceLimitMinAtBeginn;		
+			stForceLimitMin.fz := stForceLimitMin.Fz * fPowerFactor;
+			stForceLimitMin.Mx := stForceLimitMin.Mx * fPowerFactor;
+			stForceLimitMin.My := stForceLimitMin.My * fPowerFactor;
+			
+			stForceLimitMax := stForceLimitMaxAtBeginn;	
+			stForceLimitMax.fz := stForceLimitMax.Fz * fPowerFactor;
+			stForceLimitMax.Mx := stForceLimitMax.Mx * fPowerFactor;
+			stForceLimitMax.My := stForceLimitMax.My * fPowerFactor;
+	
+	
+		// 13.01.2025 Todo PLC Chash if Min > Max. use objParm insted
+		//THIS^.TcIoXPlanarMover.SetForceLimitMax(stForceLimitMax);
+		//THIS^.TcIoXPlanarMover.SetForceLimitMin(stForceLimitMin);
+		FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityTcIoMover.ObjectId, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+		IF ipComObject <> 0 THEN
+			// No minimum can be set if one of the 6 values in the struct is greater than the maximum. Equal is allowed.
+			// The minimum is therefore first written to something valid. Followed by Max and the original minimum
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stValideMinForce), pData := ADR(stValideMinForce), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMax, nData := SIZEOF(stForceLimitMax), pData := ADR(stForceLimitMax), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stForceLimitMin), pData := ADR(stForceLimitMin), pgp := 0);
+			FW_SafeRelease(ADR(ipComObject));
+		END_IF
+	
+		END_IF
+	
+		
+	20: // Reduce Force to normal			
+		fPowerFactor := fMaxForceFactor;
+		
+		//set force Z, a and b to minimum
+		stForceLimitMin := stForceLimitMinAtBeginn;		
+		stForceLimitMin.fz := stForceLimitMin.Fz * fPowerFactor;
+		stForceLimitMin.Mx := stForceLimitMin.Mx * fPowerFactor;
+		stForceLimitMin.My := stForceLimitMin.My * fPowerFactor;
+		
+		stForceLimitMax := stForceLimitMaxAtBeginn;	
+		stForceLimitMax.fz := stForceLimitMax.Fz * fPowerFactor;
+		stForceLimitMax.Mx := stForceLimitMax.Mx * fPowerFactor;
+		stForceLimitMax.My := stForceLimitMax.My * fPowerFactor;
+	    	
+		// 13.01.2025 Todo PLC Chash if Min > Max. use objParm insted
+		//THIS^.TcIoXPlanarMover.SetForceLimitMax(stForceLimitMax);
+		//THIS^.TcIoXPlanarMover.SetForceLimitMin(stForceLimitMin);
+		FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityTcIoMover.ObjectId, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+		IF ipComObject <> 0 THEN
+			// No minimum can be set if one of the 6 values in the struct is greater than the maximum. Equal is allowed.
+			// The minimum is therefore first written to something valid. Followed by Max and the original minimum
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stValideMinForce), pData := ADR(stValideMinForce), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMax, nData := SIZEOF(stForceLimitMax), pData := ADR(stForceLimitMax), pgp := 0);
+			hr := ipComObject.TcSetObjPara(pid := N_PTCID_ForceLimitMin, nData := SIZEOF(stForceLimitMin), pData := ADR(stForceLimitMin), pgp := 0);
+			FW_SafeRelease(ADR(ipComObject));
+		END_IF
+		
+		
+		THIS^.UtilityMcMover.SetMaximumPositionLagValue(stLagValuesAtBeginn);
+        
+		nSeqLiftFromUnknown := 999;
+				
+	999: // finish seqence feedback
+		fbFeedbackLiftFromUnknown.Done := TRUE;
+		
+	1000..1999:
+		//Error
+		fbFeedbackLiftFromUnknown.HR := E_FAIL;
+END_CASE
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="UtilityMcMover" Id="{cab4f1ac-f949-4b0f-9abb-2fd50f7eddd0}" FolderPath="XPlanarUtility\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY UtilityMover : Tc3_XPlanarUtility.I_McPlanarMover]]></Declaration>
+PROPERTY UtilityMcMover : Tc3_XPlanarUtility.I_McPlanarMover]]></Declaration>
       <Get Name="Get" Id="{43cd8752-c959-4b42-b896-ad915e653b55}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[UtilityMcMover :=  THIS^.ipMcMover;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="UtilityTcIoMover" Id="{8b11592d-c5fc-49f9-8ea2-4c230e1380b3}" FolderPath="XPlanarUtility\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityTcIoMover : Tc3_XPlanarUtility.I_TcIoXPlanarMover]]></Declaration>
+      <Get Name="Get" Id="{94982195-fa79-480b-85bc-04315239c2d2}">
         <Declaration><![CDATA[VAR
+;
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[UtilityMover := THIS^.fbUtilityMover;]]></ST>
+          <ST><![CDATA[UtilityTcIoMover := THIS^.ipTcIoMover;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="VelocityAct" Id="{b149e020-d324-4301-8f41-ff44a56a3529}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+(* Provides the current planar mover act XYZABC [mm/s] *)
+PROPERTY VelocityAct : REFERENCE TO MoverVector]]></Declaration>
+      <Get Name="Get" Id="{513d1962-a4a5-41e2-ac8b-a2a845e1f61b}">
+        <Declaration><![CDATA[VAR_INST
+	{attribute 'hide'}
+	copyOfData :  MoverVector;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//Creat an copy of the struct to view value in targetdbrowser and plc online view
+copyOfData := THIS^.fbMover.MCTOPLC.ACT.ActVelo;
+VelocityAct REF= copyOfData;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -2173,7 +2841,7 @@ PROPERTY VelocitySet : REFERENCE TO MoverVector]]></Declaration>
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[//Creat an copy of the struct to view value in targeddbrowser and plc online view
+          <ST><![CDATA[//Creat an copy of the struct to view value in targetdbrowser and plc online view
 copyOfData := THIS^.fbMover.MCTOPLC.SET.SetVelo;
 VelocitySet REF= copyOfData;]]></ST>
         </Implementation>

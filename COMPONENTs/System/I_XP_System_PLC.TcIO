@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <Itf Name="I_XP_System_PLC" Id="{c3b3d3ce-c3c0-4441-bc62-ab81925683e6}">
     <Declaration><![CDATA[INTERFACE I_XP_System_PLC EXTENDS I_CH_Object
 ]]></Declaration>
     <Method Name="CheckTargetExists" Id="{41af54e4-98a3-42b3-a270-0f5a5953c6eb}">
       <Declaration><![CDATA[METHOD CheckTargetExists : BOOL //Return TRUE if target is existing
 VAR_INPUT
-	sStation	: STRING; //Group of the targed station or LUID
+	sStation	: STRING; //Group of the target station or LUID
 END_VAR]]></Declaration>
     </Method>
     <Method Name="Disable" Id="{0e1c17f7-3e58-40a2-9be7-754489d0378a}">
@@ -76,9 +76,18 @@ PROPERTY Initialized : BOOL]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Property Name="Movers" Id="{eb1e997d-a42b-4926-a204-df00717ba322}">
+    <Property Name="MoversNotPresent" Id="{5b4b5c58-ae6a-4d3f-867b-ff2e1eee129a}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY Movers : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+//List of movers that are not present in the current system
+PROPERTY MoversNotPresent : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{e3716ba6-056b-4b24-a0e9-a5ef94a1306a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoversPresent" Id="{eb1e997d-a42b-4926-a204-df00717ba322}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of movers that are present in the current system
+PROPERTY MoversPresent : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
       <Get Name="Get" Id="{e2e7ae6b-0a08-4719-9298-403b515ebd6f}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
@@ -96,10 +105,19 @@ VAR_INPUT
 	sLUID : STRING;
 END_VAR]]></Declaration>
     </Method>
-    <Property Name="Stations" Id="{72cbf4b8-aca0-4ec3-b014-b877cfe731c1}">
+    <Property Name="StationsAll" Id="{72cbf4b8-aca0-4ec3-b014-b877cfe731c1}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY Stations : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+//List of all station objects that exist in this project
+PROPERTY StationsAll : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
       <Get Name="Get" Id="{b0e6f6ff-8d89-4f2b-8235-1909b8f695e9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationsUsed" Id="{79c5b129-63d5-4187-88f4-1d306dfe5645}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//List of all station objects that are considered for path planning in the currently running system
+PROPERTY StationsUsed : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{86667df9-077d-4df6-934d-511070492b46}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

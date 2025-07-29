@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
   <POU Name="FB_XP_Environment" Id="{6c9df844-5691-4d75-a14e-01fa98bb26e3}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
 (* XPlanar Environment - 1 per associated XPlanar 
@@ -60,6 +60,7 @@ END_VAR
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.AddToGroupe;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -79,10 +80,12 @@ END_IF
       </Implementation>
     </Method>
     <Method Name="Clear" Id="{e2df5771-2b46-447a-a790-27cc8fd54fd0}">
-      <Declaration><![CDATA[METHOD Clear : HRESULT
+      <Declaration><![CDATA[(* Clears the Planar Environment (stators and boundary). *)
+METHOD Clear : HRESULT
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Clear;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -166,9 +169,9 @@ WHILE fbListOfMoverToCheck.HasNextObject() DO
 	//get first mover in list,
 	__QUERYINTERFACE(fbListOfMoverToCheck.GetNextObject(),ipMover1);
 	
-	fMoverXPos := ipMover1.PlanarMover.MCTOPLC.ACT.ActPos.x;
-	fMoverYPos := ipMover1.PlanarMover.MCTOPLC.ACT.ActPos.y;
-	fMoverCPos := ipMover1.PlanarMover.MCTOPLC.ACT.ActPos.c;
+	fMoverXPos := ipMover1.PositionAct.x;
+	fMoverYPos := ipMover1.PositionAct.y;
+	fMoverCPos := ipMover1.PositionAct.c;
 		
 	//Get corner points of the rectangle 
 	fMoverWidth := ipMover1.MoverWidth - fOffsetMoverSize;
@@ -196,14 +199,20 @@ WHILE fbListOfMoverToCheck.HasNextObject() DO
 	WHILE fbListOfMoverToCheck.HasNextObject() DO
 		__QUERYINTERFACE(fbListOfMoverToCheck.GetNextObject(),ipEachMover);
 		
+		//Skip if same
 		IF ipEachMover = ipMover1 THEN
-			//Skip if same
 			CONTINUE;
 		END_IF
 		
-		fMoverXPos := ipEachMover.PlanarMover.MCTOPLC.ACT.ActPos.x;
-		fMoverYPos := ipEachMover.PlanarMover.MCTOPLC.ACT.ActPos.y;
-		fMovercPos := ipEachMover.PlanarMover.MCTOPLC.ACT.ActPos.c;
+		//Skip if far away
+		IF (MAX(ipEachMover.MoverHeight, ipEachMover.MoverWidth) + MAX(ipMover1.MoverHeight, ipMover1.MoverWidth) + fOffsetMoverSize) < F_DistXYVectors(ipEachMover.PositionAct, ipMover1.PositionAct) THEN
+			CONTINUE;
+		END_IF
+		
+		
+		fMoverXPos := ipEachMover.PositionAct.x;
+		fMoverYPos := ipEachMover.PositionAct.y;
+		fMovercPos := ipEachMover.PositionAct.c;
 		
 		//Get corner points of the rectangle 
 		fMoverWidth := ipEachMover.MoverWidth - fOffsetMoverSize;
@@ -284,6 +293,7 @@ END_WHILE
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Configure;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 THIS^.fbFeedback.Busy 				:= TRUE;
 
@@ -299,14 +309,10 @@ VAR_INPUT
 	
 	ipSystem : I_CH_Object;
 END_VAR
-VAR_INST
-	{attribute 'hide'}
-	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
-END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Do the following code once during start up and not during onlinechange
-IF NOT bFBInitCalledOnce THEN 
+IF NOT bInCopyCode THEN 
 	
 	(* Register to the Xplanar System
 	   1. Test if the interface exists
@@ -317,11 +323,9 @@ IF NOT bFBInitCalledOnce THEN
 	END_IF
 	
 	
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
+	
 END_IF
-
-bFBInitCalledOnce := TRUE;
-
-
 ]]></ST>
       </Implementation>
     </Method>
@@ -380,9 +384,8 @@ ELSE
 END_IF
 
 
-
-THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(CHALET_NC.E_NcAxisCommands.Initialize);
 THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.Initialize;
+THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 THIS^.fbFeedback.LastCommandAccepted:= TRUE;	
 //Set done or keep in busy state	
 THIS^.fbFeedback.HR := Initialize;
@@ -506,7 +509,7 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 	
 	IF ipComObject <> 0 THEN
 		hr := ipComObject.TcGetObjPara(pid:=N_IDX_OFFSET_MoverDetectionStatus , nData:= nParaSize, pData:= pParaData, pgp:=0 );	
-		ipComObject.TcRelease();	
+		FW_SafeRelease(ADR(ipComObject));
 	END_IF
 	
 	//force to have the in progress active FOR 1 cycle longer
@@ -571,7 +574,7 @@ nParaSize := SIZEOF(nProcessingUnitOid);	pParaData := ADR(nProcessingUnitOid);
 
 IF ipComObject <> 0 THEN
 	hr := ipComObject.TcGetObjPara(pid:=N_IDX_OFFSET_PU_Oid , nData:= nParaSize, pData:= pParaData, pgp:=0 );	
-	ipComObject.TcRelease();	
+	FW_SafeRelease(ADR(ipComObject));
 END_IF
 
 ProcessingUnitOID := nProcessingUnitOid;
@@ -585,6 +588,7 @@ ProcessingUnitOID := nProcessingUnitOid;
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.fbFeedback.Busy THEN
 	THIS^.eActiveCommand 				:= CHALET_NC.E_NcAxisCommands.RemoveFromGroupe;
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(THIS^.eActiveCommand);	
 	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
 	THIS^.fbFeedback.Busy 				:= TRUE;
 	
@@ -603,6 +607,19 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="System" Id="{39ffeb45-ee5e-4724-be7c-c11cc9e33b10}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to CHALET system to which this object belongs
+PROPERTY System : I_XP_System_PLC]]></Declaration>
+      <Get Name="Get" Id="{ec0f323d-84f2-44b2-afcb-d65582a62b18}">
+        <Declaration><![CDATA[]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//get I_x_System_PLC interface from I_x_System_Registration
+__QUERYINTERFACE(THIS^.ipXpSystem, System);
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Method Name="Update" Id="{476a95ad-3269-45e6-a01b-247748d45f7c}">
       <Declaration><![CDATA[METHOD PUBLIC Update : HRESULT
 ]]></Declaration>
@@ -611,10 +628,6 @@ END_IF
 
 
 // ********************** Set feedback depending on active command *******************************
-IF THIS^.eActiveCommand <> E_NcAxisCommands.None THEN
-	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
-END_IF
-
 CASE THIS^.eActiveCommand OF
 	E_NcAxisCommands.None: 
 		//Display if a Mover Error is active during no command is active
@@ -711,7 +724,7 @@ END_VAR
 //WARNING - each mover default is 2mm larger
 IF THIS^.bCollisionCheckEnabled AND NOT bDisableDuringMoverDetection THEN
 	//get mover or 0 for no collision
-	ipMoverCollision := CollisionDetectionAlgorithm(fOffsetMoverSize := THIS^.fMoverOffsetWarning, ipListOfMovers := THIS^.ipXpSystem.Movers);
+	ipMoverCollision := CollisionDetectionAlgorithm(fOffsetMoverSize := THIS^.fMoverOffsetWarning, ipListOfMovers := THIS^.ipXpSystem.MoversPresent);
 	
 	IF ipMoverCollision <> 0 AND_THEN ipMoverCollision <> ipMoverCollisionOldWarning AND_THEN NOT ipMoverCollision.MoverIsNotPresent THEN
 		fbAlarmCollisionMoverWarning.CreateEx(tc_Events.CHALET_XPlanar_Events.MoverCollisionWarning, 0, THIS^.fbSourceInfo);
@@ -735,7 +748,7 @@ END_IF
 //ERROR - each mover is default -1mm smaller
 IF THIS^.bCollisionCheckEnabled AND NOT bDisableDuringMoverDetection  THEN
 	//get mover or 0 for no collision
-	ipMoverCollision := CollisionDetectionAlgorithm(fOffsetMoverSize := THIS^.fMoverOffsetError, ipListOfMovers := THIS^.ipXpSystem.Movers);
+	ipMoverCollision := CollisionDetectionAlgorithm(fOffsetMoverSize := THIS^.fMoverOffsetError, ipListOfMovers := THIS^.ipXpSystem.MoversPresent);
 	
 	IF ipMoverCollision <> 0 AND ipMoverCollision <> ipMoverCollisionOldAlarm THEN
 		fbAlarmCollisionMoverAlarm.CreateEx(tc_Events.CHALET_XPlanar_Events.MoverCollisionStop, 0, THIS^.fbSourceInfo);
@@ -744,7 +757,8 @@ IF THIS^.bCollisionCheckEnabled AND NOT bDisableDuringMoverDetection  THEN
 		fbAlarmCollisionMoverAlarm.Raise(0);
 
 		//Stop if this is a real system, keep running in simulation
-		IF THIS^.UtilityEnvirement.XpuTcIo(1).GetOperationMode() = OperationMode.Normal THEN
+		
+		IF THIS^.UtilityEnvirement.TcIoXpu(1).GetOperationMode() = XplanarOperationMode.Normal THEN
 			IF __QUERYINTERFACE(THIS^.ipXpSystem, ipSystemPlc) THEN
 				//Disable System
 				ipSystemPlc.FastStop();
