@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.17">
   <POU Name="FB_XP_Station" Id="{1b833098-1580-4aa4-b709-fc8a6b21b84a}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'enable_dynamic_creation'}
 {attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
@@ -97,6 +97,9 @@ VAR
 	sFilter : STRING :=  XPlanarParameterlist.S_ANY_STATION_NAME;
 	{attribute 'hide'}	
 	fbAlarmStationIsBlocked : FB_TcAlarm;
+	
+	{attribute 'hide'}	
+	bThisStationIsCreatedAutomatically : BOOL;
 END_VAR
 
 // Dynamic to use if an Mvoer passes the station
@@ -1169,7 +1172,6 @@ THIS^.fbFeedback.HR := Initialize;
 VAR
 	ipThisStation : I_XP_Station := THIS^;
 	ipTempTrackAhead : I_XP_Track;
-	bThisStationIsCreatedAutomatically : BOOL;
 	
 	bOtherStationsOnThisTrack : BOOL;
 	bAnotherTrackAhed : BOOL;
@@ -1179,7 +1181,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Check if this station was created by the user, e.g., as a process station, or if it was created automatically at the end of the track to improve track management.
-bThisStationIsCreatedAutomatically := (ipThisStation = THIS^.AccocietedTrack.HelperStationAtEndOfTrack);
+THIS^.bThisStationIsCreatedAutomatically := (ipThisStation = THIS^.AccocietedTrack.HelperStationAtEndOfTrack);
 
 // Only check automaticali created stations
 IF NOT bThisStationIsCreatedAutomatically THEN
@@ -1188,11 +1190,9 @@ IF NOT bThisStationIsCreatedAutomatically THEN
 END_IF
 
 
-
 //Set position of this automatic generated station to the end of the accocieted Track
 THIS^.PositionXY.x := THIS^.AccocietedTrack.EndPosition.x;
 THIS^.PositionXY.y := THIS^.AccocietedTrack.EndPosition.y;
-
 
 
 //Check if other Stations are existiong on this track
@@ -1374,6 +1374,7 @@ VAR
 	
 	//this raises an error 33155 "Target position is not reachable. There is no path available to the target position or target position is unreachable in general."
 	bPreventMoveCmdToMoversCurrentPos : BOOL;
+
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -1381,6 +1382,11 @@ END_VAR
 	RETURN;
 END_IF
 
+// Check if this station was created by the user, e.g., as a process station, or if it was created automatically at the end of the track to improve track management.
+// No dynamic or gap change on a automatic generated station
+IF THIS^.bThisStationIsCreatedAutomatically THEN
+	RETURN;
+END_IF
 
 //Detect mover who is passing the station whitout be in queue. 
 //Adjust to new Dynamics
@@ -2145,13 +2151,8 @@ WHILE ipXpSystem.MoversPresent.HasNextObject() DO
 				//If the mover is very close to the transition, the next settings are already used here
 				//This is the case if the mover was in a station for an interaction.
 				IF (fDistToThisStation <= 1.0) THEN
-					//Set new dynamic. Be careful when reducing the deceleration so that the mover can still stop in real time
-					IF XPlanarParameterlist.B_STATIONS_OVERRIDE_MOVER_DYN_CONSTRAINT THEN
-						ipMover.SetDynConstraint_Path(	V:= THIS^.fMoverVeloAtExit, 
-														A:= THIS^.fMoverAccAtExit,
-														D:= THIS^.fMoverDecAtExit,
-														J:= MC_DEFAULT);
-					END_IF
+					//Set the new dynamic depending on the settings used in methode
+					THIS^.OnMoverPasses(ipMover);
 					ipMover.MoveOnTrackToStation(	ipStation := ipPath.StationDestination,
 													fGap := THIS^.fMoverGapAtExit);	
 				END_IF	

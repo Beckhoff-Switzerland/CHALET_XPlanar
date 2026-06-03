@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.17">
   <POU Name="FB_XP_Track" Id="{3b47d2f9-b25f-432c-a6e7-cfeea4a711ff}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
 (* XPlanar track - n per associated XPlanar. Can be instantiated as an array and/or individually
@@ -1146,19 +1146,21 @@ WHILE THIS^.fbListPathsOnThisTrack.HasNextObject() DO
 		END_IF
 	
 		//Dist to End				
-		fDist := ipEachPathOnTrack.DistanceToDestiantion(	ipTrack := ipThisTrack, 
-															fPosOnTrack := 	fPosOnTrack);
-		//Dist to Start	
-		fDist := MIN(fDist, ipEachPathOnTrack.Length - ipEachPathOnTrack.DistanceToDestiantion(	ipTrack := ipThisTrack, 
-																						fPosOnTrack := 	fPosOnTrack));
-
-
-															
-		//Get shortest distance													
+		fDist := ipEachPathOnTrack.DistanceToDestiantion(ipTrack := ipThisTrack, fPosOnTrack := fPosOnTrack);															
+		//Check if Dist is shorten then last shortest distance													
 		IF 	fDist <= fDistToTempBestStaton	THEN
 			fDistToTempBestStaton := fDist;
 			ipTempBestStation := ipEachPathOnTrack.StationDestination;
-		END_IF
+		END_IF		
+
+							
+		//Dist to Start	
+		fDist := ipEachPathOnTrack.Length - ipEachPathOnTrack.DistanceToDestiantion(ipTrack := ipThisTrack, fPosOnTrack := fPosOnTrack);	
+		//Check if Dist is shorten then last shortest distance													
+		IF 	fDist <= fDistToTempBestStaton	THEN
+			fDistToTempBestStaton := fDist;
+			ipTempBestStation := ipEachPathOnTrack.StationStart;
+		END_IF	
 		
 	END_IF
 END_WHILE

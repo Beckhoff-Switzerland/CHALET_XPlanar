@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.15">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.17">
   <POU Name="FB_XP_Mover" Id="{ab327e23-c80a-4275-af5f-c83c5ee6f670}" SpecialFunc="None">
     <Declaration><![CDATA[// The warning " Interface of overridden methode xxx of base I_xxx doesn't match declaration" can be disabled here. 
 {warning disable C0094 }
@@ -14,6 +14,7 @@ VAR
 END_VAR
 
 VAR
+	bTest : BOOL;
 	//Link to MC-Mover
 	fbMover : MC_PlanarMover; 
 	

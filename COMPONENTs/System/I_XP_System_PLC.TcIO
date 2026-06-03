@@ -26,6 +26,8 @@ PROPERTY Disabled : BOOL
     <Method Name="Enable" Id="{b7d5fbd1-5b07-42a2-8c1a-086f194cd652}">
       <Declaration><![CDATA[METHOD Enable : I_CH_Feedback
 VAR_INPUT
+	//This allows you to optionally select that new movers freshly placed in the system are recognized when enabled.
+	bForceMoverRedetection : BOOL := FALSE;
 END_VAR
 ]]></Declaration>
     </Method>
